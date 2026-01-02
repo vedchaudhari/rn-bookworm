@@ -1,35 +1,26 @@
-import {
-  View,
-  Text,
-  Image,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from "react-native";
-import { Link } from "expo-router";
-import styles from "../../assets/styles/login.styles";
-import { useState } from "react";
-import { Ionicons } from "@expo/vector-icons";
-import COLORS from "../../constants/colors";
-
-import { useAuthStore } from "../../store/authStore";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native'
+import React, { useState } from 'react'
+import { Image } from "react-native";
+import styles from '../../assets/styles/login.styles';
+import { Ionicons } from '@expo/vector-icons';
+import COLORS from '../../constants/colors';
+import { Link } from 'expo-router';
+import { useAuthStore } from '../../store/authContext';
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { isLoading, login, isCheckingAuth } = useAuthStore();
+  const { user, isLoading, login } = useAuthStore();
 
   const handleLogin = async () => {
     const result = await login(email, password);
-
-    if (!result.success) Alert.alert("Error", result.error);
-  };
-
-  if (isCheckingAuth) return null;
+    if (!result.success) {
+      Alert.alert("Error", result.error);
+      return;
+    }
+    Alert.alert("Success", "Logged in successfully")
+  }
 
   return (
     <KeyboardAvoidingView
@@ -37,7 +28,7 @@ export default function Login() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.container}>
-        {/* ILLUSTRATION */}
+        {/*Image*/}
         <View style={styles.topIllustration}>
           <Image
             source={require("../../assets/images/i.png")}
@@ -46,9 +37,13 @@ export default function Login() {
           />
         </View>
 
+
+        {/*Card*/}
         <View style={styles.card}>
-          <View style={styles.formContainer}>
-            {/* EMAIL */}
+          {/*Form*/}
+          <View style={styles.formContainer} >
+
+            {/*Email*/}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
               <View style={styles.inputContainer}>
@@ -70,27 +65,28 @@ export default function Login() {
               </View>
             </View>
 
-            {/* PASSWORD */}
+            {/*PASSWORD*/}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password</Text>
               <View style={styles.inputContainer}>
-                {/* LEFT ICON */}
+                {/*LEFT ICON*/}
                 <Ionicons
                   name="lock-closed-outline"
                   size={20}
                   color={COLORS.primary}
                   style={styles.inputIcon}
                 />
-                {/* INPUT */}
+
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your password"
+                  placeholder="Enter password"
                   placeholderTextColor={COLORS.placeholderText}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                 />
 
+                {/*EYE ICON*/}
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeIcon}
@@ -101,29 +97,39 @@ export default function Login() {
                     color={COLORS.primary}
                   />
                 </TouchableOpacity>
+
               </View>
             </View>
 
-            <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Login</Text>
-              )}
+            {/*LOGIN*/}
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleLogin}
+              disabled={isLoading}
+            >
+              {
+                isLoading ?
+                  <ActivityIndicator color="#fff" />
+                  : <Text style={styles.buttonText}>Login</Text>
+              }
             </TouchableOpacity>
 
-            {/* FOOTER */}
+            {/*CARD FOOTER*/}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account?</Text>
-              <Link href="/signup" asChild>
+
+              <Link href='/signup' asChild>
                 <TouchableOpacity>
-                  <Text style={styles.link}>Sign Up</Text>
+                  <Text style={styles.link}>Sign up</Text>
                 </TouchableOpacity>
               </Link>
+
             </View>
+
           </View>
         </View>
       </View>
     </KeyboardAvoidingView>
-  );
+
+  )
 }
