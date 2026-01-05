@@ -13,9 +13,13 @@ router.post("/", protectRoute, async (req, res) => {
       return res.status(400).json({ message: "Please provide all fields" });
     }
 
+    console.log("Image url is", image)
+
     // upload the image to cloudinary
     const uploadResponse = await cloudinary.uploader.upload(image);
     const imageUrl = uploadResponse.secure_url;
+
+    console.log("Image url", imageUrl)
 
     // save to the database
     const newBook = new Book({
