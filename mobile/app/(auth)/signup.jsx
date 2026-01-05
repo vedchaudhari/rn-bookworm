@@ -3,7 +3,6 @@ import React, { useState } from 'react'
 import styles from '../../assets/styles/signup.styles';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../constants/colors';
-import { Link, router } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authContext';
 
@@ -24,7 +23,7 @@ export default function Signup() {
       Alert.alert("Error", result.error)
       return;
     }
-    Alert.alert("Success", "Account created successfully");
+    //router.replace("/");
   }
 
 
@@ -48,7 +47,7 @@ export default function Signup() {
 
             {/*Full Name*/}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full Name</Text>
+              <Text style={styles.label}>Username</Text>
               <View style={styles.inputContainer}>
                 <Ionicons
                   name="person-outline"
@@ -58,7 +57,7 @@ export default function Signup() {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="John Doe"
+                  placeholder="johndoe123"
                   placeholderTextColor={COLORS.placeholderText}
                   value={username}
                   onChangeText={setUsername}
@@ -144,7 +143,7 @@ export default function Signup() {
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account?</Text>
 
-              <TouchableOpacity onPress={() => router.back('/login')}>
+              <TouchableOpacity onPress={() => router.replace('/')}>
                 <Text style={styles.link}>Login</Text>
               </TouchableOpacity>
 

@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+const BASE_URL = "http://192.168.1.35:3000" ||
+"http://10.0.2.2:3000"
+
 export const useAuthStore = create((set, get) => ({
     user: null,
     token: null,
@@ -10,7 +13,7 @@ export const useAuthStore = create((set, get) => ({
         set({ isLoading: true });
         try {
             const res = await fetch(
-                "http://localhost:3000/api/auth/register",
+                `${BASE_URL}/api/auth/register`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -24,12 +27,11 @@ export const useAuthStore = create((set, get) => ({
             }
 
             await AsyncStorage.setItem("user", JSON.stringify(data.user));
-            await AsyncStorage.setItem("token", JSON.stringify(data.token));
+            await AsyncStorage.setItem("token", data.token);
 
             set({
                 token: data.token,
                 user: data.user,
-                isLoading: false
             })
 
             return { success: true };
@@ -40,8 +42,8 @@ export const useAuthStore = create((set, get) => ({
     },
 
     checkAuth: async () => {
+        set({isLoading: true});
         try {
-            set({isLoading: true});
 
             const token = await AsyncStorage.getItem("token");
             const userJson = await AsyncStorage.getItem("user");
@@ -50,7 +52,7 @@ export const useAuthStore = create((set, get) => ({
             set({
                 token,
                 user,
-                isLoading: false
+                isLoading:false            
             });
 
         } catch (error) {
@@ -63,7 +65,7 @@ export const useAuthStore = create((set, get) => ({
         set({isLoading: true})
         try {
             const res = await fetch(
-                "http://localhost:3000/api/auth/login",
+                `${BASE_URL}/api/auth/login`,
                 {
                     method:"POST",
                     headers: {"Content-Type": "application/json"},
@@ -77,7 +79,7 @@ export const useAuthStore = create((set, get) => ({
             }
 
             await AsyncStorage.setItem("user", JSON.stringify(data.user));
-            await AsyncStorage.setItem("token", JSON.stringify(data.token));
+            await AsyncStorage.setItem("token", data.token);
 
             set({
                 token: data.token,
@@ -90,8 +92,6 @@ export const useAuthStore = create((set, get) => ({
         } catch (error) {
             set({isLoading: false});
             return {success: false, error: error.message};
-        }finally{
-            set({isLoading: false})
         }
     },
 

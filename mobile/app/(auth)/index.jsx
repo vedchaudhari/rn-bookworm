@@ -4,7 +4,7 @@ import { Image } from "react-native";
 import styles from '../../assets/styles/login.styles';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../constants/colors';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authContext';
 
 export default function Login() {
@@ -12,6 +12,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const { user, isLoading, login } = useAuthStore();
+  const router = useRouter();
 
   const handleLogin = async () => {
     const result = await login(email, password);
@@ -19,7 +20,6 @@ export default function Login() {
       Alert.alert("Error", result.error);
       return;
     }
-    Alert.alert("Success", "Logged in successfully")
   }
 
   return (
