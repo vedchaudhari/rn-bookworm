@@ -27,7 +27,7 @@ export default function Home() {
       if (refresh) setRefreshing(true);
       else if (pageNum === 1) setLoading(true);
 
-      const response = await fetch(`${API_URL}/api/books?page=${pageNum}&limit=2`, {
+      const response = await fetch(`${API_URL}/api/books?page=${pageNum}&limit=10`, {
         headers: {
           Authorization: `Bearer ${token}`,
         }

@@ -39,9 +39,7 @@ export default function CreateTab() {
       })
 
       if (!result.canceled) {
-        // console.log("Result is here", result.assets[0].uri)
 
-        console.log("Maybe base64", result.assets[0].base64)
         setImage(result.assets[0].uri);
         setImageBase64(result.assets[0].base64);
       }
@@ -79,7 +77,7 @@ export default function CreateTab() {
             "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             title,
             caption,
             rating: rating.toString(),
@@ -90,8 +88,8 @@ export default function CreateTab() {
 
       const data = await res.json();
 
-      if(!res.ok){
-        throw new Error(data.message ||  "Something went wrong");
+      if (!res.ok) {
+        throw new Error(data.message || "Something went wrong");
       }
 
       Alert.alert("Success", "Your book recommendation has been posted!")
@@ -106,7 +104,7 @@ export default function CreateTab() {
     } catch (error) {
       console.error("Error creating post: ", error);
       Alert.alert("Error", error.message || "Something went wrong");
-    }finally{
+    } finally {
       setLoading(false);
     }
 

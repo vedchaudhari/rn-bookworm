@@ -175,7 +175,7 @@ export default function Profile() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            colors={COLORS.primary}
+            colors={[COLORS.primary]}
             tintColor={COLORS.primary}
           />
         }
@@ -184,7 +184,7 @@ export default function Profile() {
             <Ionicons name="book-outline" size={50} color={COLORS.textSecondary} />
             <Text style={styles.emptyText}>No recommendations yet</Text>
             <TouchableOpacity style={styles.addButton} onPress={() => router.push("/create")}>
-              <Text>Add your first book</Text>
+              <Text style={styles.addButtonText}>Add your first book</Text>
             </TouchableOpacity>
           </View>
         }

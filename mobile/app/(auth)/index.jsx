@@ -28,7 +28,7 @@ export default function Login() {
       }
 
       // optional success alert
-      Alert.alert("Success", "Welcome back! 😊");
+      // Alert.alert("Success", "Welcome back! 😊");
 
     } catch (e) {
       Alert.alert("Error", "Something went wrong. Please try again.");

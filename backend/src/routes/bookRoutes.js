@@ -13,13 +13,9 @@ router.post("/", protectRoute, async (req, res) => {
       return res.status(400).json({ message: "Please provide all fields" });
     }
 
-    console.log("Image url is", image)
-
     // upload the image to cloudinary
     const uploadResponse = await cloudinary.uploader.upload(image);
     const imageUrl = uploadResponse.secure_url;
-
-    console.log("Image url", imageUrl)
 
     // save to the database
     const newBook = new Book({
@@ -44,8 +40,8 @@ router.get("/", protectRoute, async (req, res) => {
   // example call from react native - frontend
   // const response = await fetch("http://localhost:3000/api/books?page=1&limit=5");
   try {
-    const page = req.query.page || 1;
-    const limit = req.query.limit || 2;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
     const books = await Book.find()
