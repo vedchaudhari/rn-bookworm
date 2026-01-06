@@ -18,13 +18,38 @@ export default function Signup() {
   const { user, isLoading, register } = useAuthStore();
 
   const handleSignup = async () => {
-    const result = await register(email, username, password);
-    if (!result.success) {
-      Alert.alert("Error", result.error)
-      return;
+    try {
+      if (!username || !email || !password) {
+        return Alert.alert("Error", "All fields are required");
+      }
+
+      const result = await register(
+        email.trim().toLowerCase(),
+        username.trim().toLowerCase(),
+        password
+      );
+
+      if (!result?.success) {
+        Alert.alert("Error", result?.error || "Registration failed");
+        return;
+      }
+
+      Alert.alert(
+        "Success 🎉",
+        "Account created successfully",
+        [
+          {
+            text: "Continue",
+            onPress: () => router.replace("/(tabs)")
+          }
+        ]
+      );
+
+    } catch (e) {
+      Alert.alert("Error", "Something went wrong. Please try again.");
     }
-    //router.replace("/");
-  }
+  };
+
 
 
   return (
@@ -60,7 +85,7 @@ export default function Signup() {
                   placeholder="johndoe123"
                   placeholderTextColor={COLORS.placeholderText}
                   value={username}
-                  onChangeText={setUsername}
+                  onChangeText={(text) => setUsername(text.toLowerCase())}
                   keyboardType="default"
                   autoCapitalize="none"
                 />
@@ -83,7 +108,7 @@ export default function Signup() {
                   placeholder="johndoe@gmail.com"
                   placeholderTextColor={COLORS.placeholderText}
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(text) => setEmail(text.toLowerCase())}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
@@ -143,7 +168,7 @@ export default function Signup() {
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account?</Text>
 
-              <TouchableOpacity onPress={() => router.replace('/')}>
+              <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
                 <Text style={styles.link}>Login</Text>
               </TouchableOpacity>
 

@@ -11,16 +11,31 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { user, isLoading, login } = useAuthStore();
+  const { isLoading, login, isCheckingAuth } = useAuthStore();
   const router = useRouter();
 
   const handleLogin = async () => {
-    const result = await login(email, password);
-    if (!result.success) {
-      Alert.alert("Error", result.error);
-      return;
+    try {
+      if (!email || !password) {
+        return Alert.alert("Error", "Email and password required");
+      }
+
+      const result = await login(email.trim().toLowerCase(), password);
+
+      if (!result?.success) {
+        Alert.alert("Error", result?.error || "Login failed");
+        return;
+      }
+
+      // optional success alert
+      Alert.alert("Success", "Welcome back! 😊");
+
+    } catch (e) {
+      Alert.alert("Error", "Something went wrong. Please try again.");
     }
-  }
+  };
+
+  if (isCheckingAuth) return null;
 
   return (
     <KeyboardAvoidingView
@@ -58,7 +73,7 @@ export default function Login() {
                   placeholder="Enter your email"
                   placeholderTextColor={COLORS.placeholderText}
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(text) => setEmail(text.toLowerCase())}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />

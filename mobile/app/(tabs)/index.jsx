@@ -9,6 +9,9 @@ import COLORS from '../../constants/colors';
 import { formatPublishDate } from '../../lib/utils';
 import Loader from '../../components/Loader';
 
+export const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+
 export default function Home() {
 
   const { token } = useAuthStore();
@@ -18,7 +21,6 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
   const fetchBooks = async (pageNum = 1, refresh = false) => {
     try {

@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {API_URL} from "../constants/api";
+import { API_URL } from "../constants/api";
 
 export const useAuthStore = create((set, get) => ({
     user: null,
     token: null,
     isLoading: false,
+    isCheckingAuth: true,
 
     register: async (email, username, password) => {
         set({ isLoading: true });
@@ -40,7 +41,6 @@ export const useAuthStore = create((set, get) => ({
     },
 
     checkAuth: async () => {
-        set({isLoading: true});
         try {
 
             const token = await AsyncStorage.getItem("token");
@@ -50,29 +50,29 @@ export const useAuthStore = create((set, get) => ({
             set({
                 token,
                 user,
-                isLoading:false            
             });
 
         } catch (error) {
             console.log("Auth check failed");
-            set({isLoading: false});
+        } finally {
+            set({ isCheckingAuth: false })
         }
     },
 
-    login: async(email, password) => {
-        set({isLoading: true})
+    login: async (email, password) => {
+        set({ isLoading: true })
         try {
             const res = await fetch(
                 `${API_URL}/api/auth/login`,
                 {
-                    method:"POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({email, password})
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password })
                 }
             )
 
             const data = await res.json();
-            if(!res.ok){
+            if (!res.ok) {
                 throw new Error(data.message || "Something went wrong in login")
             }
 
@@ -81,29 +81,29 @@ export const useAuthStore = create((set, get) => ({
 
             set({
                 token: data.token,
-                user:data.user,
-                isLoading:false
+                user: data.user,
+                isLoading: false
             })
 
-            return {success: true};
-            
+            return { success: true };
+
         } catch (error) {
-            set({isLoading: false});
-            return {success: false, error: error.message};
+            set({ isLoading: false });
+            return { success: false, error: error.message };
         }
     },
 
     logout: async () => {
         try {
-            set({isLoading: true})
+            set({ isLoading: true })
             await AsyncStorage.removeItem("token");
             await AsyncStorage.removeItem("user");
-            set({ token: null, user: null, isLoading:false });
+            set({ token: null, user: null, isLoading: false });
 
-            return {success: true};
+            return { success: true };
         } catch (error) {
-            set({isLoading: false});
-            return {success: false, error: "Logout failed"}
+            set({ isLoading: false });
+            return { success: false, error: "Logout failed" }
         }
     }
 }))
