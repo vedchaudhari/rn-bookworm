@@ -1,6 +1,17 @@
-import { Platform } from "react-native";
+import Constants from "expo-constants";
 
-export const API_URL =
-  Platform.OS === "android"
-    ? "http://10.0.2.2:3000"
-    : "http://localhost:3000";
+const localhost = Constants.expoConfig?.hostUri?.split(":")[0];
+
+export const API_URL = `http://${localhost}:3000`;
+
+
+// import * as Device from "expo-device";
+
+// export const API_URL =
+//   Platform.OS === "android"
+//     ? Device.isDevice
+//         ? "http://192.168.29.xxx:3000"   // real Android
+//         : "http://10.0.2.2:3000"         // emulator
+//     : Device.isDevice
+//         ? "http://192.168.29.xxx:3000"   // real iPhone
+//         : "http://localhost:3000";       // iOS simulator

@@ -144,7 +144,7 @@ export default function Profile() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await sleep(800);
+    await sleep(100);
     await fetchData();
     setRefreshing(false);
   }

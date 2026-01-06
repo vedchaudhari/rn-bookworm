@@ -56,7 +56,7 @@ export default function Home() {
       console.log("Error fetching books:", error);
     } finally {
       if (refresh) {
-        await sleep(800);
+        await sleep(100);
         setRefreshing(false)
       }
       else setLoading(false)

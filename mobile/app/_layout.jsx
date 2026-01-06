@@ -1,4 +1,4 @@
-import { SplashScreen, Stack, useRouter, useSegments } from "expo-router";
+import { SplashScreen, Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import SafeScreen from "../components/SafeScreen";
 import { StatusBar } from "expo-status-bar";
@@ -12,6 +12,7 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
+  const navigationState = useRootNavigationState();
   const { checkAuth, user, token, isCheckingAuth } = useAuthStore();
 
   const [fontsLoaded] = useFonts({
@@ -28,14 +29,14 @@ export default function RootLayout() {
 
   // handle navigation based on the auth state
   useEffect(() => {
-    if (isCheckingAuth) return;
+    if (isCheckingAuth || !navigationState?.key) return;
 
     const inAuthScreen = segments[0] === "(auth)";
     const isSignedIn = user && token;
 
     if (!isSignedIn && !inAuthScreen) router.replace("/(auth)");
     else if (isSignedIn && inAuthScreen) router.replace("/(tabs)");
-  }, [user, token, segments, isCheckingAuth]);
+  }, [user, token, segments, isCheckingAuth, navigationState]);
 
   return (
     <SafeAreaProvider>

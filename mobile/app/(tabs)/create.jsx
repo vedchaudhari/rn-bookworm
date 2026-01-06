@@ -135,7 +135,7 @@ export default function CreateTab() {
     >
       <ScrollView contentContainerStyle={styles.container} style={styles.scrollViewStyle}>
         <View style={styles.card}>
-          {/*HEADER*/}
+          {/* HEADER */}
           <View style={styles.header}>
             <Text style={styles.title}>Add Book Recommendation</Text>
             <Text style={styles.subtitle}>Share your favorite reads with others</Text>
