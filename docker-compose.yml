@@ -1,0 +1,19 @@
+services:
+  backend:
+    build: ./backend
+    container_name: bookworm-backend
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./backend/.env
+
+  nginx:
+    image: nginx:latest
+    container_name: bookworm-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
