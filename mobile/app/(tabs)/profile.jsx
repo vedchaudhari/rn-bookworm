@@ -1,6 +1,6 @@
 import { View, Text, Alert, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native'
 import React, { useEffect, useState } from 'react'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { API_URL } from '../../constants/api';
 import { useAuthStore } from '../../store/authContext';
 import styles from "../../assets/styles/profile.styles";
@@ -47,9 +47,11 @@ export default function Profile() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchData();
+    }, [])
+  );
 
   const handleDeleteBook = async (bookId) => {
     try {

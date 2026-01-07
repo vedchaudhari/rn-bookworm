@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl } from 'react-native'
+import { useFocusEffect } from 'expo-router';
 import React, { useEffect, useState } from 'react'
 import { useAuthStore } from '../../store/authContext'
 import styles from "../../assets/styles/home.styles";
@@ -63,9 +64,11 @@ export default function Home() {
     }
   }
 
-  useEffect(() => {
-    fetchBooks();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchBooks();
+    }, [])
+  );
 
   const handleLoadMore = async () => {
     if (hasMore && !loading && !refreshing) {
