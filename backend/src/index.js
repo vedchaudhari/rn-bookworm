@@ -16,7 +16,7 @@ app.use(express.json({limit:"10mb"}));
 app.use(cors());
 
 app.get("/", (req, res) => {
-  res.send("Hello Bookworm!")
+  res.send("Hello Bookwoooorm!")
 })
 
 app.use("/api/auth", authRoutes);
