@@ -4,26 +4,23 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "backend/**"
-      - "docker-compose.yml"
-      - ".github/workflows/backend.yml"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd /home/ubuntu/bookworm-expo
+            cd /home/ubuntu/rn-bookworm
             git pull
             docker compose down
             docker compose up -d --build
