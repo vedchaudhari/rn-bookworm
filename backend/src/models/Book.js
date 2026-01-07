@@ -25,6 +25,18 @@ const bookSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    genre: {
+      type: String,
+      default: "General",
+    },
+    author: {
+      type: String,
+      default: "",
+    },
+    tags: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );

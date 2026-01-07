@@ -56,6 +56,11 @@ router.post("/register", async (req, res) => {
         username: user.username,
         email: user.email,
         profileImage: user.profileImage,
+        bio: user.bio,
+        level: user.level,
+        points: user.points,
+        currentStreak: user.currentStreak,
+        longestStreak: user.longestStreak,
         createdAt: user.createdAt,
       },
     });
@@ -71,8 +76,10 @@ router.post("/login", async (req, res) => {
 
     if (!email || !password) return res.status(400).json({ message: "All fields are required" });
 
-    // check if user exists
-    const user = await User.findOne({ email });
+    // check if user exists (by email OR username)
+    const user = await User.findOne({
+      $or: [{ email: email.toLowerCase() }, { username: email.toLowerCase() }]
+    });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
     // check if password is correct
@@ -88,6 +95,11 @@ router.post("/login", async (req, res) => {
         username: user.username,
         email: user.email,
         profileImage: user.profileImage,
+        bio: user.bio,
+        level: user.level,
+        points: user.points,
+        currentStreak: user.currentStreak,
+        longestStreak: user.longestStreak,
         createdAt: user.createdAt,
       },
     });

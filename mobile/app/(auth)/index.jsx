@@ -58,9 +58,8 @@ export default function Login() {
           {/*Form*/}
           <View style={styles.formContainer} >
 
-            {/*Email*/}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>Email or Username</Text>
               <View style={styles.inputContainer}>
                 <Ionicons
                   name="mail-outline"
@@ -70,8 +69,8 @@ export default function Login() {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your email"
-                  placeholderTextColor={COLORS.placeholderText}
+                  placeholder="Enter email or username"
+                  placeholderTextColor={COLORS.textMuted}
                   value={email}
                   onChangeText={(text) => setEmail(text.toLowerCase())}
                   keyboardType="email-address"
@@ -95,7 +94,7 @@ export default function Login() {
                 <TextInput
                   style={styles.input}
                   placeholder="Enter password"
-                  placeholderTextColor={COLORS.placeholderText}
+                  placeholderTextColor={COLORS.textMuted}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}

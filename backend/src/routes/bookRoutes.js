@@ -7,10 +7,10 @@ const router = express.Router();
 
 router.post("/", protectRoute, async (req, res) => {
   try {
-    const { title, caption, rating, image } = req.body;
+    const { title, caption, rating, image, genre, author, tags } = req.body;
 
     if (!image || !title || !caption || !rating) {
-      return res.status(400).json({ message: "Please provide all fields" });
+      return res.status(400).json({ message: "Please provide all required fields" });
     }
 
     // upload the image to cloudinary
@@ -24,9 +24,22 @@ router.post("/", protectRoute, async (req, res) => {
       rating,
       image: imageUrl,
       user: req.user._id,
+      genre: genre || "General",
+      author: author || "",
+      tags: tags || [],
     });
 
     await newBook.save();
+
+    // Check achievements after creating book
+    const { checkAchievements } = await import("../lib/achievementService.js");
+    const bookCount = await Book.countDocuments({ user: req.user._id });
+
+    if (bookCount === 1) await checkAchievements(req.user._id, "FIRST_POST");
+    if (bookCount === 5) await checkAchievements(req.user._id, "BOOK_LOVER_5");
+    if (bookCount === 10) await checkAchievements(req.user._id, "BOOK_LOVER_10");
+    if (bookCount === 25) await checkAchievements(req.user._id, "BOOK_LOVER_25");
+    if (bookCount === 50) await checkAchievements(req.user._id, "BOOK_LOVER_50");
 
     res.status(201).json(newBook);
   } catch (error) {
@@ -48,12 +61,31 @@ router.get("/", protectRoute, async (req, res) => {
       .sort({ createdAt: -1 }) // desc
       .skip(skip)
       .limit(limit)
-      .populate("user", "username profileImage");
+      .populate("user", "username profileImage level");
+
+    // Add like and comment counts
+    const { default: Like } = await import("../models/Like.js");
+    const { default: Comment } = await import("../models/Comment.js");
+
+    const booksWithCounts = await Promise.all(
+      books.map(async (book) => {
+        const likeCount = await Like.countDocuments({ book: book._id });
+        const commentCount = await Comment.countDocuments({ book: book._id });
+        const isLiked = await Like.findOne({ user: req.user._id, book: book._id });
+
+        return {
+          ...book.toObject(),
+          likeCount,
+          commentCount,
+          isLiked: !!isLiked,
+        };
+      })
+    );
 
     const totalBooks = await Book.countDocuments();
 
     res.send({
-      books,
+      books: booksWithCounts,
       currentPage: page,
       totalBooks,
       totalPages: Math.ceil(totalBooks / limit),

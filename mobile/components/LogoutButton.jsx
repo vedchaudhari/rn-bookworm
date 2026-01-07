@@ -1,7 +1,6 @@
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, StyleSheet } from 'react-native'
 import React from 'react'
 import { useAuthStore } from '../store/authContext'
-import styles from '../assets/styles/profile.styles';
 import { Ionicons } from "@expo/vector-icons"
 import COLORS from '../constants/colors';
 
@@ -11,31 +10,38 @@ export default function LogoutButton() {
     const confirmLogout = () => {
         Alert.alert(
             "Logout",
-            "Are you sure you want to logout",
+            "Are you sure you want to log out?",
             [
                 { text: "Cancel", style: "cancel" },
-                { text: "Logout", onPress: () => logout(), style: "destructive" },
+                { text: "Log Out", onPress: () => logout(), style: "destructive" },
             ]
         );
     };
 
     return (
-        <TouchableOpacity style={styles.logoutButton} onPress={confirmLogout} disabled={isLoading}>
+        <TouchableOpacity style={styles.button} onPress={confirmLogout} disabled={isLoading}>
             {isLoading ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <ActivityIndicator size="small" color={COLORS.white} />
-                    <Text style={styles.logoutText}>Logging out...</Text>
-                </View>
+                <ActivityIndicator size="small" color={COLORS.textSecondary} />
             ) : (
-                <>
-                    <Ionicons
-                        name="log-out-outline"
-                        size={20}
-                        color={COLORS.white}
-                    />
-                    <Text style={styles.logoutText}>Logout</Text>
-                </>
+                <Ionicons name="log-out-outline" size={22} color={COLORS.textSecondary} />
             )}
         </TouchableOpacity>
     )
 }
+
+const styles = StyleSheet.create({
+    button: {
+        position: 'absolute',
+        top: 20,
+        right: 20,
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: COLORS.surface,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.surfaceLight,
+        zIndex: 100,
+    },
+});

@@ -83,7 +83,7 @@ export default function Signup() {
                 <TextInput
                   style={styles.input}
                   placeholder="johndoe123"
-                  placeholderTextColor={COLORS.placeholderText}
+                  placeholderTextColor={COLORS.textMuted}
                   value={username}
                   onChangeText={(text) => setUsername(text.toLowerCase())}
                   keyboardType="default"
@@ -106,7 +106,7 @@ export default function Signup() {
                 <TextInput
                   style={styles.input}
                   placeholder="johndoe@gmail.com"
-                  placeholderTextColor={COLORS.placeholderText}
+                  placeholderTextColor={COLORS.textMuted}
                   value={email}
                   onChangeText={(text) => setEmail(text.toLowerCase())}
                   keyboardType="email-address"
@@ -130,7 +130,7 @@ export default function Signup() {
                 <TextInput
                   style={styles.input}
                   placeholder="Enter password"
-                  placeholderTextColor={COLORS.placeholderText}
+                  placeholderTextColor={COLORS.textMuted}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}

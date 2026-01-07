@@ -15,6 +15,8 @@ export default function CreateTab() {
   const [image, setImage] = useState(null);
   const [imageBase64, setImageBase64] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [genre, setGenre] = useState("General");
+  const [author, setAuthor] = useState("");
 
   const { token } = useAuthStore();
 
@@ -82,6 +84,8 @@ export default function CreateTab() {
             caption,
             rating: rating.toString(),
             image: imageDataUrl,
+            genre,
+            author,
           }),
         }
       )
@@ -99,6 +103,8 @@ export default function CreateTab() {
       setRating(3);
       setImage(null);
       setImageBase64(null);
+      setGenre("General");
+      setAuthor("");
       router.push("/");
 
     } catch (error) {
@@ -154,9 +160,49 @@ export default function CreateTab() {
               <TextInput
                 style={styles.input}
                 placeholder='Enter book title'
-                placeholderTextColor={COLORS.placeholderText}
+                placeholderTextColor={COLORS.textSecondary}
                 value={title}
                 onChangeText={setTitle}
+              />
+            </View>
+          </View>
+
+          {/*Author*/}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Author</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color={COLORS.textSecondary}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder='Enter author name'
+                placeholderTextColor={COLORS.textSecondary}
+                value={author}
+                onChangeText={setAuthor}
+              />
+            </View>
+          </View>
+
+          {/*Genre*/}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Genre</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons
+                name="library-outline"
+                size={20}
+                color={COLORS.textSecondary}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder='Enter genre (e.g., Fiction, Mystery)'
+                placeholderTextColor={COLORS.textSecondary}
+                value={genre}
+                onChangeText={setGenre}
               />
             </View>
           </View>
