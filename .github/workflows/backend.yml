@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "backend/**"
+      - "nginx/**"
+      - "docker-compose.yml"
+      - ".github/workflows/backend.yml"
 
 jobs:
   deploy:
