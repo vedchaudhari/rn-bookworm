@@ -44,8 +44,12 @@ export const useMessageStore = create((set, get) => ({
                 });
             } else {
                 const existing = messages[userId] || [];
+                // Prevent duplicates when merging
+                const existingIds = new Set(existing.map(m => m._id));
+                const newMessages = data.messages.filter(m => !existingIds.has(m._id));
+
                 set({
-                    messages: { ...messages, [userId]: [...data.messages, ...existing] },
+                    messages: { ...messages, [userId]: [...newMessages, ...existing] },
                 });
             }
 
@@ -74,9 +78,13 @@ export const useMessageStore = create((set, get) => ({
             // Add message to local state
             const { messages } = get();
             const userMessages = messages[receiverId] || [];
-            set({
-                messages: { ...messages, [receiverId]: [...userMessages, data] },
-            });
+
+            // Check if message already exists (prevent duplicates)
+            if (!userMessages.some(m => m._id === data._id)) {
+                set({
+                    messages: { ...messages, [receiverId]: [...userMessages, data] },
+                });
+            }
 
             return { success: true, message: data };
         } catch (error) {
@@ -91,9 +99,13 @@ export const useMessageStore = create((set, get) => ({
         const senderId = message.sender._id || message.sender;
 
         const userMessages = messages[senderId] || [];
-        set({
-            messages: { ...messages, [senderId]: [...userMessages, message] },
-        });
+
+        // Prevent duplicates
+        if (!userMessages.some(m => m._id === message._id)) {
+            set({
+                messages: { ...messages, [senderId]: [...userMessages, message] },
+            });
+        }
 
         // Update unread count if not in active conversation
         if (activeConversation !== senderId) {

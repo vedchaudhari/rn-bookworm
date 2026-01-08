@@ -1,5 +1,6 @@
 import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -125,6 +126,8 @@ export default function ChatScreen() {
         );
     };
 
+    const insets = useSafeAreaInsets();
+
     return (
         <>
             <Stack.Screen
@@ -136,52 +139,56 @@ export default function ChatScreen() {
                     headerShadowVisible: false,
                 }}
             />
-            <KeyboardAvoidingView
-                style={styles.container}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={90}
-            >
-                <FlatList
-                    ref={flatListRef}
-                    data={conversationMessages}
-                    renderItem={renderMessage}
-                    keyExtractor={(item, index) => item._id || index.toString()}
-                    contentContainerStyle={styles.messagesList}
-                    onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
-                    ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <Text style={styles.emptyText}>Start the conversation!</Text>
-                        </View>
-                    }
-                />
-
-                <GlassCard style={styles.inputContainer} variant="light">
-                    <TouchableOpacity onPress={handlePickImage} style={styles.iconButton}>
-                        <Ionicons name="images-outline" size={24} color={COLORS.primary} />
-                    </TouchableOpacity>
-
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Message..."
-                        placeholderTextColor={COLORS.textMuted}
-                        value={messageText}
-                        onChangeText={setMessageText}
-                        multiline
-                        maxLength={1000}
+            <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+                <KeyboardAvoidingView
+                    style={styles.keyboardContainer}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+                >
+                    <FlatList
+                        ref={flatListRef}
+                        data={conversationMessages}
+                        renderItem={renderMessage}
+                        keyExtractor={(item, index) => item._id || index.toString()}
+                        contentContainerStyle={styles.messagesList}
+                        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                <Text style={styles.emptyText}>Start the conversation!</Text>
+                            </View>
+                        }
                     />
-                    <TouchableOpacity
-                        onPress={handleSend}
-                        disabled={!messageText.trim() || sending}
-                        style={[styles.sendButton, (!messageText.trim() || sending) && styles.sendButtonDisabled]}
-                    >
-                        {sending ? (
-                            <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                            <Ionicons name="arrow-up" size={20} color="#fff" />
-                        )}
-                    </TouchableOpacity>
-                </GlassCard>
-            </KeyboardAvoidingView>
+
+                    <View style={styles.inputWrapper}>
+                        <GlassCard style={styles.inputContainer} variant="light">
+                            <TouchableOpacity onPress={handlePickImage} style={styles.iconButton}>
+                                <Ionicons name="images-outline" size={24} color={COLORS.primary} />
+                            </TouchableOpacity>
+
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Message..."
+                                placeholderTextColor={COLORS.textMuted}
+                                value={messageText}
+                                onChangeText={setMessageText}
+                                multiline
+                                maxLength={1000}
+                            />
+                            <TouchableOpacity
+                                onPress={handleSend}
+                                disabled={!messageText.trim() || sending}
+                                style={[styles.sendButton, (!messageText.trim() || sending) && styles.sendButtonDisabled]}
+                            >
+                                {sending ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                    <Ionicons name="arrow-up" size={20} color="#fff" />
+                                )}
+                            </TouchableOpacity>
+                        </GlassCard>
+                    </View>
+                </KeyboardAvoidingView>
+            </View>
         </>
     );
 }
@@ -261,13 +268,20 @@ const styles = {
     theirTime: {
         color: COLORS.textMuted,
     },
+    keyboardContainer: {
+        flex: 1,
+    },
+    inputWrapper: {
+        paddingHorizontal: 16,
+        paddingBottom: 8,
+        paddingTop: 8,
+    },
     inputContainer: {
         flexDirection: 'row',
-        padding: 12,
-        marginHorizontal: 16,
-        marginBottom: 8, // slight margin from keyboard
+        padding: 8,
         gap: 12,
         alignItems: 'flex-end',
+        borderRadius: 25,
         // GlassCard handles bg
     },
     input: {

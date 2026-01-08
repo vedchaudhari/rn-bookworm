@@ -25,6 +25,7 @@ const httpServer = createServer(app);
 
 // Setup Socket.IO
 const io = new Server(httpServer, {
+  maxHttpBufferSize: 5e7, // 50MB
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
@@ -60,7 +61,7 @@ app.set("io", io);
 app.set("connectedUsers", connectedUsers);
 
 // job.start();
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "50mb" }));
 app.use(cors());
 
 app.get("/", (req, res) => {

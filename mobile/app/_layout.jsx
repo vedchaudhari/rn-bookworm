@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 
 import { useAuthStore } from "../store/authContext";
+import { useNotificationStore } from '../store/notificationStore';
 import { useEffect } from "react";
 
 SplashScreen.preventAutoHideAsync();
@@ -37,6 +38,19 @@ export default function RootLayout() {
     if (!isSignedIn && !inAuthScreen) router.replace("/(auth)");
     else if (isSignedIn && inAuthScreen) router.replace("/(tabs)");
   }, [user, token, segments, isCheckingAuth, navigationState]);
+
+  // Connect socket when user is logged in
+  const { connect, disconnect } = useNotificationStore();
+
+  useEffect(() => {
+    if (user && token) {
+      connect(user.id);
+    } else {
+      disconnect();
+    }
+
+    return () => disconnect();
+  }, [user, token]);
 
   return (
     <SafeAreaProvider>
