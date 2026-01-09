@@ -34,8 +34,10 @@ router.get("/search", protectRoute, async (req, res) => {
         const { q } = req.query;
         if (!q) return res.json({ users: [] });
 
+        const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
         const users = await User.find({
-            username: { $regex: q, $options: "i" },
+            username: { $regex: escaped, $options: "i" },
             _id: { $ne: req.user._id } // exclude self
         }).select("username profileImage level bio");
 

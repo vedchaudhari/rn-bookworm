@@ -17,12 +17,15 @@ router.get("/search", protectRoute, async (req, res) => {
     try {
         const { q, genre, rating, page, limit } = req.query;
 
+        // Escape regex special characters
+        const searchQuery = q ? q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
+
         const filters = {};
         if (genre) filters.genre = genre;
         if (rating) filters.rating = rating;
 
         const result = await searchBooks(
-            q || "",
+            searchQuery,
             filters,
             parseInt(page) || 1,
             parseInt(limit) || 10

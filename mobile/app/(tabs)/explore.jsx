@@ -72,9 +72,13 @@ export default function Explore() {
 
         try {
             if (searchType === 'books') {
-                const res = await fetch(`${API_URL}/api/books/search?q=${query}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const res = await fetch(
+                    `${API_URL}/api/discovery/search?q=${encodeURIComponent(query)}`,
+                    {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }
+                );
+
 
                 if (!res.ok) {
                     console.error('Book search failed:', res.status, res.statusText);
@@ -85,9 +89,12 @@ export default function Explore() {
                 const data = await res.json();
                 setBooks(data.books || []);
             } else {
-                const res = await fetch(`${API_URL}/api/users/search?q=${query}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const res = await fetch(
+                    `${API_URL}/api/users/search?q=${encodeURIComponent(query)}`,
+                    {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }
+                );
 
                 if (!res.ok) {
                     console.error('User search failed:', res.status, res.statusText);
