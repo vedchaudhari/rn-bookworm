@@ -72,15 +72,15 @@ export default function Notifications() {
     const getNotificationIcon = (type) => {
         switch (type) {
             case 'LIKE':
-                return { name: 'heart', color: '#ff4757' };
+                return { name: 'heart', color: COLORS.error };
             case 'COMMENT':
-                return { name: 'chatbubble', color: '#5352ed' };
+                return { name: 'chatbubble', color: COLORS.accent };
             case 'FOLLOW':
-                return { name: 'person-add', color: '#00d2d3' };
+                return { name: 'person-add', color: COLORS.accentLight };
             case 'ACHIEVEMENT':
-                return { name: 'trophy', color: '#f4b400' };
+                return { name: 'trophy', color: COLORS.gold };
             case 'GOAL_COMPLETED':
-                return { name: 'checkmark-circle', color: '#26de81' };
+                return { name: 'checkmark-circle', color: COLORS.success };
             default:
                 return { name: 'notifications', color: COLORS.primary };
         }

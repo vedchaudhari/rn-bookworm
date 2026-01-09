@@ -1,6 +1,7 @@
 import express from "express";
 import cloudinary from "../lib/cloudinary.js";
 import Book from "../models/Book.js";
+import Follow from "../models/Follow.js";
 import protectRoute from "../middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -92,6 +93,65 @@ router.get("/", protectRoute, async (req, res) => {
     });
   } catch (error) {
     console.log("Error in get all books route", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.get("/following", protectRoute, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // 1. Get the list of users followed by the current user
+    const following = await Follow.find({ follower: req.user._id }).select("following");
+    const followingIds = following.map((f) => f.following);
+
+    if (followingIds.length === 0) {
+      return res.send({
+        books: [],
+        currentPage: page,
+        totalBooks: 0,
+        totalPages: 0,
+      });
+    }
+
+    // 2. Find books created by those users
+    const books = await Book.find({ user: { $in: followingIds } })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("user", "username profileImage level");
+
+    // 3. Add like and comment counts
+    const { default: Like } = await import("../models/Like.js");
+    const { default: Comment } = await import("../models/Comment.js");
+
+    const booksWithCounts = await Promise.all(
+      books.map(async (book) => {
+        const likeCount = await Like.countDocuments({ book: book._id });
+        const commentCount = await Comment.countDocuments({ book: book._id });
+        const isLiked = await Like.findOne({ user: req.user._id, book: book._id });
+
+        return {
+          ...book.toObject(),
+          likeCount,
+          commentCount,
+          isLiked: !!isLiked,
+        };
+      })
+    );
+
+    const totalBooks = await Book.countDocuments({ user: { $in: followingIds } });
+
+    res.send({
+      books: booksWithCounts,
+      currentPage: page,
+      totalBooks,
+      totalPages: Math.ceil(totalBooks / limit),
+    });
+  } catch (error) {
+    console.log("Error in get following books route", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });

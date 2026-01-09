@@ -22,14 +22,19 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [activeTab, setActiveTab] = useState('all'); // 'all' or 'following'
   const router = useRouter();
 
-  const fetchBooks = async (pageNum = 1, refresh = false) => {
+  const fetchBooks = async (pageNum = 1, refresh = false, tab = activeTab) => {
     try {
       if (refresh) setRefreshing(true);
       else if (pageNum === 1) setLoading(true);
 
-      const response = await fetch(`${API_URL}/api/books?page=${pageNum}&limit=10`, {
+      const endpoint = tab === 'following'
+        ? `${API_URL}/api/books/following?page=${pageNum}&limit=10`
+        : `${API_URL}/api/books?page=${pageNum}&limit=10`;
+
+      const response = await fetch(endpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
         }
@@ -56,9 +61,16 @@ export default function Home() {
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchBooks();
-    }, [])
+      fetchBooks(1, false, activeTab);
+    }, [activeTab])
   );
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setBooks([]);
+    setPage(1);
+    fetchBooks(1, false, tab);
+  };
 
   const handleLoadMore = async () => {
     if (hasMore && !loading && !refreshing) {
@@ -74,7 +86,7 @@ export default function Home() {
           key={i}
           name={i <= rating ? "star" : "star-outline"}
           size={16}
-          color={i <= rating ? "#f4b400" : COLORS.textMuted}
+          color={i <= rating ? COLORS.gold : COLORS.textMuted}
           style={{ marginRight: 2 }}
         />
       );
@@ -165,6 +177,26 @@ export default function Home() {
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Feed</Text>
             <Text style={styles.headerSubtitle}>Curated stories for your shelf</Text>
+
+            {/* Tab Switcher */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+                onPress={() => handleTabChange('all')}
+              >
+                <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+                  All Books
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'following' && styles.activeTab]}
+                onPress={() => handleTabChange('following')}
+              >
+                <Text style={[styles.tabText, activeTab === 'following' && styles.activeTabText]}>
+                  Following
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         }
         ListFooterComponent={hasMore && books.length > 0 ? <ActivityIndicator style={styles.footerLoader} size="small" color={COLORS.primary} /> : null}

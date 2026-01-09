@@ -164,6 +164,32 @@ const styles = StyleSheet.create({
   footerLoader: {
     marginVertical: 40,
   },
+  tabContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 8,
+    marginBottom: 20,
+    gap: 12,
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  activeTab: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+  },
+  activeTabText: {
+    color: COLORS.white,
+  },
 });
 
 export default styles;

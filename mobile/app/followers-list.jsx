@@ -1,6 +1,6 @@
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import React, { useState, useEffect } from 'react';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
+import { useLocalSearchParams, Stack, useRouter, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import COLORS from '../constants/colors';
 import { useAuthStore } from '../store/authContext';
@@ -20,6 +20,13 @@ export default function FollowersListScreen() {
     useEffect(() => {
         fetchUsers();
     }, [userId, type]);
+
+    // Refresh on screen focus
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchUsers();
+        }, [userId, type])
+    );
 
     const fetchUsers = async () => {
         try {
@@ -62,7 +69,10 @@ export default function FollowersListScreen() {
                     <Text style={styles.levelText}>Level {item.level || 1}</Text>
                 </View>
             </View>
-            <FollowButton userId={item._id} />
+            <FollowButton
+                userId={item._id}
+                initialFollowing={item.isFollowing || false}
+            />
         </TouchableOpacity>
     );
 
@@ -124,7 +134,6 @@ const styles = {
         padding: 16,
         borderBottomWidth: 1,
         borderBottomColor: COLORS.border,
-        gap: 12,
     },
     avatar: {
         width: 56,
@@ -133,6 +142,7 @@ const styles = {
     },
     userInfo: {
         flex: 1,
+        marginHorizontal: 12,
     },
     username: {
         fontSize: 16,

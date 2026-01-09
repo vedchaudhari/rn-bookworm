@@ -1,46 +1,55 @@
 const COLORS = {
-  // Primary Brand
-  primary: "#6366F1", // Indigo 500
-  primaryDark: "#4338CA", // Indigo 700
-  primaryLight: "#818CF8", // Indigo 400
+  // Primary Brand - Warm Amber/Gold (Literary warmth, vintage book pages)
+  primary: "#D97706", // Rich Amber 600
+  primaryDark: "#B45309", // Amber 700
+  primaryLight: "#F59E0B", // Amber 500
 
-  // Secondary / Accent
-  accent: "#F59E0B", // Amber 500
-  accentLight: "#FCD34D", // Amber 300
+  // Secondary / Accent - Burgundy (Classic book bindings)
+  secondary: "#991B1B", // Red 800 - Deep Burgundy
+  secondaryLight: "#B91C1C", // Red 700
 
-  // Backgrounds & Surfaces
-  background: "#09090B", // Zinc 950 (Deepest Black)
-  surface: "#18181B", // Zinc 900
-  surfaceLight: "#27272A", // Zinc 800
-  surfaceHighlight: "#3F3F46", // Zinc 700
+  // Tertiary Accent - Sage/Teal (Modern, reading-friendly)
+  accent: "#14B8A6", // Teal 500
+  accentLight: "#2DD4BF", // Teal 400
+  accentDark: "#0F766E", // Teal 700
+
+  // Gold - For star ratings and achievements
+  gold: "#F59E0B", // Amber 500 - warm gold tone
+
+  // Backgrounds & Surfaces - Warmer blacks with brown undertones
+  background: "#0A0908", // Almost black with warm tone
+  surface: "#1C1816", // Dark brown-black
+  surfaceLight: "#2B2621", // Warm dark brown
+  surfaceHighlight: "#3D3631", // Medium warm brown
 
   // Text & Content
-  textPrimary: "#FAFAFA", // Zinc 50
-  textSecondary: "#A1A1AA", // Zinc 400
-  textMuted: "#71717A", // Zinc 500
-  textTertiary: "#52525B", // Zinc 600
+  textPrimary: "#FAF8F5", // Warm white (cream)
+  textSecondary: "#C9B8A3", // Warm beige/tan
+  textMuted: "#8A7968", // Muted brown
+  textTertiary: "#5C5144", // Dark warm brown
 
   // Status
   success: "#10B981", // Emerald 500
-  error: "#EF4444", // Red 500
+  error: "#DC2626", // Red 600
   warning: "#F59E0B", // Amber 500
-  info: "#3B82F6", // Blue 500
+  info: "#14B8A6", // Teal 500
 
   // Borders & Dividers
-  border: "#27272A", // Zinc 800
-  borderLight: "#3F3F46", // Zinc 700
+  border: "#2B2621", // Warm dark brown
+  borderLight: "#3D3631", // Medium warm brown
 
   // Specific UI
-  cardBg: "#18181B",
-  tabBarBg: "#09090B",
+  cardBg: "#1C1816",
+  tabBarBg: "#0A0908",
 
   white: "#FFFFFF",
   black: "#000000",
   transparent: "transparent",
 
-  // Effects
-  glass: "rgba(255, 255, 255, 0.05)",
-  glassBorder: "rgba(255, 255, 255, 0.08)",
+  // Effects - Warmer glass effects
+  glass: "rgba(217, 119, 6, 0.08)", // Warm amber tint
+  glassBorder: "rgba(217, 119, 6, 0.15)", // Warm amber border
+  glassHighlight: "rgba(250, 248, 245, 0.03)", // Subtle warm highlight
 };
 
 export default COLORS;

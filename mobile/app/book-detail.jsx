@@ -78,7 +78,7 @@ export default function BookDetailScreen() {
                     key={i}
                     name={i <= rating ? 'star' : 'star-outline'}
                     size={20}
-                    color="#f4b400"
+                    color={COLORS.gold}
                     style={{ marginRight: 4 }}
                 />
             );
@@ -166,7 +166,10 @@ export default function BookDetailScreen() {
 
                                 {book.user._id !== user.id && (
                                     <View style={styles.userActionsRow}>
-                                        <FollowButton userId={book.user._id} />
+                                        <FollowButton
+                                            userId={book.user._id}
+                                            initialFollowing={book.user.isFollowing || false}
+                                        />
                                         <TouchableOpacity onPress={handleMessageUser} style={styles.glassIconButton}>
                                             <Ionicons name="chatbubble-outline" size={18} color={COLORS.textPrimary} />
                                         </TouchableOpacity>
@@ -305,12 +308,12 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     genreBadgeCentered: {
-        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        backgroundColor: 'rgba(217, 119, 6, 0.15)',
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: 'rgba(99, 102, 241, 0.2)',
+        borderColor: 'rgba(217, 119, 6, 0.3)',
     },
     genreText: {
         fontSize: 12,
@@ -373,10 +376,10 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 12,
-        backgroundColor: COLORS.surfaceDark,
+        backgroundColor: COLORS.surface,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderColor: COLORS.surfaceLight,
     },
     statsRowLarge: {

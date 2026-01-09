@@ -23,11 +23,19 @@ export default function Profile() {
 
   const fetchData = async () => {
     try {
+      // Guard: ensure user is fully loaded before making requests
+      if (!currentUser?._id) {
+        console.log('User not fully loaded yet, skipping fetch');
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       const [booksRes, statsRes] = await Promise.all([
         fetch(`${API_URL}/api/books/user`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        fetch(`${API_URL}/api/social/follow-counts/${currentUser.id}`, {
+        fetch(`${API_URL}/api/social/follow-counts/${currentUser._id}`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
@@ -35,8 +43,10 @@ export default function Profile() {
       const booksData = await booksRes.json();
       const statsData = await statsRes.json();
 
+      console.log('Stats data received:', statsData);
+
       if (booksRes.ok) setBooks(booksData || []);
-      if (statsRes.ok) setStats(statsData);
+      if (statsRes.ok) setStats(statsData || { followers: 0, following: 0 });
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
@@ -102,24 +112,29 @@ export default function Profile() {
 
           {/* Stats Row */}
           <View style={styles.statsRow}>
-            <View style={styles.statBox}>
+            <TouchableOpacity
+              style={styles.statBox}
+              activeOpacity={0.7}
+            >
               <Text style={styles.statNumber}>{books.length}</Text>
               <Text style={styles.statLabel}>Posts</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.statDivider} />
             <TouchableOpacity
               style={styles.statBox}
-              onPress={() => router.push({ pathname: '/followers-list', params: { userId: currentUser.id, type: 'followers' } })}
+              onPress={() => router.push({ pathname: '/followers-list', params: { userId: currentUser._id, username: currentUser.username, type: 'followers' } })}
+              activeOpacity={0.7}
             >
-              <Text style={styles.statNumber}>{stats.followers}</Text>
+              <Text style={styles.statNumber}>{stats.followers ?? 0}</Text>
               <Text style={styles.statLabel}>Followers</Text>
             </TouchableOpacity>
             <View style={styles.statDivider} />
             <TouchableOpacity
               style={styles.statBox}
-              onPress={() => router.push({ pathname: '/followers-list', params: { userId: currentUser.id, type: 'following' } })}
+              onPress={() => router.push({ pathname: '/followers-list', params: { userId: currentUser._id, type: 'following' } })}
+              activeOpacity={0.7}
             >
-              <Text style={styles.statNumber}>{stats.following}</Text>
+              <Text style={styles.statNumber}>{stats.following ?? 0}</Text>
               <Text style={styles.statLabel}>Following</Text>
             </TouchableOpacity>
           </View>
@@ -234,14 +249,17 @@ const styles = {
     alignSelf: 'center',
   },
   statNumber: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: COLORS.textPrimary,
+    fontSize: 24,
+    fontWeight: '900',
+    color: COLORS.white,
+    textShadowColor: 'rgba(217, 119, 6, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     textTransform: 'uppercase',
     marginTop: 4,
     letterSpacing: 0.5,

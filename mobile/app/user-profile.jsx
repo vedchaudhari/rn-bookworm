@@ -199,12 +199,12 @@ export default function UserProfile() {
                 {/* Badges Row */}
                 <View style={styles.badgesRow}>
                     <View style={styles.levelBadge}>
-                        <Ionicons name="trophy" size={14} color="#f4b400" />
+                        <Ionicons name="trophy" size={14} color={COLORS.gold} />
                         <Text style={styles.levelText}>Level {user?.level || 1}</Text>
                     </View>
                     {user?.currentStreak > 0 && (
                         <View style={styles.streakBadge}>
-                            <Ionicons name="flame" size={14} color="#ff4757" />
+                            <Ionicons name="flame" size={14} color={COLORS.error} />
                             <Text style={styles.streakText}>{user.currentStreak} day streak</Text>
                         </View>
                     )}
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(244, 180, 0, 0.2)',
     },
     levelText: {
-        color: '#f4b400',
+        color: COLORS.gold,
         fontSize: 13,
         fontWeight: '800',
     },
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255, 71, 87, 0.2)',
     },
     streakText: {
-        color: '#ff4757',
+        color: COLORS.error,
         fontSize: 13,
         fontWeight: '800',
     },

@@ -5,16 +5,38 @@ import COLORS from '../constants/colors';
 import { useSocialStore } from '../store/socialStore';
 import { useAuthStore } from '../store/authContext';
 
-export default function FollowButton({ userId, initialFollowing = false, onFollowChange }) {
+export default function FollowButton({ userId, initialFollowing = false, onFollowChange, style = {}, compact = false }) {
     const [following, setFollowing] = useState(initialFollowing);
     const [isLoading, setIsLoading] = useState(false);
-    const { toggleFollow } = useSocialStore();
+    const { toggleFollow, followedUsers, checkFollowStatus } = useSocialStore();
     const { token } = useAuthStore();
     const scale = useSharedValue(1);
 
+    // Check follow status on mount
+    useEffect(() => {
+        const initFollowStatus = async () => {
+            const isFollowingUser = await checkFollowStatus(userId, token);
+            setFollowing(isFollowingUser);
+        };
+
+        // Only check if not already set from initial prop
+        if (!initialFollowing && !followedUsers.has(userId)) {
+            initFollowStatus();
+        }
+    }, [userId]);
+
+    // Sync with initial prop changes
     useEffect(() => {
         setFollowing(initialFollowing);
     }, [initialFollowing]);
+
+    // Sync with global store state
+    useEffect(() => {
+        const isFollowingInStore = followedUsers.has(userId);
+        if (isFollowingInStore !== following) {
+            setFollowing(isFollowingInStore);
+        }
+    }, [followedUsers, userId]);
 
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value }],
@@ -50,6 +72,8 @@ export default function FollowButton({ userId, initialFollowing = false, onFollo
             <Animated.View style={[
                 styles.button,
                 following ? styles.followingButton : styles.followButton,
+                compact && styles.compactButton,
+                style,
                 animatedStyle
             ]}>
                 {isLoading ? (
@@ -66,11 +90,12 @@ export default function FollowButton({ userId, initialFollowing = false, onFollo
 
 const styles = StyleSheet.create({
     wrapper: {
-        flex: 1,
+        minWidth: 100, // Ensure minimum width for text
     },
     button: {
-        height: 50,
-        borderRadius: 16,
+        height: 44,
+        paddingHorizontal: 20,
+        borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1.5,
@@ -78,24 +103,26 @@ const styles = StyleSheet.create({
     },
     followButton: {
         backgroundColor: COLORS.primary,
-        shadowColor: COLORS.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
+        borderColor: COLORS.primaryDark,
     },
     followingButton: {
-        backgroundColor: COLORS.surfaceHighlight,
-        borderColor: COLORS.border,
+        backgroundColor: COLORS.surface,
+        borderColor: COLORS.borderLight,
+    },
+    compactButton: {
+        height: 36,
+        paddingHorizontal: 16,
+        borderRadius: 10,
     },
     buttonText: {
-        fontWeight: '700',
+        fontWeight: '800',
         fontSize: 14,
+        letterSpacing: 0.3,
     },
     followText: {
         color: COLORS.white,
     },
     followingText: {
-        color: COLORS.textMuted,
+        color: COLORS.textSecondary,
     },
 });
