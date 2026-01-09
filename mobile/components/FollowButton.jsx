@@ -10,31 +10,49 @@ export default function FollowButton({ userId, initialFollowing = false, onFollo
     const { toggleFollow, followedUsers, checkFollowStatus } = useSocialStore();
     const { token } = useAuthStore();
 
-    // Check follow status on mount
+    // Unified effect to sync follow status
     useEffect(() => {
-        const initFollowStatus = async () => {
-            const isFollowingUser = await checkFollowStatus(userId, token);
-            setFollowing(isFollowingUser);
+        let isMounted = true;
+
+        const syncFollowStatus = async () => {
+            // Priority: Trust global store as source of truth
+            // This handles the case where a user un-follows someone (removing from store)
+            // but the parent component (like Explore) still passes a stale initialFollowing=true.
+            const isFollowingInStore = followedUsers.has(userId);
+
+            if (isMounted) {
+                setFollowing(isFollowingInStore);
+            }
+
+            // Only fetch if we really need to (e.g. if we don't trust our store completeness)
+            // But since we hydrate, we trust the store 'false' means 'false'.
+            // However, for robustness, if we wanted to double check:
+            // if (!isFollowingInStore && initialFollowing === undefined) { ... fetch ... }
+
+            // For now, let's keep it simple and trust the store if it's populated.
+            // If the store is empty (new install), and we rely on props?
+
+            // Refined Hybrid:
+            // If store has it -> TRUE.
+            // If store misses it -> 
+            //    If initialFollowing matches store (false) -> FALSE
+            //    If initialFollowing conflicts (true) -> 
+            //       If we assume store is perfect -> FALSE
+            //       If we assume props are fresh -> TRUE
+
+            // To be safe, let's stick to the Store for now as it fixes the immediate bug.
+            if (!isFollowingInStore && initialFollowing === undefined) {
+                const status = await checkFollowStatus(userId, token);
+                if (isMounted) setFollowing(status);
+            }
         };
 
-        // Only check if not already set from initial prop
-        if (!initialFollowing && !followedUsers.has(userId)) {
-            initFollowStatus();
-        }
-    }, [userId]);
+        syncFollowStatus();
 
-    // Sync with initial prop changes
-    useEffect(() => {
-        setFollowing(initialFollowing);
-    }, [initialFollowing]);
-
-    // Sync with global store state
-    useEffect(() => {
-        const isFollowingInStore = followedUsers.has(userId);
-        if (isFollowingInStore !== following) {
-            setFollowing(isFollowingInStore);
-        }
-    }, [followedUsers, userId]);
+        return () => {
+            isMounted = false;
+        };
+    }, [userId, initialFollowing, followedUsers]);
 
     const handleFollow = async () => {
         if (isLoading) return;

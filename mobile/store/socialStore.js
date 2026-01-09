@@ -1,10 +1,54 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../constants/api';
+
+// Helper functions to serialize/deserialize Sets
+const serializeSet = (set) => JSON.stringify([...set]);
+const deserializeSet = (str) => {
+    try {
+        return new Set(JSON.parse(str));
+    } catch {
+        return new Set();
+    }
+};
 
 export const useSocialStore = create((set, get) => ({
     // State
     likedBooks: new Set(),
     followedUsers: new Set(),
+    isHydrated: false,
+
+    // Hydrate state from AsyncStorage
+    hydrate: async () => {
+        try {
+            const [likedBooksStr, followedUsersStr] = await Promise.all([
+                AsyncStorage.getItem('likedBooks'),
+                AsyncStorage.getItem('followedUsers')
+            ]);
+
+            set({
+                likedBooks: likedBooksStr ? deserializeSet(likedBooksStr) : new Set(),
+                followedUsers: followedUsersStr ? deserializeSet(followedUsersStr) : new Set(),
+                isHydrated: true
+            });
+        } catch (error) {
+            console.error('Error hydrating social store:', error);
+            set({ isHydrated: true });
+        }
+    },
+
+    // Persist to AsyncStorage
+    persist: async () => {
+        try {
+            const { likedBooks, followedUsers } = get();
+            await Promise.all([
+                AsyncStorage.setItem('likedBooks', serializeSet(likedBooks)),
+                AsyncStorage.setItem('followedUsers', serializeSet(followedUsers))
+            ]);
+        } catch (error) {
+            console.error('Error persisting social store:', error);
+        }
+    },
 
     // Like actions
     toggleLike: async (bookId, token) => {
@@ -30,6 +74,7 @@ export const useSocialStore = create((set, get) => ({
             }
 
             set({ likedBooks: newLikedBooks });
+            get().persist(); // Persist changes
             return { success: true, liked: data.liked };
         } catch (error) {
             console.error('Error toggling like:', error);
@@ -53,6 +98,7 @@ export const useSocialStore = create((set, get) => ({
                 const newLikedBooks = new Set(likedBooks);
                 newLikedBooks.add(bookId);
                 set({ likedBooks: newLikedBooks });
+                get().persist(); // Persist changes
             }
 
             return data.liked;
@@ -86,6 +132,7 @@ export const useSocialStore = create((set, get) => ({
             }
 
             set({ followedUsers: newFollowedUsers });
+            get().persist(); // Persist changes
             return { success: true, following: data.following };
         } catch (error) {
             console.error('Error toggling follow:', error);
@@ -109,6 +156,7 @@ export const useSocialStore = create((set, get) => ({
                 const newFollowedUsers = new Set(followedUsers);
                 newFollowedUsers.add(userId);
                 set({ followedUsers: newFollowedUsers });
+                get().persist(); // Persist changes
             }
 
             return data.following;
@@ -160,10 +208,15 @@ export const useSocialStore = create((set, get) => ({
     },
 
     // Reset store
-    reset: () => {
+    reset: async () => {
         set({
             likedBooks: new Set(),
             followedUsers: new Set(),
         });
+        try {
+            await AsyncStorage.multiRemove(['likedBooks', 'followedUsers']);
+        } catch (error) {
+            console.error('Error clearing social store:', error);
+        }
     },
 }));

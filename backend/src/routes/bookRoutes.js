@@ -167,6 +167,18 @@ router.get("/user", protectRoute, async (req, res) => {
   }
 });
 
+// get books by a specific user (public profile)
+router.get("/user/:userId", protectRoute, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const books = await Book.find({ user: userId }).sort({ createdAt: -1 });
+    res.json(books);
+  } catch (error) {
+    console.error("Get specific user books error:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 router.delete("/:id", protectRoute, async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import COLORS from '../constants/colors';
 import { API_URL } from '../constants/api';
 import { useAuthStore } from '../store/authContext';
@@ -24,9 +25,11 @@ export default function UserProfile() {
     const [stats, setStats] = useState({ followers: 0, following: 0 });
     const [isFollowing, setIsFollowing] = useState(false);
 
-    const isOwnProfile = currentUser?._id === userId;
+    const isOwnProfile = (currentUser?._id || currentUser?.id) === userId;
 
     const fetchData = async () => {
+        if (!userId || !token) return;
+
         try {
             const [userRes, booksRes] = await Promise.all([
                 fetch(`${API_URL}/api/users/${userId}`, {
@@ -37,21 +40,25 @@ export default function UserProfile() {
                 })
             ]);
 
-            const userData = await userRes.json();
-            const booksData = await booksRes.json();
-
             if (userRes.ok) {
+                const userData = await userRes.json();
                 setUser(userData.user);
                 setStats({
                     followers: userData.user.followersCount || 0,
                     following: userData.user.followingCount || 0
                 });
                 setIsFollowing(userData.isFollowing || false);
+            } else {
+                console.error("User fetch failed:", userRes.status);
             }
 
             if (booksRes.ok) {
-                setBooks(booksData.books || []);
+                const booksData = await booksRes.json();
+                setBooks(Array.isArray(booksData) ? booksData : []);
+            } else {
+                console.error("Books fetch failed:", booksRes.status);
             }
+
         } catch (error) {
             console.error('Error fetching profile:', error);
         } finally {
@@ -59,6 +66,8 @@ export default function UserProfile() {
             setRefreshing(false);
         }
     };
+
+
 
     const handleUpdateProfileImage = async () => {
         try {
@@ -73,12 +82,8 @@ export default function UserProfile() {
             if (!result.canceled && result.assets[0].base64) {
                 const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
 
-                // Optimistic update
                 setUser(prev => ({ ...prev, profileImage: base64Img }));
 
-                // Find and use the correct endpoint or create one. 
-                // Since I haven't seen specific user update route, I'll assume/create one in authRoutes or similar.
-                // For now, I will use a hypothetical endpoint and fix backend next.
                 const response = await fetch(`${API_URL}/api/users/update-profile-image`, {
                     method: 'PUT',
                     headers: {
@@ -90,17 +95,17 @@ export default function UserProfile() {
 
                 if (!response.ok) {
                     Alert.alert('Error', 'Failed to update profile image');
-                    fetchData(); // Revert
+                    fetchData();
                 }
             }
-        } catch (error) {
+        } catch {
             Alert.alert('Error', 'Failed to pick image');
         }
     };
 
     useEffect(() => {
         fetchData();
-    }, [userId]);
+    }, [userId, token]);
 
     const handleRefresh = () => {
         setRefreshing(true);
@@ -152,17 +157,18 @@ export default function UserProfile() {
                     headerShadowVisible: false,
                 }}
             />
+
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[COLORS.primary]} />
                 }
             >
-                {/* Profile Header Centered */}
+                {/* Profile Header */}
                 <View style={styles.profileHeaderCentered}>
                     <TouchableOpacity
                         style={styles.avatarWrapper}
-                        onPress={isOwnProfile ? handleUpdateProfileImage : null}
+                        onPress={isOwnProfile ? handleUpdateProfileImage : undefined}
                         activeOpacity={isOwnProfile ? 0.7 : 1}
                     >
                         <Image source={{ uri: user?.profileImage }} style={styles.avatarLarge} />
@@ -178,7 +184,7 @@ export default function UserProfile() {
                     {user?.bio && <Text style={styles.bioCentered}>{user.bio}</Text>}
                 </View>
 
-                {/* Stats Row */}
+                {/* Stats */}
                 <GlassCard style={styles.statsRow}>
                     <View style={styles.statBox}>
                         <Text style={styles.statNumber}>{books.length}</Text>
@@ -186,17 +192,17 @@ export default function UserProfile() {
                     </View>
                     <View style={styles.statDivider} />
                     <TouchableOpacity style={styles.statBox} onPress={handleFollowersPress}>
-                        <Text style={styles.statNumber}>{stats.followers ?? 0}</Text>
+                        <Text style={styles.statNumber}>{stats.followers}</Text>
                         <Text style={styles.statLabel}>Followers</Text>
                     </TouchableOpacity>
                     <View style={styles.statDivider} />
                     <TouchableOpacity style={styles.statBox} onPress={handleFollowingPress}>
-                        <Text style={styles.statNumber}>{stats.following ?? 0}</Text>
+                        <Text style={styles.statNumber}>{stats.following}</Text>
                         <Text style={styles.statLabel}>Following</Text>
                     </TouchableOpacity>
                 </GlassCard>
 
-                {/* Badges Row */}
+                {/* Badges */}
                 <View style={styles.badgesRow}>
                     <View style={styles.levelBadge}>
                         <Ionicons name="trophy" size={14} color={COLORS.gold} />
@@ -214,7 +220,7 @@ export default function UserProfile() {
                 {!isOwnProfile && (
                     <View style={styles.actionButtonsCentered}>
                         <FollowButton
-                            userId={userId}
+                            userId={String(userId)}
                             initialFollowing={isFollowing}
                             onFollowChange={(following) => {
                                 setIsFollowing(following);
@@ -231,7 +237,7 @@ export default function UserProfile() {
                     </View>
                 )}
 
-                {/* Books Grid */}
+                {/* Books */}
                 <View style={styles.booksHeader}>
                     <Text style={styles.sectionTitle}>Bookshelf</Text>
                 </View>
@@ -255,6 +261,7 @@ export default function UserProfile() {
         </View>
     );
 }
+
 
 const styles = StyleSheet.create({
     container: {
@@ -290,7 +297,6 @@ const styles = StyleSheet.create({
         height: 16,
         borderRadius: 8,
         backgroundColor: COLORS.success,
-        borderWidth: 3,
         borderWidth: 3,
         borderColor: COLORS.background,
     },

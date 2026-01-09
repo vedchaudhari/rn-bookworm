@@ -97,6 +97,38 @@ export const useAuthStore = create((set, get) => ({
         }
     },
 
+    // Refresh user data from storage
+    refreshUser: async () => {
+        try {
+            const userJson = await AsyncStorage.getItem("user");
+            if (userJson) {
+                const user = JSON.parse(userJson);
+                set({ user });
+                return { success: true, user };
+            }
+            return { success: false, error: "No user data found" };
+        } catch (error) {
+            console.error("Error refreshing user:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Update user data in both state and storage
+    updateUser: async (userData) => {
+        try {
+            const currentUser = get().user;
+            const updatedUser = { ...currentUser, ...userData };
+
+            await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+            set({ user: updatedUser });
+
+            return { success: true };
+        } catch (error) {
+            console.error("Error updating user:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
     logout: async () => {
         try {
             set({ isLoading: true })

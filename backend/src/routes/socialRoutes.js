@@ -68,17 +68,22 @@ router.get("/likes/:bookId", protectRoute, async (req, res) => {
             .skip(skip)
             .limit(limit);
 
+        // Filter out null users (in case user was deleted)
+        const validLikes = likes
+            .filter(like => like.user != null)
+            .map((like) => like.user);
+
         const totalLikes = await Like.countDocuments({ book: bookId });
 
         res.json({
-            likes: likes.map((like) => like.user),
+            likes: validLikes,
             currentPage: page,
             totalLikes,
             totalPages: Math.ceil(totalLikes / limit),
         });
     } catch (error) {
         console.error("Error fetching likes:", error);
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: "Internal server error", error: error.message });
     }
 });
 
@@ -260,17 +265,22 @@ router.get("/followers/:userId", protectRoute, async (req, res) => {
             .skip(skip)
             .limit(limit);
 
+        // Filter out null followers (in case user was deleted)
+        const validFollowers = followers
+            .filter(f => f.follower != null)
+            .map((f) => f.follower);
+
         const totalFollowers = await Follow.countDocuments({ following: userId });
 
         res.json({
-            followers: followers.map((f) => f.follower),
+            followers: validFollowers,
             currentPage: page,
             totalFollowers,
             totalPages: Math.ceil(totalFollowers / limit),
         });
     } catch (error) {
         console.error("Error fetching followers:", error);
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: "Internal server error", error: error.message });
     }
 });
 
@@ -288,17 +298,22 @@ router.get("/following/:userId", protectRoute, async (req, res) => {
             .skip(skip)
             .limit(limit);
 
+        // Filter out null following (in case user was deleted)
+        const validFollowing = following
+            .filter(f => f.following != null)
+            .map((f) => f.following);
+
         const totalFollowing = await Follow.countDocuments({ follower: userId });
 
         res.json({
-            following: following.map((f) => f.following),
+            following: validFollowing,
             currentPage: page,
             totalFollowing,
             totalPages: Math.ceil(totalFollowing / limit),
         });
     } catch (error) {
         console.error("Error fetching following:", error);
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: "Internal server error", error: error.message });
     }
 });
 

@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 
 import { useAuthStore } from "../store/authContext";
+import { useSocialStore } from "../store/socialStore";
 import { useNotificationStore } from '../store/notificationStore';
 import { useEffect } from "react";
 
@@ -15,6 +16,7 @@ export default function RootLayout() {
   const segments = useSegments();
   const navigationState = useRootNavigationState();
   const { checkAuth, user, token, isCheckingAuth } = useAuthStore();
+  const { hydrate } = useSocialStore();
 
   const [fontsLoaded] = useFonts({
     "JetBrainsMono-Medium": require("../assets/fonts/JetBrainsMono-Medium.ttf"),
@@ -26,6 +28,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     checkAuth();
+    hydrate(); // Load persisted social state
   }, []);
 
   // handle navigation based on the auth state

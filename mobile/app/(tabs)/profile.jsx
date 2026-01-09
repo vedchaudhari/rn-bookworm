@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl, Dimensions, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl, Dimensions } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,43 +13,47 @@ const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = width / 3;
 
 export default function Profile() {
-  const { user: currentUser, token } = useAuthStore();
+  const { user: currentUser, token, isCheckingAuth } = useAuthStore();
   const router = useRouter();
 
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
   const [stats, setStats] = useState({ followers: 0, following: 0 });
-  const [activeView, setActiveView] = useState('posts'); // 'posts', 'followers', 'following'
+  const [activeView, setActiveView] = useState('posts');
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
+  useEffect(() => {
+    // console.log("Current user:", currentUser?._id);
+  }, [currentUser]);
+
   const fetchData = async () => {
+    // Standardize on _id
+    const userId = currentUser?._id || currentUser?.id;
+
+    if (!userId || !token) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Guard: ensure user is fully loaded before making requests
-      if (!currentUser?._id) {
-        console.log('User not fully loaded yet, skipping fetch');
-        setLoading(false);
-        setRefreshing(false);
-        return;
-      }
+      if (!refreshing) setLoading(true);
 
       const [booksRes, statsRes] = await Promise.all([
         fetch(`${API_URL}/api/books/user`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        fetch(`${API_URL}/api/social/follow-counts/${currentUser._id}`, {
+        fetch(`${API_URL}/api/social/follow-counts/${userId}`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
 
-      // Check response status before parsing
       if (booksRes.ok) {
         const booksData = await booksRes.json();
         setBooks(booksData || []);
-      } else {
-        console.error('Books fetch failed:', booksRes.status);
       }
 
       if (statsRes.ok) {
@@ -58,11 +62,10 @@ export default function Profile() {
           followers: statsData.followersCount || 0,
           following: statsData.followingCount || 0
         });
-      } else {
-        console.error('Stats fetch failed:', statsRes.status);
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
+
+    } catch (err) {
+      console.error("Profile fetch error:", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -70,32 +73,36 @@ export default function Profile() {
   };
 
   const fetchFollowers = async () => {
-    if (!currentUser?._id) return;
+    const userId = currentUser?._id || currentUser?.id;
+    if (!userId) return;
+
     setLoadingUsers(true);
     try {
-      const res = await fetch(`${API_URL}/api/social/followers/${currentUser._id}`, {
+      const res = await fetch(`${API_URL}/api/social/followers/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
       if (res.ok) setFollowers(data.followers || []);
-    } catch (error) {
-      console.error('Error fetching followers:', error);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoadingUsers(false);
     }
   };
 
   const fetchFollowing = async () => {
-    if (!currentUser?._id) return;
+    const userId = currentUser?._id || currentUser?.id;
+    if (!userId) return;
+
     setLoadingUsers(true);
     try {
-      const res = await fetch(`${API_URL}/api/social/following/${currentUser._id}`, {
+      const res = await fetch(`${API_URL}/api/social/following/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
       if (res.ok) setFollowing(data.following || []);
-    } catch (error) {
-      console.error('Error fetching following:', error);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoadingUsers(false);
     }
@@ -103,51 +110,19 @@ export default function Profile() {
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchData();
-    }, [])
+      const userId = currentUser?._id || currentUser?.id;
+      if (userId && token) {
+        fetchData();
+      } else if (!isCheckingAuth && !currentUser) {
+        setLoading(false);
+      }
+    }, [currentUser, token, isCheckingAuth])
   );
 
   const handleStatClick = async (view) => {
     setActiveView(view);
-    if (view === 'followers') {
-      await fetchFollowers();
-      // Refresh stats to get updated count
-      if (currentUser?._id) {
-        try {
-          const res = await fetch(`${API_URL}/api/social/follow-counts/${currentUser._id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setStats({
-              followers: data.followersCount || 0,
-              following: data.followingCount || 0
-            });
-          }
-        } catch (error) {
-          console.error('Error refreshing stats:', error);
-        }
-      }
-    } else if (view === 'following') {
-      await fetchFollowing();
-      // Refresh stats to get updated count
-      if (currentUser?._id) {
-        try {
-          const res = await fetch(`${API_URL}/api/social/follow-counts/${currentUser._id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setStats({
-              followers: data.followersCount || 0,
-              following: data.followingCount || 0
-            });
-          }
-        } catch (error) {
-          console.error('Error refreshing stats:', error);
-        }
-      }
-    }
+    if (view === 'followers') fetchFollowers();
+    if (view === 'following') fetchFollowing();
   };
 
   const handleRefresh = () => {
@@ -160,19 +135,14 @@ export default function Profile() {
       style={styles.bookItem}
       onPress={() => router.push({ pathname: '/book-detail', params: { bookId: item._id } })}
     >
-      <Image
-        source={{ uri: item.image }}
-        style={styles.bookImage}
-        contentFit="cover"
-        transition={300}
-      />
+      <Image source={{ uri: item.image }} style={styles.bookImage} />
     </TouchableOpacity>
   );
 
   const renderUserStrip = ({ item }) => (
     <TouchableOpacity
       style={styles.userStripItem}
-      onPress={() => router.push({ pathname: '/user-profile', params: { userId: item._id } })}
+      onPress={() => router.push({ pathname: '/user-profile', params: { userId: item.id || item._id } })}
     >
       <Image source={{ uri: item.profileImage }} style={styles.userStripAvatar} />
       <Text style={styles.userStripName} numberOfLines={1}>{item.username}</Text>
@@ -189,134 +159,52 @@ export default function Profile() {
 
   return (
     <SafeScreen>
-      <View style={styles.container}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[COLORS.primary]} />
-          }
-        >
-          {/* Centered Profile Header */}
-          <View style={styles.profileHeaderCentered}>
-            <LogoutButton />
-            <View style={styles.avatarWrapper}>
-              <Image source={{ uri: currentUser?.profileImage }} style={styles.avatarLarge} />
-              <View style={styles.activeGlow} />
-            </View>
+      <ScrollView
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+      >
 
-            <Text style={styles.usernameCentered}>{currentUser?.username}</Text>
-            <Text style={styles.emailCentered}>{currentUser?.email}</Text>
-            {currentUser?.bio && <Text style={styles.bioCentered}>{currentUser.bio}</Text>}
-          </View>
+        <View style={styles.profileHeaderCentered}>
+          <LogoutButton />
+          <Image source={{ uri: currentUser?.profileImage }} style={styles.avatarLarge} />
+          <Text style={styles.usernameCentered}>{currentUser?.username}</Text>
+          <Text style={styles.emailCentered}>{currentUser?.email}</Text>
+          {currentUser?.bio && <Text style={styles.bioCentered}>{currentUser.bio}</Text>}
+        </View>
 
-          {/* Stats Row */}
-          <View style={styles.statsRow}>
-            <TouchableOpacity
-              style={[styles.statBox, activeView === 'posts' && styles.statBoxActive]}
-              onPress={() => handleStatClick('posts')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.statNumber}>{books.length}</Text>
-              <Text style={[styles.statLabel, activeView === 'posts' && styles.statLabelActive]}>Posts</Text>
-            </TouchableOpacity>
-            <View style={styles.statDivider} />
-            <TouchableOpacity
-              style={[styles.statBox, activeView === 'followers' && styles.statBoxActive]}
-              onPress={() => handleStatClick('followers')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.statNumber}>{stats.followers ?? 0}</Text>
-              <Text style={[styles.statLabel, activeView === 'followers' && styles.statLabelActive]}>Followers</Text>
-            </TouchableOpacity>
-            <View style={styles.statDivider} />
-            <TouchableOpacity
-              style={[styles.statBox, activeView === 'following' && styles.statBoxActive]}
-              onPress={() => handleStatClick('following')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.statNumber}>{stats.following ?? 0}</Text>
-              <Text style={[styles.statLabel, activeView === 'following' && styles.statLabelActive]}>Following</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.statsRow}>
+          <TouchableOpacity onPress={() => handleStatClick('posts')} style={styles.statBox}>
+            <Text style={styles.statNumber}>{books.length}</Text>
+            <Text style={styles.statLabel}>Posts</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleStatClick('followers')} style={styles.statBox}>
+            <Text style={styles.statNumber}>{stats.followers}</Text>
+            <Text style={styles.statLabel}>Followers</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleStatClick('following')} style={styles.statBox}>
+            <Text style={styles.statNumber}>{stats.following}</Text>
+            <Text style={styles.statLabel}>Following</Text>
+          </TouchableOpacity>
+        </View>
 
-          {/* Content Section - Conditional based on activeView */}
-          {activeView === 'posts' && (
-            <>
-              <View style={styles.booksHeader}>
-                <Text style={styles.sectionTitle}>My Bookshelf</Text>
-                <TouchableOpacity onPress={() => router.push('/(tabs)/create')}>
-                  <Ionicons name="add-circle" size={28} color={COLORS.primary} />
-                </TouchableOpacity>
-              </View>
+        {activeView === 'posts' && (
+          <FlatList
+            data={books}
+            renderItem={renderBookItem}
+            keyExtractor={(i) => i._id}
+            numColumns={3}
+            scrollEnabled={false}
+          />
+        )}
 
-              {books.length > 0 ? (
-                <FlatList
-                  data={books}
-                  renderItem={renderBookItem}
-                  keyExtractor={(item) => item._id}
-                  numColumns={3}
-                  scrollEnabled={false}
-                  contentContainerStyle={styles.gridContent}
-                />
-              ) : (
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
-                  <Text style={styles.emptyText}>Start sharing your reads!</Text>
-                  <TouchableOpacity style={styles.addButton} onPress={() => router.push('/(tabs)/create')}>
-                    <Text style={styles.addButtonText}>Create First Post</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </>
-          )}
+        {activeView === 'followers' && (
+          <FlatList horizontal data={followers} renderItem={renderUserStrip} />
+        )}
 
-          {activeView === 'followers' && (
-            <View style={styles.stripContainer}>
-              <Text style={styles.stripTitle}>Followers ({stats.followers})</Text>
-              {loadingUsers ? (
-                <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
-              ) : followers.length > 0 ? (
-                <FlatList
-                  data={followers}
-                  renderItem={renderUserStrip}
-                  keyExtractor={(item) => item._id}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.stripContent}
-                />
-              ) : (
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
-                  <Text style={styles.emptyText}>No followers yet</Text>
-                </View>
-              )}
-            </View>
-          )}
+        {activeView === 'following' && (
+          <FlatList horizontal data={following} renderItem={renderUserStrip} />
+        )}
 
-          {activeView === 'following' && (
-            <View style={styles.stripContainer}>
-              <Text style={styles.stripTitle}>Following ({stats.following})</Text>
-              {loadingUsers ? (
-                <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
-              ) : following.length > 0 ? (
-                <FlatList
-                  data={following}
-                  renderItem={renderUserStrip}
-                  keyExtractor={(item) => item._id}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.stripContent}
-                />
-              ) : (
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
-                  <Text style={styles.emptyText}>Not following anyone yet</Text>
-                </View>
-              )}
-            </View>
-          )}
-        </ScrollView>
-      </View>
+      </ScrollView>
     </SafeScreen>
   );
 }
