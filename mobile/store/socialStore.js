@@ -52,6 +52,19 @@ export const useSocialStore = create((set, get) => ({
 
     // Like actions
     toggleLike: async (bookId, token) => {
+        const { likedBooks } = get();
+        const wasLiked = likedBooks.has(bookId);
+
+        // Optimistic Update
+        const newLikedBooks = new Set(likedBooks);
+        if (wasLiked) {
+            newLikedBooks.delete(bookId);
+        } else {
+            newLikedBooks.add(bookId);
+        }
+        set({ likedBooks: newLikedBooks });
+        get().persist();
+
         try {
             const response = await fetch(`${API_URL}/api/social/like/${bookId}`, {
                 method: 'POST',
@@ -61,23 +74,19 @@ export const useSocialStore = create((set, get) => ({
             });
 
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
-
-            // Optimistic update
-            const { likedBooks } = get();
-            const newLikedBooks = new Set(likedBooks);
-
-            if (data.liked) {
-                newLikedBooks.add(bookId);
-            } else {
-                newLikedBooks.delete(bookId);
+            if (!response.ok) {
+                // Revert on failure
+                set({ likedBooks: likedBooks });
+                get().persist();
+                throw new Error(data.message);
             }
 
-            set({ likedBooks: newLikedBooks });
-            get().persist(); // Persist changes
-            return { success: true, liked: data.liked };
+            return { success: true, liked: !wasLiked };
         } catch (error) {
             console.error('Error toggling like:', error);
+            // Revert on error
+            set({ likedBooks: likedBooks });
+            get().persist();
             return { success: false, error: error.message };
         }
     },
@@ -95,10 +104,13 @@ export const useSocialStore = create((set, get) => ({
 
             if (data.liked) {
                 const { likedBooks } = get();
-                const newLikedBooks = new Set(likedBooks);
-                newLikedBooks.add(bookId);
-                set({ likedBooks: newLikedBooks });
-                get().persist(); // Persist changes
+                // Only update if not already there to avoid unnecessary heavy ops
+                if (!likedBooks.has(bookId)) {
+                    const newLikedBooks = new Set(likedBooks);
+                    newLikedBooks.add(bookId);
+                    set({ likedBooks: newLikedBooks });
+                    get().persist();
+                }
             }
 
             return data.liked;
@@ -110,6 +122,19 @@ export const useSocialStore = create((set, get) => ({
 
     // Follow actions
     toggleFollow: async (userId, token) => {
+        const { followedUsers } = get();
+        const wasFollowing = followedUsers.has(userId);
+
+        // Optimistic Update
+        const newFollowedUsers = new Set(followedUsers);
+        if (wasFollowing) {
+            newFollowedUsers.delete(userId);
+        } else {
+            newFollowedUsers.add(userId);
+        }
+        set({ followedUsers: newFollowedUsers });
+        get().persist();
+
         try {
             const response = await fetch(`${API_URL}/api/social/follow/${userId}`, {
                 method: 'POST',
@@ -119,23 +144,19 @@ export const useSocialStore = create((set, get) => ({
             });
 
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
-
-            // Optimistic update
-            const { followedUsers } = get();
-            const newFollowedUsers = new Set(followedUsers);
-
-            if (data.following) {
-                newFollowedUsers.add(userId);
-            } else {
-                newFollowedUsers.delete(userId);
+            if (!response.ok) {
+                // Revert
+                set({ followedUsers: followedUsers });
+                get().persist();
+                throw new Error(data.message);
             }
 
-            set({ followedUsers: newFollowedUsers });
-            get().persist(); // Persist changes
-            return { success: true, following: data.following };
+            return { success: true, following: !wasFollowing };
         } catch (error) {
             console.error('Error toggling follow:', error);
+            // Revert
+            set({ followedUsers: followedUsers });
+            get().persist();
             return { success: false, error: error.message };
         }
     },

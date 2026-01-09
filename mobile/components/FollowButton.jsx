@@ -5,90 +5,49 @@ import { useSocialStore } from '../store/socialStore';
 import { useAuthStore } from '../store/authContext';
 
 export default function FollowButton({ userId, initialFollowing = false, onFollowChange, style = {}, compact = false }) {
-    const [following, setFollowing] = useState(initialFollowing);
-    const [isLoading, setIsLoading] = useState(false);
+    // We can rely directly on the store's state since it's now optimistic
     const { toggleFollow, followedUsers, checkFollowStatus } = useSocialStore();
     const { token } = useAuthStore();
 
-    // Unified effect to sync follow status
+    // Derived state from store
+    const isFollowing = followedUsers.has(userId);
+
+    // Initial sync effect - only if needed or for first load consistency
     useEffect(() => {
         let isMounted = true;
-
-        const syncFollowStatus = async () => {
-            // Priority: Trust global store as source of truth
-            // This handles the case where a user un-follows someone (removing from store)
-            // but the parent component (like Explore) still passes a stale initialFollowing=true.
-            const isFollowingInStore = followedUsers.has(userId);
-
-            if (isMounted) {
-                setFollowing(isFollowingInStore);
-            }
-
-            // Only fetch if we really need to (e.g. if we don't trust our store completeness)
-            // But since we hydrate, we trust the store 'false' means 'false'.
-            // However, for robustness, if we wanted to double check:
-            // if (!isFollowingInStore && initialFollowing === undefined) { ... fetch ... }
-
-            // For now, let's keep it simple and trust the store if it's populated.
-            // If the store is empty (new install), and we rely on props?
-
-            // Refined Hybrid:
-            // If store has it -> TRUE.
-            // If store misses it -> 
-            //    If initialFollowing matches store (false) -> FALSE
-            //    If initialFollowing conflicts (true) -> 
-            //       If we assume store is perfect -> FALSE
-            //       If we assume props are fresh -> TRUE
-
-            // To be safe, let's stick to the Store for now as it fixes the immediate bug.
-            if (!isFollowingInStore && initialFollowing === undefined) {
-                const status = await checkFollowStatus(userId, token);
-                if (isMounted) setFollowing(status);
+        const syncStatus = async () => {
+            if (!followedUsers.has(userId) && initialFollowing === undefined) {
+                await checkFollowStatus(userId, token);
             }
         };
+        syncStatus();
+        return () => { isMounted = false; };
+    }, [userId, initialFollowing, token, followedUsers]); // Keep deps to ensure check happens if needed
 
-        syncFollowStatus();
-
-        return () => {
-            isMounted = false;
-        };
-    }, [userId, initialFollowing, followedUsers]);
-
-    const handleFollow = async () => {
-        if (isLoading) return;
-        const newFollowing = !following;
-        setFollowing(newFollowing);
-        setIsLoading(true);
-        const result = await toggleFollow(userId, token);
-        setIsLoading(false);
-
-        if (result.success) {
-            if (onFollowChange) onFollowChange(result.following);
-        } else {
-            setFollowing(!newFollowing);
-        }
+    const handleFollow = () => {
+        // Trigger action - store updates optimistically immediately
+        toggleFollow(userId, token).then(result => {
+            if (result.success && onFollowChange) {
+                onFollowChange(result.following);
+            }
+        });
     };
 
     return (
         <TouchableOpacity
             onPress={handleFollow}
-            disabled={isLoading}
             activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             style={[
                 styles.button,
-                following ? styles.followingButton : styles.followButton,
+                isFollowing ? styles.followingButton : styles.followButton,
                 compact && styles.compactButton,
                 style,
             ]}
         >
-            {isLoading ? (
-                <ActivityIndicator size="small" color={following ? COLORS.primary : '#fff'} />
-            ) : (
-                <Text style={[styles.buttonText, following ? styles.followingText : styles.followText]}>
-                    {following ? 'Following' : 'Follow'}
-                </Text>
-            )}
+            <Text style={[styles.buttonText, isFollowing ? styles.followingText : styles.followText]}>
+                {isFollowing ? 'Following' : 'Follow'}
+            </Text>
         </TouchableOpacity>
     );
 }
