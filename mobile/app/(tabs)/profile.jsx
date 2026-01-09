@@ -20,6 +20,10 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({ followers: 0, following: 0 });
+  const [activeView, setActiveView] = useState('posts'); // 'posts', 'followers', 'following'
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -40,13 +44,23 @@ export default function Profile() {
         })
       ]);
 
-      const booksData = await booksRes.json();
-      const statsData = await statsRes.json();
+      // Check response status before parsing
+      if (booksRes.ok) {
+        const booksData = await booksRes.json();
+        setBooks(booksData || []);
+      } else {
+        console.error('Books fetch failed:', booksRes.status);
+      }
 
-      console.log('Stats data received:', statsData);
-
-      if (booksRes.ok) setBooks(booksData || []);
-      if (statsRes.ok) setStats(statsData || { followers: 0, following: 0 });
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats({
+          followers: statsData.followersCount || 0,
+          following: statsData.followingCount || 0
+        });
+      } else {
+        console.error('Stats fetch failed:', statsRes.status);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
@@ -55,11 +69,86 @@ export default function Profile() {
     }
   };
 
+  const fetchFollowers = async () => {
+    if (!currentUser?._id) return;
+    setLoadingUsers(true);
+    try {
+      const res = await fetch(`${API_URL}/api/social/followers/${currentUser._id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) setFollowers(data.followers || []);
+    } catch (error) {
+      console.error('Error fetching followers:', error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const fetchFollowing = async () => {
+    if (!currentUser?._id) return;
+    setLoadingUsers(true);
+    try {
+      const res = await fetch(`${API_URL}/api/social/following/${currentUser._id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) setFollowing(data.following || []);
+    } catch (error) {
+      console.error('Error fetching following:', error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
   useFocusEffect(
     React.useCallback(() => {
       fetchData();
     }, [])
   );
+
+  const handleStatClick = async (view) => {
+    setActiveView(view);
+    if (view === 'followers') {
+      await fetchFollowers();
+      // Refresh stats to get updated count
+      if (currentUser?._id) {
+        try {
+          const res = await fetch(`${API_URL}/api/social/follow-counts/${currentUser._id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setStats({
+              followers: data.followersCount || 0,
+              following: data.followingCount || 0
+            });
+          }
+        } catch (error) {
+          console.error('Error refreshing stats:', error);
+        }
+      }
+    } else if (view === 'following') {
+      await fetchFollowing();
+      // Refresh stats to get updated count
+      if (currentUser?._id) {
+        try {
+          const res = await fetch(`${API_URL}/api/social/follow-counts/${currentUser._id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setStats({
+              followers: data.followersCount || 0,
+              following: data.followingCount || 0
+            });
+          }
+        } catch (error) {
+          console.error('Error refreshing stats:', error);
+        }
+      }
+    }
+  };
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -77,6 +166,16 @@ export default function Profile() {
         contentFit="cover"
         transition={300}
       />
+    </TouchableOpacity>
+  );
+
+  const renderUserStrip = ({ item }) => (
+    <TouchableOpacity
+      style={styles.userStripItem}
+      onPress={() => router.push({ pathname: '/user-profile', params: { userId: item._id } })}
+    >
+      <Image source={{ uri: item.profileImage }} style={styles.userStripAvatar} />
+      <Text style={styles.userStripName} numberOfLines={1}>{item.username}</Text>
     </TouchableOpacity>
   );
 
@@ -113,56 +212,107 @@ export default function Profile() {
           {/* Stats Row */}
           <View style={styles.statsRow}>
             <TouchableOpacity
-              style={styles.statBox}
+              style={[styles.statBox, activeView === 'posts' && styles.statBoxActive]}
+              onPress={() => handleStatClick('posts')}
               activeOpacity={0.7}
             >
               <Text style={styles.statNumber}>{books.length}</Text>
-              <Text style={styles.statLabel}>Posts</Text>
+              <Text style={[styles.statLabel, activeView === 'posts' && styles.statLabelActive]}>Posts</Text>
             </TouchableOpacity>
             <View style={styles.statDivider} />
             <TouchableOpacity
-              style={styles.statBox}
-              onPress={() => router.push({ pathname: '/followers-list', params: { userId: currentUser._id, username: currentUser.username, type: 'followers' } })}
+              style={[styles.statBox, activeView === 'followers' && styles.statBoxActive]}
+              onPress={() => handleStatClick('followers')}
               activeOpacity={0.7}
             >
               <Text style={styles.statNumber}>{stats.followers ?? 0}</Text>
-              <Text style={styles.statLabel}>Followers</Text>
+              <Text style={[styles.statLabel, activeView === 'followers' && styles.statLabelActive]}>Followers</Text>
             </TouchableOpacity>
             <View style={styles.statDivider} />
             <TouchableOpacity
-              style={styles.statBox}
-              onPress={() => router.push({ pathname: '/followers-list', params: { userId: currentUser._id, type: 'following' } })}
+              style={[styles.statBox, activeView === 'following' && styles.statBoxActive]}
+              onPress={() => handleStatClick('following')}
               activeOpacity={0.7}
             >
               <Text style={styles.statNumber}>{stats.following ?? 0}</Text>
-              <Text style={styles.statLabel}>Following</Text>
+              <Text style={[styles.statLabel, activeView === 'following' && styles.statLabelActive]}>Following</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Bookshelf */}
-          <View style={styles.booksHeader}>
-            <Text style={styles.sectionTitle}>My Bookshelf</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/create')}>
-              <Ionicons name="add-circle" size={28} color={COLORS.primary} />
-            </TouchableOpacity>
-          </View>
+          {/* Content Section - Conditional based on activeView */}
+          {activeView === 'posts' && (
+            <>
+              <View style={styles.booksHeader}>
+                <Text style={styles.sectionTitle}>My Bookshelf</Text>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/create')}>
+                  <Ionicons name="add-circle" size={28} color={COLORS.primary} />
+                </TouchableOpacity>
+              </View>
 
-          {books.length > 0 ? (
-            <FlatList
-              data={books}
-              renderItem={renderBookItem}
-              keyExtractor={(item) => item._id}
-              numColumns={3}
-              scrollEnabled={false}
-              contentContainerStyle={styles.gridContent}
-            />
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
-              <Text style={styles.emptyText}>Start sharing your reads!</Text>
-              <TouchableOpacity style={styles.addButton} onPress={() => router.push('/(tabs)/create')}>
-                <Text style={styles.addButtonText}>Create First Post</Text>
-              </TouchableOpacity>
+              {books.length > 0 ? (
+                <FlatList
+                  data={books}
+                  renderItem={renderBookItem}
+                  keyExtractor={(item) => item._id}
+                  numColumns={3}
+                  scrollEnabled={false}
+                  contentContainerStyle={styles.gridContent}
+                />
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
+                  <Text style={styles.emptyText}>Start sharing your reads!</Text>
+                  <TouchableOpacity style={styles.addButton} onPress={() => router.push('/(tabs)/create')}>
+                    <Text style={styles.addButtonText}>Create First Post</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
+          )}
+
+          {activeView === 'followers' && (
+            <View style={styles.stripContainer}>
+              <Text style={styles.stripTitle}>Followers ({stats.followers})</Text>
+              {loadingUsers ? (
+                <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
+              ) : followers.length > 0 ? (
+                <FlatList
+                  data={followers}
+                  renderItem={renderUserStrip}
+                  keyExtractor={(item) => item._id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.stripContent}
+                />
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
+                  <Text style={styles.emptyText}>No followers yet</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {activeView === 'following' && (
+            <View style={styles.stripContainer}>
+              <Text style={styles.stripTitle}>Following ({stats.following})</Text>
+              {loadingUsers ? (
+                <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
+              ) : following.length > 0 ? (
+                <FlatList
+                  data={following}
+                  renderItem={renderUserStrip}
+                  keyExtractor={(item) => item._id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.stripContent}
+                />
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
+                  <Text style={styles.emptyText}>Not following anyone yet</Text>
+                </View>
+              )}
             </View>
           )}
         </ScrollView>
@@ -263,6 +413,46 @@ const styles = {
     textTransform: 'uppercase',
     marginTop: 4,
     letterSpacing: 0.5,
+  },
+  statBoxActive: {
+    borderBottomWidth: 3,
+    borderBottomColor: COLORS.primary,
+  },
+  statLabelActive: {
+    color: COLORS.primary,
+  },
+  stripContainer: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  stripTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: COLORS.textPrimary,
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  stripContent: {
+    paddingVertical: 10,
+    gap: 16,
+  },
+  userStripItem: {
+    alignItems: 'center',
+    width: 90,
+  },
+  userStripAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: COLORS.surfaceLight,
+  },
+  userStripName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    textAlign: 'center',
   },
   booksHeader: {
     marginTop: 40,

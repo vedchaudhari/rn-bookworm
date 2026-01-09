@@ -1,6 +1,5 @@
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
 import React, { useState, useEffect } from 'react';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import COLORS from '../constants/colors';
 import { useSocialStore } from '../store/socialStore';
 import { useAuthStore } from '../store/authContext';
@@ -10,7 +9,6 @@ export default function FollowButton({ userId, initialFollowing = false, onFollo
     const [isLoading, setIsLoading] = useState(false);
     const { toggleFollow, followedUsers, checkFollowStatus } = useSocialStore();
     const { token } = useAuthStore();
-    const scale = useSharedValue(1);
 
     // Check follow status on mount
     useEffect(() => {
@@ -38,13 +36,6 @@ export default function FollowButton({ userId, initialFollowing = false, onFollo
         }
     }, [followedUsers, userId]);
 
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }],
-    }));
-
-    const handlePressIn = () => { scale.value = withSpring(0.95); };
-    const handlePressOut = () => { scale.value = withSpring(1); };
-
     const handleFollow = async () => {
         if (isLoading) return;
         const newFollowing = !following;
@@ -63,35 +54,28 @@ export default function FollowButton({ userId, initialFollowing = false, onFollo
     return (
         <TouchableOpacity
             onPress={handleFollow}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
             disabled={isLoading}
-            activeOpacity={0.9}
-            style={styles.wrapper}
-        >
-            <Animated.View style={[
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={[
                 styles.button,
                 following ? styles.followingButton : styles.followButton,
                 compact && styles.compactButton,
                 style,
-                animatedStyle
-            ]}>
-                {isLoading ? (
-                    <ActivityIndicator size="small" color={following ? COLORS.primary : '#fff'} />
-                ) : (
-                    <Text style={[styles.buttonText, following ? styles.followingText : styles.followText]}>
-                        {following ? 'Following' : 'Follow'}
-                    </Text>
-                )}
-            </Animated.View>
+            ]}
+        >
+            {isLoading ? (
+                <ActivityIndicator size="small" color={following ? COLORS.primary : '#fff'} />
+            ) : (
+                <Text style={[styles.buttonText, following ? styles.followingText : styles.followText]}>
+                    {following ? 'Following' : 'Follow'}
+                </Text>
+            )}
         </TouchableOpacity>
     );
 }
 
 const styles = StyleSheet.create({
-    wrapper: {
-        minWidth: 100, // Ensure minimum width for text
-    },
     button: {
         height: 44,
         paddingHorizontal: 20,
