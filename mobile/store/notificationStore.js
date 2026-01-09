@@ -10,7 +10,9 @@ export const useNotificationStore = create((set, get) => ({
 
     // Connect to WebSocket
     connect: (userId) => {
-        const socket = io(API_URL);
+        const socket = io(API_URL, {
+            transports: ['websocket'],
+        });
 
         socket.on('connect', () => {
             console.log('Socket connected');
