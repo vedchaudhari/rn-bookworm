@@ -2,9 +2,9 @@ import Constants from "expo-constants";
 
 const localhost = Constants.expoConfig?.hostUri?.split(":")[0];
 
-export const API_URL = `http://${localhost}:3000`;
+// export const API_URL = `http://${localhost}:3000`;
 
-// export const API_URL = `https://api-bookworm.backend-portfolio-api.online`;
+export const API_URL = `https://api-bookworm.backend-portfolio-api.online`;
 
 
 // import * as Device from "expo-device";
