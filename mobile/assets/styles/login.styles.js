@@ -1,12 +1,12 @@
 // styles/login.styles.js
-import { StyleSheet, Dimensions } from "react-native";
+import { StyleSheet, Dimensions, Platform } from "react-native";
 import COLORS from "../../constants/colors";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
+    flex: 1,
     backgroundColor: COLORS.background,
     padding: 24,
     justifyContent: "center",
@@ -14,23 +14,23 @@ const styles = StyleSheet.create({
   topIllustration: {
     alignItems: "center",
     width: "100%",
-    marginBottom: 40,
+    marginBottom: 32,
   },
   illustrationImage: {
-    width: width * 0.6,
-    height: width * 0.6,
+    width: Math.min(width * 0.4, 160),
+    height: Math.min(width * 0.4, 160),
   },
   card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 24,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 32,
     padding: 24,
     borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
+    borderColor: COLORS.border,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
-    elevation: 8,
+    elevation: 10,
   },
   header: {
     alignItems: "center",
@@ -38,78 +38,135 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.textPrimary,
     letterSpacing: -1,
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.textSecondary,
     fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 22,
   },
   formContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   inputGroup: {
     marginBottom: 20,
   },
   label: {
-    fontSize: 13,
+    fontSize: 12,
     marginBottom: 8,
     color: COLORS.textSecondary,
     fontWeight: "700",
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.surfaceLight,
+    backgroundColor: COLORS.surface,
     borderRadius: 16,
     paddingHorizontal: 16,
     height: 56,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  inputContainerFocused: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.surfaceLight,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  inputContainerError: {
+    borderColor: COLORS.error,
   },
   inputIcon: {
     marginRight: 12,
+    opacity: 0.7,
   },
   input: {
     flex: 1,
     color: COLORS.textPrimary,
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   eyeIcon: {
-    padding: 8,
+    padding: 10,
+  },
+  errorText: {
+    fontSize: 12,
+    color: COLORS.error,
+    marginTop: 6,
+    marginLeft: 4,
+    fontWeight: '600',
   },
   button: {
     backgroundColor: COLORS.primary,
-    borderRadius: 16,
+    borderRadius: 20,
     height: 56,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 16,
+    marginTop: 24,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  buttonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   buttonText: {
     color: COLORS.white,
     fontSize: 16,
     fontWeight: "800",
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
-    letterSpacing: 1,
   },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
     marginTop: 32,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
   },
   footerText: {
     color: COLORS.textMuted,
     marginRight: 6,
-    fontWeight: '600',
+    fontWeight: '500',
+    fontSize: 14,
   },
   link: {
     color: COLORS.primary,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  welcomeText: {
+    fontSize: 24,
     fontWeight: "800",
+    color: COLORS.textPrimary,
+    textAlign: "center",
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  welcomeSubtext: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    fontWeight: '500',
+    marginBottom: 32,
+    lineHeight: 22,
   },
 });
 

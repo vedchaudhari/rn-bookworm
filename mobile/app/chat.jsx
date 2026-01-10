@@ -1,5 +1,6 @@
 import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
+import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { Image } from 'expo-image';
@@ -10,6 +11,9 @@ import GlassCard from '../components/GlassCard';
 import { useMessageStore } from '../store/messageStore';
 import { useAuthStore } from '../store/authContext';
 import { useNotificationStore } from '../store/notificationStore';
+import SafeScreen from '../components/SafeScreen';
+
+import styles from '../assets/styles/chat.styles';
 
 export default function ChatScreen() {
     const { userId, username, profileImage } = useLocalSearchParams();
@@ -19,15 +23,51 @@ export default function ChatScreen() {
 
     const { messages, fetchMessages, sendMessage, markAsRead, addReceivedMessage, setActiveConversation } = useMessageStore();
     const { token, user } = useAuthStore();
-    const { socket } = useNotificationStore();
+    const { socket, userStatuses } = useNotificationStore();
 
     const conversationMessages = messages[userId] || [];
 
+    // Derive status from store
+    const userStatus = userStatuses[userId] || { status: 'offline', lastActive: null };
+    const isOnline = userStatus.status === 'online';
+
+    // Calculate display status
+    const getDisplayStatus = () => {
+        if (isOnline) return 'Online';
+        if (!userStatus.lastActive) return 'Offline';
+
+        const lastActive = new Date(userStatus.lastActive);
+        const diffValid = !isNaN(lastActive.getTime());
+
+        if (!diffValid) return 'Offline';
+
+        const diffMinutes = (new Date() - lastActive) / 1000 / 60;
+        if (diffMinutes < 5) return 'Recently active';
+
+        return 'Offline';
+    };
+
+    const displayStatus = getDisplayStatus();
+    const pulseOpacity = useSharedValue(0.4);
+
     useEffect(() => {
+        if (isOnline) {
+            pulseOpacity.value = withRepeat(
+                withSequence(
+                    withTiming(1, { duration: 1000 }),
+                    withTiming(0.4, { duration: 1000 })
+                ),
+                -1,
+                true
+            );
+        } else {
+            pulseOpacity.value = 0; // Stop pulsing if offline
+        }
+
         loadMessages();
         markAsRead(userId, token);
+        setActiveConversation(userId);
 
-        // Listen for new messages
         if (socket) {
             socket.on('new_message', handleNewMessage);
         }
@@ -38,7 +78,7 @@ export default function ChatScreen() {
                 socket.off('new_message', handleNewMessage);
             }
         };
-    }, [userId, socket]);
+    }, [userId, socket, isOnline]);
 
     const handleNewMessage = (message) => {
         const senderId = message.sender._id || message.sender;
@@ -47,6 +87,10 @@ export default function ChatScreen() {
             markAsRead(userId, token);
         }
     };
+
+    const animatedStatusStyle = useAnimatedStyle(() => ({
+        opacity: pulseOpacity.value,
+    }));
 
     const loadMessages = async () => {
         await fetchMessages(userId, token);
@@ -84,7 +128,6 @@ export default function ChatScreen() {
         setSending(false);
 
         if (result.success) {
-            // Inverted list: Scroll to offset 0 (bottom)
             setTimeout(() => {
                 flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
             }, 100);
@@ -93,37 +136,46 @@ export default function ChatScreen() {
         }
     };
 
-    const renderMessage = ({ item }) => {
+    const renderMessage = ({ item, index }) => {
         const isMe = (item.sender._id || item.sender) === user.id || item.sender._id === 'me';
+        const showAvatar = !isMe && (index === 0 || (messages[userId][index - 1]?.sender._id !== userId));
 
         return (
             <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage]}>
                 {!isMe && (
-                    <Image source={{ uri: profileImage }} style={styles.messageAvatar} />
+                    <View style={{ width: 32 }}>
+                        {showAvatar ? (
+                            <Image source={{ uri: profileImage }} style={styles.messageAvatar} />
+                        ) : null}
+                    </View>
                 )}
                 <View style={[
                     styles.messageBubble,
                     isMe ? styles.myBubble : styles.theirBubble,
                     item.image && styles.imageBubble
                 ]}>
-                    {item.image ? (
+                    {item.image && (
                         <Image
                             source={{ uri: item.image }}
                             style={styles.sentImage}
                             contentFit="cover"
                         />
-                    ) : null}
+                    )}
 
-                    {item.text ? (
+                    {item.text && (
                         <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText]}>
                             {item.text}
                         </Text>
-                    ) : null}
+                    )}
 
-                    <Text style={[styles.messageTime, isMe ? styles.myTime : styles.theirTime]}>
-                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        {item.pending && <Ionicons name="time-outline" size={10} color="rgba(255,255,255,0.7)" style={{ marginLeft: 4 }} />}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignSelf: 'flex-end', alignItems: 'center', gap: 4 }}>
+                        <Text style={[styles.messageTime, isMe ? styles.myTime : styles.theirTime]}>
+                            {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                        {isMe && item.pending && (
+                            <Ionicons name="time-outline" size={10} color="rgba(255,255,255,0.7)" />
+                        )}
+                    </View>
                 </View>
             </View>
         );
@@ -132,195 +184,88 @@ export default function ChatScreen() {
     const insets = useSafeAreaInsets();
 
     return (
-        <>
+        <View style={{ flex: 1, backgroundColor: COLORS.background }}>
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: username,
-                    headerStyle: { backgroundColor: COLORS.background }, // Use main background
+                    headerTitle: () => (
+                        <View style={styles.headerRow}>
+                            <View style={styles.avatarContainer}>
+                                <Image source={{ uri: profileImage }} style={styles.headerAvatar} />
+                                {isOnline && <Animated.View style={[styles.statusDot, animatedStatusStyle]} />}
+                            </View>
+                            <View style={styles.headerInfo}>
+                                <Text style={styles.headerName}>{username}</Text>
+                                <Text style={styles.headerStatus}>{displayStatus}</Text>
+                            </View>
+                        </View>
+                    ),
+                    headerStyle: { backgroundColor: COLORS.background },
                     headerTintColor: COLORS.textPrimary,
                     headerShadowVisible: false,
+                    headerTitleAlign: 'left',
+                    headerStatusBarHeight: insets.top,
                 }}
             />
-            <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-                <KeyboardAvoidingView
-                    style={styles.keyboardContainer}
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
-                    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 100}
-                >
+
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            >
+                <View style={[styles.container, { paddingTop: insets.top }]}>
                     <FlatList
                         ref={flatListRef}
                         data={conversationMessages}
                         renderItem={renderMessage}
                         keyExtractor={(item, index) => item._id || index.toString()}
-                        contentContainerStyle={styles.messagesList}
+                        contentContainerStyle={[styles.messagesList, { paddingBottom: 20 }]}
                         inverted
+                        showsVerticalScrollIndicator={false}
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
-                                <Text style={styles.emptyText}>Start the conversation!</Text>
+                                <View style={styles.emptyIconCircle}>
+                                    <Ionicons name="chatbubbles-outline" size={32} color={COLORS.primary} />
+                                </View>
+                                <Text style={styles.emptyText}>Start a literary conversation with {username}</Text>
                             </View>
                         }
                     />
 
-                    <View style={styles.inputWrapper}>
-                        <GlassCard style={styles.inputContainer} variant="light">
+                    <View style={[styles.inputWrapper, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+                        <View style={styles.inputContainer}>
                             <TouchableOpacity onPress={handlePickImage} style={styles.iconButton}>
-                                <Ionicons name="images-outline" size={24} color={COLORS.primary} />
+                                <Ionicons name="add" size={24} color={COLORS.primary} />
                             </TouchableOpacity>
 
                             <TextInput
                                 style={styles.input}
-                                placeholder="Message..."
+                                placeholder="Type a message..."
                                 placeholderTextColor={COLORS.textMuted}
                                 value={messageText}
                                 onChangeText={setMessageText}
                                 multiline
                                 maxLength={1000}
                             />
+
                             <TouchableOpacity
                                 onPress={handleSend}
                                 disabled={!messageText.trim() || sending}
-                                style={[styles.sendButton, (!messageText.trim() || sending) && styles.sendButtonDisabled]}
+                                style={[
+                                    styles.sendButton,
+                                    (!messageText.trim() || sending) && styles.sendButtonDisabled
+                                ]}
                             >
                                 {sending ? (
                                     <ActivityIndicator size="small" color="#fff" />
                                 ) : (
-                                    <Ionicons name="arrow-up" size={20} color="#fff" />
+                                    <Ionicons name="send" size={18} color="#fff" />
                                 )}
                             </TouchableOpacity>
-                        </GlassCard>
+                        </View>
                     </View>
-                </KeyboardAvoidingView>
-            </View>
-        </>
+                </View>
+            </KeyboardAvoidingView>
+        </View>
     );
 }
-
-const styles = {
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    messagesList: {
-        paddingVertical: 20,
-        paddingHorizontal: 16,
-    },
-    messageContainer: {
-        flexDirection: 'row',
-        marginBottom: 16,
-        gap: 12,
-    },
-    myMessage: {
-        justifyContent: 'flex-end',
-    },
-    theirMessage: {
-        justifyContent: 'flex-start',
-    },
-    messageAvatar: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: COLORS.surfaceLight,
-    },
-    messageBubble: {
-        maxWidth: '75%',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 20,
-    },
-    imageBubble: {
-        padding: 4,
-        overflow: 'hidden',
-    },
-    sentImage: {
-        width: 200,
-        height: 150,
-        borderRadius: 16,
-        marginBottom: 4,
-    },
-    myBubble: {
-        backgroundColor: COLORS.primary,
-        borderBottomRightRadius: 4,
-    },
-    theirBubble: {
-        backgroundColor: COLORS.surfaceHighlight,
-        borderBottomLeftRadius: 4,
-    },
-    messageText: {
-        fontSize: 15,
-        lineHeight: 22,
-        fontWeight: '400',
-    },
-    myText: {
-        color: '#fff',
-    },
-    theirText: {
-        color: COLORS.textPrimary,
-    },
-    messageTime: {
-        fontSize: 10,
-        marginTop: 4,
-        fontWeight: '600',
-        alignSelf: 'flex-end',
-        opacity: 0.8,
-    },
-    myTime: {
-        color: 'rgba(255,255,255,0.8)',
-    },
-    theirTime: {
-        color: COLORS.textMuted,
-    },
-    keyboardContainer: {
-        flex: 1,
-    },
-    inputWrapper: {
-        paddingHorizontal: 16,
-        paddingBottom: 8,
-        paddingTop: 8,
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        padding: 8,
-        gap: 12,
-        alignItems: 'flex-end',
-        borderRadius: 25,
-        // GlassCard handles bg
-    },
-    input: {
-        flex: 1,
-        maxHeight: 100,
-        color: COLORS.textPrimary,
-        fontSize: 16,
-        fontWeight: '400',
-        paddingVertical: 10,
-    },
-    iconButton: {
-        padding: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    sendButton: {
-        backgroundColor: COLORS.primary,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 4,
-    },
-    sendButtonDisabled: {
-        opacity: 0.4,
-    },
-    emptyContainer: {
-        alignItems: 'center',
-        padding: 60,
-        marginTop: 60,
-    },
-    emptyText: {
-        fontSize: 15,
-        color: COLORS.textMuted,
-        fontWeight: '600',
-        textAlign: 'center',
-    },
-};

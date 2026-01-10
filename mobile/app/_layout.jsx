@@ -9,6 +9,7 @@ import { useSocialStore } from "../store/socialStore";
 import { useNotificationStore } from '../store/notificationStore';
 import { useMessageStore } from "../store/messageStore";
 import { useEffect } from "react";
+import COLORS from "../constants/colors";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -77,12 +78,19 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <SafeScreen>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(auth)" />
-        </Stack>
-      </SafeScreen>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: COLORS.background },
+          headerStyle: { backgroundColor: COLORS.background },
+          headerTintColor: COLORS.textPrimary,
+          headerShadowVisible: false,
+          animation: 'slide_from_right',
+        }}
+      >
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" />
+      </Stack>
       <StatusBar style="light" />
     </SafeAreaProvider>
   );

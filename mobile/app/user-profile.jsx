@@ -4,16 +4,19 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import COLORS from '../constants/colors';
 import { API_URL } from '../constants/api';
 import { useAuthStore } from '../store/authContext';
 import FollowButton from '../components/FollowButton';
 import GlassCard from '../components/GlassCard';
+import SafeScreen from '../components/SafeScreen';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = width / 3;
 
 export default function UserProfile() {
+    const insets = useSafeAreaInsets();
     const { userId } = useLocalSearchParams();
     const { user: currentUser, token } = useAuthStore();
     const router = useRouter();
@@ -113,11 +116,11 @@ export default function UserProfile() {
     };
 
     const handleFollowersPress = () => {
-        router.push({ pathname: '/followers', params: { userId } });
+        router.push({ pathname: '/followers-list', params: { userId, username: user?.username, type: 'followers' } });
     };
 
     const handleFollowingPress = () => {
-        router.push({ pathname: '/following', params: { userId } });
+        router.push({ pathname: '/followers-list', params: { userId, username: user?.username, type: 'following' } });
     };
 
     const handleMessage = () => {
@@ -140,125 +143,130 @@ export default function UserProfile() {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
-            </View>
+            <SafeScreen>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                </View>
+            </SafeScreen>
         );
     }
 
     return (
-        <View style={styles.container}>
-            <Stack.Screen
-                options={{
-                    headerShown: true,
-                    title: '',
-                    headerStyle: { backgroundColor: COLORS.background },
-                    headerTintColor: COLORS.textPrimary,
-                    headerShadowVisible: false,
-                }}
-            />
+        <SafeScreen top={true} bottom={false}>
+            <View style={[styles.container, { paddingTop: 0 }]}>
+                <Stack.Screen
+                    options={{
+                        headerShown: true,
+                        title: '',
+                        headerStyle: { backgroundColor: COLORS.background },
+                        headerTintColor: COLORS.textPrimary,
+                        headerShadowVisible: false,
+                        headerStatusBarHeight: insets.top,
+                    }}
+                />
 
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[COLORS.primary]} />
-                }
-            >
-                {/* Profile Header */}
-                <View style={styles.profileHeaderCentered}>
-                    <TouchableOpacity
-                        style={styles.avatarWrapper}
-                        onPress={isOwnProfile ? handleUpdateProfileImage : undefined}
-                        activeOpacity={isOwnProfile ? 0.7 : 1}
-                    >
-                        <Image source={{ uri: user?.profileImage }} style={styles.avatarLarge} />
-                        {isOwnProfile && (
-                            <View style={styles.editIconBadge}>
-                                <Ionicons name="camera" size={12} color="#fff" />
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[COLORS.primary]} />
+                    }
+                >
+                    {/* Profile Header */}
+                    <View style={styles.profileHeaderCentered}>
+                        <TouchableOpacity
+                            style={styles.avatarWrapper}
+                            onPress={isOwnProfile ? handleUpdateProfileImage : undefined}
+                            activeOpacity={isOwnProfile ? 0.7 : 1}
+                        >
+                            <Image source={{ uri: user?.profileImage }} style={styles.avatarLarge} />
+                            {isOwnProfile && (
+                                <View style={styles.editIconBadge}>
+                                    <Ionicons name="camera" size={12} color="#fff" />
+                                </View>
+                            )}
+                            <View style={styles.activeGlow} />
+                        </TouchableOpacity>
+
+                        <Text style={styles.usernameCentered}>{user?.username}</Text>
+                        {user?.bio && <Text style={styles.bioCentered}>{user.bio}</Text>}
+                    </View>
+
+                    {/* Stats */}
+                    <GlassCard style={styles.statsRow}>
+                        <View style={styles.statBox}>
+                            <Text style={styles.statNumber}>{books.length}</Text>
+                            <Text style={styles.statLabel}>Posts</Text>
+                        </View>
+                        <View style={styles.statDivider} />
+                        <TouchableOpacity style={styles.statBox} onPress={handleFollowersPress}>
+                            <Text style={styles.statNumber}>{stats.followers}</Text>
+                            <Text style={styles.statLabel}>Followers</Text>
+                        </TouchableOpacity>
+                        <View style={styles.statDivider} />
+                        <TouchableOpacity style={styles.statBox} onPress={handleFollowingPress}>
+                            <Text style={styles.statNumber}>{stats.following}</Text>
+                            <Text style={styles.statLabel}>Following</Text>
+                        </TouchableOpacity>
+                    </GlassCard>
+
+                    {/* Badges */}
+                    <View style={styles.badgesRow}>
+                        <View style={styles.levelBadge}>
+                            <Ionicons name="trophy" size={14} color={COLORS.gold} />
+                            <Text style={styles.levelText}>Level {user?.level || 1}</Text>
+                        </View>
+                        {user?.currentStreak > 0 && (
+                            <View style={styles.streakBadge}>
+                                <Ionicons name="flame" size={14} color={COLORS.error} />
+                                <Text style={styles.streakText}>{user.currentStreak} day streak</Text>
                             </View>
                         )}
-                        <View style={styles.activeGlow} />
-                    </TouchableOpacity>
-
-                    <Text style={styles.usernameCentered}>{user?.username}</Text>
-                    {user?.bio && <Text style={styles.bioCentered}>{user.bio}</Text>}
-                </View>
-
-                {/* Stats */}
-                <GlassCard style={styles.statsRow}>
-                    <View style={styles.statBox}>
-                        <Text style={styles.statNumber}>{books.length}</Text>
-                        <Text style={styles.statLabel}>Posts</Text>
                     </View>
-                    <View style={styles.statDivider} />
-                    <TouchableOpacity style={styles.statBox} onPress={handleFollowersPress}>
-                        <Text style={styles.statNumber}>{stats.followers}</Text>
-                        <Text style={styles.statLabel}>Followers</Text>
-                    </TouchableOpacity>
-                    <View style={styles.statDivider} />
-                    <TouchableOpacity style={styles.statBox} onPress={handleFollowingPress}>
-                        <Text style={styles.statNumber}>{stats.following}</Text>
-                        <Text style={styles.statLabel}>Following</Text>
-                    </TouchableOpacity>
-                </GlassCard>
 
-                {/* Badges */}
-                <View style={styles.badgesRow}>
-                    <View style={styles.levelBadge}>
-                        <Ionicons name="trophy" size={14} color={COLORS.gold} />
-                        <Text style={styles.levelText}>Level {user?.level || 1}</Text>
-                    </View>
-                    {user?.currentStreak > 0 && (
-                        <View style={styles.streakBadge}>
-                            <Ionicons name="flame" size={14} color={COLORS.error} />
-                            <Text style={styles.streakText}>{user.currentStreak} day streak</Text>
+                    {/* Action Buttons */}
+                    {!isOwnProfile && (
+                        <View style={styles.actionButtonsCentered}>
+                            <FollowButton
+                                userId={String(userId)}
+                                initialFollowing={isFollowing}
+                                onFollowChange={(following) => {
+                                    setIsFollowing(following);
+                                    setStats(prev => ({
+                                        ...prev,
+                                        followers: following ? prev.followers + 1 : Math.max(0, prev.followers - 1),
+                                    }));
+                                }}
+                            />
+                            <TouchableOpacity onPress={handleMessage} style={styles.glassMessageButton}>
+                                <Ionicons name="chatbubble-outline" size={18} color={COLORS.textPrimary} />
+                                <Text style={styles.messageButtonText}>Message</Text>
+                            </TouchableOpacity>
                         </View>
                     )}
-                </View>
 
-                {/* Action Buttons */}
-                {!isOwnProfile && (
-                    <View style={styles.actionButtonsCentered}>
-                        <FollowButton
-                            userId={String(userId)}
-                            initialFollowing={isFollowing}
-                            onFollowChange={(following) => {
-                                setIsFollowing(following);
-                                setStats(prev => ({
-                                    ...prev,
-                                    followers: following ? prev.followers + 1 : Math.max(0, prev.followers - 1),
-                                }));
-                            }}
+                    {/* Books */}
+                    <View style={styles.booksHeader}>
+                        <Text style={styles.sectionTitle}>Bookshelf</Text>
+                    </View>
+
+                    {books.length > 0 ? (
+                        <FlatList
+                            data={books}
+                            renderItem={renderBookItem}
+                            keyExtractor={(item) => item._id}
+                            numColumns={3}
+                            scrollEnabled={false}
+                            contentContainerStyle={styles.gridContent}
                         />
-                        <TouchableOpacity onPress={handleMessage} style={styles.glassMessageButton}>
-                            <Ionicons name="chatbubble-outline" size={18} color={COLORS.textPrimary} />
-                            <Text style={styles.messageButtonText}>Message</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-
-                {/* Books */}
-                <View style={styles.booksHeader}>
-                    <Text style={styles.sectionTitle}>Bookshelf</Text>
-                </View>
-
-                {books.length > 0 ? (
-                    <FlatList
-                        data={books}
-                        renderItem={renderBookItem}
-                        keyExtractor={(item) => item._id}
-                        numColumns={3}
-                        scrollEnabled={false}
-                        contentContainerStyle={styles.gridContent}
-                    />
-                ) : (
-                    <View style={styles.emptyContainer}>
-                        <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
-                        <Text style={styles.emptyText}>Empty bookshelf</Text>
-                    </View>
-                )}
-            </ScrollView>
-        </View>
+                    ) : (
+                        <View style={styles.emptyContainer}>
+                            <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
+                            <Text style={styles.emptyText}>Empty bookshelf</Text>
+                        </View>
+                    )}
+                </ScrollView>
+            </View>
+        </SafeScreen>
     );
 }
 
@@ -312,22 +320,25 @@ const styles = StyleSheet.create({
         borderColor: COLORS.background,
     },
     usernameCentered: {
-        fontSize: 24,
-        fontWeight: '900',
+        fontSize: 26,
+        fontWeight: '800',
         color: COLORS.textPrimary,
         letterSpacing: -0.5,
+        textAlign: 'center',
     },
     bioCentered: {
-        fontSize: 15,
+        fontSize: 14,
         color: COLORS.textSecondary,
         textAlign: 'center',
         marginTop: 8,
         paddingHorizontal: 40,
         lineHeight: 22,
+        fontWeight: '500',
+        opacity: 0.9,
     },
     statsRow: {
         flexDirection: 'row',
-        marginHorizontal: 20,
+        marginHorizontal: 24,
         paddingVertical: 20,
         // GlassCard handles bg/border
     },
@@ -347,8 +358,8 @@ const styles = StyleSheet.create({
         color: COLORS.textPrimary,
     },
     statLabel: {
-        fontSize: 12,
-        fontWeight: '700',
+        fontSize: 11,
+        fontWeight: '600',
         color: COLORS.textSecondary,
         textTransform: 'uppercase',
         marginTop: 4,
@@ -365,8 +376,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'rgba(244, 180, 0, 0.1)',
         paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
+        paddingVertical: 8,
+        borderRadius: 14,
         gap: 6,
         borderWidth: 1,
         borderColor: 'rgba(244, 180, 0, 0.2)',
@@ -381,8 +392,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'rgba(255, 71, 87, 0.1)',
         paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
+        paddingVertical: 8,
+        borderRadius: 14,
         gap: 6,
         borderWidth: 1,
         borderColor: 'rgba(255, 71, 87, 0.2)',
@@ -409,7 +420,12 @@ const styles = StyleSheet.create({
         height: 50,
         gap: 8,
         borderWidth: 1,
-        borderColor: COLORS.borderLight,
+        borderColor: COLORS.surfaceLight,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
     messageButtonText: {
         color: COLORS.textPrimary,
@@ -417,26 +433,35 @@ const styles = StyleSheet.create({
         fontSize: 15,
     },
     booksHeader: {
-        marginTop: 40,
-        paddingHorizontal: 20,
+        marginTop: 32,
+        paddingHorizontal: 24,
         marginBottom: 16,
     },
     sectionTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: '900',
         color: COLORS.textPrimary,
         letterSpacing: -0.5,
+        marginBottom: 8,
     },
     gridContent: {
         paddingHorizontal: 2,
+        paddingBottom: 40,
     },
     bookItem: {
-        width: COLUMN_WIDTH - 4,
-        height: (COLUMN_WIDTH - 4) * 1.5,
-        margin: 2,
+        width: COLUMN_WIDTH - 6,
+        height: (COLUMN_WIDTH - 6) * 1.5,
+        margin: 3,
         backgroundColor: COLORS.surface,
-        borderRadius: 12,
+        borderRadius: 14,
         overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: COLORS.surfaceLight,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3,
     },
     bookImage: {
         width: '100%',
@@ -445,10 +470,12 @@ const styles = StyleSheet.create({
     emptyContainer: {
         alignItems: 'center',
         paddingVertical: 60,
+        opacity: 0.7,
     },
     emptyText: {
-        color: COLORS.textMuted,
+        color: COLORS.textSecondary,
         marginTop: 12,
         fontWeight: '600',
+        fontSize: 15,
     },
 });

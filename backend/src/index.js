@@ -16,6 +16,7 @@ import bookContentRoutes from "./routes/bookContentRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 
 import { connectDB } from "./lib/db.js";
+import User from "./models/User.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -39,17 +40,42 @@ io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
   // User authentication
-  socket.on("authenticate", (userId) => {
+  socket.on("authenticate", async (userId) => {
     connectedUsers.set(userId, socket.id);
     console.log(`User ${userId} authenticated with socket ${socket.id}`);
+
+    // Update user status in DB
+    try {
+      await User.findByIdAndUpdate(userId, { lastActiveDate: new Date() });
+    } catch (err) {
+      console.error("Error updating user status:", err);
+    }
+
+    // Broadcast online status to all clients
+    io.emit("user_status", { userId, status: "online", lastActive: new Date() });
+
+    // Send list of currently active users to the new user
+    const activeUserIds = Array.from(connectedUsers.keys());
+    socket.emit("active_users", activeUserIds);
   });
 
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     // Remove user from connected users
     for (const [userId, socketId] of connectedUsers.entries()) {
       if (socketId === socket.id) {
         connectedUsers.delete(userId);
         console.log(`User ${userId} disconnected`);
+
+        // Update user status in DB
+        const now = new Date();
+        try {
+          await User.findByIdAndUpdate(userId, { lastActiveDate: now });
+        } catch (err) {
+          console.error("Error updating user status:", err);
+        }
+
+        // Broadcast offline status
+        io.emit("user_status", { userId, status: "offline", lastActive: now });
         break;
       }
     }

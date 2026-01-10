@@ -11,7 +11,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: 16,
-    paddingBottom: 100, // Space for floating tab bar
+    paddingBottom: 110,
   },
   header: {
     marginBottom: 24,
@@ -19,30 +19,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: "800",
     color: COLORS.textPrimary,
     letterSpacing: -0.5,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.textSecondary,
     marginTop: 4,
-    letterSpacing: 0,
+    fontWeight: '500',
   },
   bookCard: {
     marginBottom: 24,
+    borderRadius: 20,
+    backgroundColor: COLORS.cardBg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
   },
   floatHeader: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
+    top: 16,
+    left: 16,
     zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
   },
   cardFooter: {
     flexDirection: 'row',
@@ -51,7 +58,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: COLORS.borderLight,
+    borderTopColor: COLORS.border,
   },
   socialGroup: {
     flexDirection: 'row',
@@ -61,77 +68,62 @@ const styles = StyleSheet.create({
   userInfo: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: 'rgba(9,9,11,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     padding: 6,
-    paddingHorizontal: 10,
-    borderRadius: 20,
+    paddingRight: 12,
+    borderRadius: 100,
+    backdropFilter: 'blur(10px)', // Note: iOS only
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     marginRight: 8,
   },
   username: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.white,
   },
   bookImageContainer: {
     width: "100%",
-    height: width * 1.1,
-    // No negative margin trick for now, cleaner cards
+    height: width * 1.25,
+    backgroundColor: COLORS.surfaceLight,
   },
   bookImage: {
     width: "100%",
     height: "100%",
   },
-  imageOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '60%',
-  },
   bookDetails: {
     padding: 20,
-    marginTop: -80, // Overlay details on image
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.surface, // Ensure contrast
+    backgroundColor: COLORS.cardBg,
   },
   bookTitle: {
     fontSize: 22,
-    fontWeight: "800",
+    fontWeight: "700",
     color: COLORS.textPrimary,
+    lineHeight: 28,
     marginBottom: 8,
   },
   ratingContainer: {
     flexDirection: "row",
     marginBottom: 12,
+    alignItems: 'center',
   },
   caption: {
     fontSize: 14,
     color: COLORS.textSecondary,
     lineHeight: 22,
-    marginBottom: 16,
+    fontWeight: '400',
   },
   date: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.textMuted,
     fontWeight: '600',
     textTransform: 'uppercase',
-  },
-  socialActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 20,
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    letterSpacing: 0.5,
   },
   commentInfo: {
     flexDirection: 'row',
@@ -142,6 +134,34 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontWeight: '600',
     fontSize: 13,
+  },
+  // Re-using tab styles but making them sleeker
+  tabContainer: {
+    flexDirection: "row",
+    backgroundColor: COLORS.surface,
+    padding: 4,
+    borderRadius: 16,
+    marginBottom: 20,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  activeTab: {
+    backgroundColor: COLORS.surfaceHighlight,
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.textSecondary,
+  },
+  activeTabText: {
+    color: COLORS.textPrimary,
   },
   emptyContainer: {
     alignItems: "center",
@@ -163,32 +183,6 @@ const styles = StyleSheet.create({
   },
   footerLoader: {
     marginVertical: 40,
-  },
-  tabContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 8,
-    marginBottom: 20,
-    gap: 12,
-  },
-  tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: COLORS.surfaceLight,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-  },
-  activeTab: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: COLORS.textSecondary,
-  },
-  activeTabText: {
-    color: COLORS.white,
   },
 });
 

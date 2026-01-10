@@ -1,55 +1,55 @@
 const COLORS = {
-  // Primary Brand - Warm Amber/Gold (Literary warmth, vintage book pages)
-  primary: "#D97706", // Rich Amber 600
-  primaryDark: "#B45309", // Amber 700
-  primaryLight: "#F59E0B", // Amber 500
+  // Primary Brand - Sophisticated Amber (Golden Hour)
+  primary: "#F59E0B", // Vibrant Amber
+  primaryDark: "#D97706", // Deep Amber
+  primaryLight: "#FBBF24", // Soft Gold
 
-  // Secondary / Accent - Burgundy (Classic book bindings)
-  secondary: "#991B1B", // Red 800 - Deep Burgundy
-  secondaryLight: "#B91C1C", // Red 700
+  // Secondary / Accent - Refined Burgundy
+  secondary: "#7F1D1D", // Deep Wine
+  secondaryLight: "#991B1B", // Rich Red
 
-  // Tertiary Accent - Sage/Teal (Modern, reading-friendly)
-  accent: "#14B8A6", // Teal 500
-  accentLight: "#2DD4BF", // Teal 400
+  // Tertiary - Modern Sage
+  accent: "#2DD4BF", // Teal 400
+  accentLight: "#5EEAD4", // Teal 300
   accentDark: "#0F766E", // Teal 700
 
-  // Gold - For star ratings and achievements
-  gold: "#F59E0B", // Amber 500 - warm gold tone
+  // Gold - For Ratings (Metallic feel)
+  gold: "#FFD700",
 
-  // Backgrounds & Surfaces - Warmer blacks with brown undertones
-  background: "#0A0908", // Almost black with warm tone
-  surface: "#1C1816", // Dark brown-black
-  surfaceLight: "#2B2621", // Warm dark brown
-  surfaceHighlight: "#3D3631", // Medium warm brown
+  // Backgrounds & Surfaces - Deep Premium Dark Mode
+  background: "#050505", // True Deep Black
+  surface: "#121212", // Material Surface
+  surfaceLight: "#1E1E1E", // Elevated Surface
+  surfaceHighlight: "#2D2D2D", // Highlight Surface
 
-  // Text & Content
-  textPrimary: "#FAF8F5", // Warm white (cream)
-  textSecondary: "#C9B8A3", // Warm beige/tan
-  textMuted: "#8A7968", // Muted brown
-  textTertiary: "#5C5144", // Dark warm brown
+  // Text & Content - High Readability
+  textPrimary: "#FFFFFF", // Pure White
+  textSecondary: "#A3A3A3", // Neutral Grey
+  textMuted: "#737373", // Darker Grey
+  textTertiary: "#525252", // Deep Grey
 
-  // Status
-  success: "#10B981", // Emerald 500
-  error: "#DC2626", // Red 600
-  warning: "#F59E0B", // Amber 500
-  info: "#14B8A6", // Teal 500
+  // Status Colors - Vibrant & Clear
+  success: "#10B981",
+  error: "#EF4444",
+  warning: "#F59E0B",
+  info: "#3B82F6",
 
-  // Borders & Dividers
-  border: "#2B2621", // Warm dark brown
-  borderLight: "#3D3631", // Medium warm brown
+  // Borders & Dividers - Subtle
+  border: "#262626",
+  borderLight: "#404040",
 
   // Specific UI
-  cardBg: "#1C1816",
-  tabBarBg: "#0A0908",
+  cardBg: "#18181b", // Zinc 900
+  tabBarBg: "#050505", // Matches background
 
   white: "#FFFFFF",
   black: "#000000",
   transparent: "transparent",
 
-  // Effects - Warmer glass effects
-  glass: "rgba(217, 119, 6, 0.08)", // Warm amber tint
-  glassBorder: "rgba(217, 119, 6, 0.15)", // Warm amber border
-  glassHighlight: "rgba(250, 248, 245, 0.03)", // Subtle warm highlight
+  // Modern Glass Effects
+  glass: "rgba(30, 30, 30, 0.6)",
+  glassBorder: "rgba(255, 255, 255, 0.08)",
+  glassHighlight: "rgba(255, 255, 255, 0.05)",
 };
 
 export default COLORS;

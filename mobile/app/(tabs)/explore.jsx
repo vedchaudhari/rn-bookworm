@@ -11,8 +11,9 @@ import GlazedView from '../../components/GlazedView';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import FollowButton from '../../components/FollowButton';
 
+import styles from '../../assets/styles/explore.styles';
+
 const { width } = Dimensions.get('window');
-const COLUMN_WIDTH = (width - 56) / 2;
 
 export default function Explore() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -258,7 +259,6 @@ export default function Explore() {
     return (
         <SafeScreen>
             <View style={styles.container}>
-                {/* Centered Header */}
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Explore</Text>
                 </View>
@@ -266,7 +266,7 @@ export default function Explore() {
                 {/* Refined Search Bar */}
                 <View style={styles.searchContainer}>
                     <View style={styles.searchInputRow}>
-                        <Ionicons name="search" size={20} color={COLORS.textMuted} style={styles.searchIcon} />
+                        <Ionicons name="search" size={22} color={COLORS.textMuted} style={styles.searchIcon} />
                         <TextInput
                             style={styles.searchInput}
                             placeholder={searchType === 'books' ? "Books, authors, genres..." : "Search users..."}
@@ -283,33 +283,20 @@ export default function Explore() {
                                 onPress={() => setSearchType('books')}
                                 style={[styles.typeBtn, searchType === 'books' && styles.typeBtnActive]}
                             >
-                                <Ionicons name="book" size={14} color={searchType === 'books' ? COLORS.white : COLORS.textMuted} />
+                                <Ionicons name="book" size={16} color={searchType === 'books' ? COLORS.white : COLORS.textMuted} />
                                 <Text style={[styles.typeText, searchType === 'books' && styles.typeTextActive]}>Books</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={() => setSearchType('users')}
                                 style={[styles.typeBtn, searchType === 'users' && styles.typeBtnActive]}
                             >
-                                <Ionicons name="people" size={14} color={searchType === 'users' ? COLORS.white : COLORS.textMuted} />
+                                <Ionicons name="people" size={16} color={searchType === 'users' ? COLORS.white : COLORS.textMuted} />
                                 <Text style={[styles.typeText, searchType === 'users' && styles.typeTextActive]}>Users</Text>
                             </TouchableOpacity>
                         </View>
                     )}
                 </View>
 
-                {/* Genre Scroll */}
-                <View>
-                    <FlatList
-                        horizontal
-                        data={genres}
-                        renderItem={({ item }) => renderGenreChip(item)}
-                        keyExtractor={(item) => item}
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.genreListContent}
-                    />
-                </View>
-
-                {/* Grid */}
                 <FlatList
                     data={getCurrentItems()}
                     renderItem={searchQuery && searchType === 'users' ? renderUserItem : renderBookItem}
@@ -320,17 +307,28 @@ export default function Explore() {
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
                     refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[COLORS.primary]} />
+                        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />
                     }
                     ListEmptyComponent={searchQuery ? renderEmptyState : null}
                     ListHeaderComponent={
                         <>
                             {searchQuery.length === 0 && (
                                 <>
+                                    <View>
+                                        <FlatList
+                                            horizontal
+                                            data={genres}
+                                            renderItem={({ item }) => renderGenreChip(item)}
+                                            keyExtractor={(item) => item}
+                                            showsHorizontalScrollIndicator={false}
+                                            contentContainerStyle={styles.genreListContent}
+                                        />
+                                    </View>
+
                                     {/* Suggested Users Row */}
                                     {suggestedUsers.length > 0 && (
                                         <View style={styles.sectionHeader}>
-                                            <Text style={styles.sectionHeaderTitle}>People you may know</Text>
+                                            <Text style={styles.sectionHeaderTitle}>Discover Readers</Text>
                                             <FlatList
                                                 horizontal
                                                 data={suggestedUsers}
@@ -342,7 +340,6 @@ export default function Explore() {
                                         </View>
                                     )}
 
-                                    {/* Premium Tabs moved inside ListHeaderComponent for better scrolling */}
                                     <View style={styles.tabContainer}>
                                         <TouchableOpacity
                                             onPress={() => setActiveTab('trending')}
@@ -367,324 +364,3 @@ export default function Explore() {
     );
 }
 
-const styles = {
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: COLORS.background,
-    },
-    header: {
-        alignItems: 'center',
-        paddingVertical: 16,
-    },
-    headerTitle: {
-        fontSize: 28,
-        fontWeight: '900',
-        color: COLORS.textPrimary,
-        letterSpacing: -1,
-    },
-    searchContainer: {
-        backgroundColor: COLORS.surface,
-        marginHorizontal: 20,
-        marginBottom: 20,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: COLORS.surfaceLight,
-        overflow: 'hidden',
-    },
-    searchInputRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        height: 54,
-    },
-    searchTypeToggle: {
-        flexDirection: 'row',
-        padding: 6,
-        gap: 8,
-        backgroundColor: COLORS.surfaceHighlight,
-        borderTopWidth: 1,
-        borderTopColor: COLORS.border,
-    },
-    typeBtn: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 6,
-        borderRadius: 10,
-        gap: 6,
-    },
-    typeBtnActive: {
-        backgroundColor: COLORS.primary,
-    },
-    typeText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: COLORS.textMuted,
-    },
-    typeTextActive: {
-        color: COLORS.white,
-    },
-    searchIcon: {
-        marginRight: 12,
-    },
-    searchInput: {
-        flex: 1,
-        fontSize: 16,
-        color: COLORS.textPrimary,
-        fontWeight: '500',
-    },
-    genreListContent: {
-        paddingHorizontal: 20,
-        gap: 10,
-        paddingBottom: 20,
-    },
-    genreChip: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 12,
-        backgroundColor: COLORS.surface,
-        borderWidth: 1,
-        borderColor: COLORS.surfaceLight,
-    },
-    genreChipActive: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
-    },
-    genreText: {
-        fontSize: 14,
-        color: COLORS.textSecondary,
-        fontWeight: '700',
-    },
-    genreTextActive: {
-        color: '#fff',
-    },
-    tabContainer: {
-        flexDirection: 'row',
-        paddingHorizontal: 20,
-        marginBottom: 20,
-        gap: 12,
-    },
-    tab: {
-        flex: 1,
-        height: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 14,
-        backgroundColor: COLORS.surface,
-        borderWidth: 1,
-        borderColor: COLORS.surfaceLight,
-    },
-    tabActive: {
-        backgroundColor: COLORS.surfaceLight,
-        borderColor: COLORS.primary + '30',
-    },
-    tabText: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: COLORS.textMuted,
-    },
-    tabTextActive: {
-        color: COLORS.primary,
-    },
-    listContent: {
-        paddingHorizontal: 20,
-        paddingBottom: 100,
-    },
-    columnWrapper: {
-        justifyContent: 'space-between',
-        marginBottom: 16,
-    },
-    bookCardWrapper: {
-        width: COLUMN_WIDTH,
-    },
-    bookCard: {
-        backgroundColor: COLORS.surface,
-        borderRadius: 20,
-        overflow: 'hidden',
-    },
-    bookImage: {
-        width: '100%',
-        height: 200,
-    },
-    bookInfo: {
-        padding: 12,
-    },
-    bookTitle: {
-        fontSize: 15,
-        fontWeight: '900',
-        color: COLORS.textPrimary,
-        marginBottom: 4,
-    },
-    bookAuthor: {
-        fontSize: 13,
-        color: COLORS.textSecondary,
-        fontWeight: '600',
-        marginBottom: 10,
-    },
-    cardFooter: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    ratingBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    ratingText: {
-        fontSize: 13,
-        fontWeight: '800',
-        color: COLORS.textPrimary,
-    },
-    statsBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    statsText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: COLORS.textMuted,
-    },
-    userCard: {
-        marginBottom: 12,
-        marginHorizontal: 0, // Handled by listContent padding
-    },
-    userCardContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.surface,
-        padding: 12,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: COLORS.surfaceLight,
-        gap: 12,
-    },
-    userAvatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-    },
-    userCardInfo: {
-        flex: 1,
-    },
-    userCardName: {
-        fontSize: 16,
-        fontWeight: '800',
-        color: COLORS.textPrimary,
-        marginBottom: 2,
-    },
-    userCardBio: {
-        fontSize: 12,
-        color: COLORS.textSecondary,
-        marginBottom: 4,
-    },
-    userCardBadge: {
-        alignSelf: 'flex-start',
-        backgroundColor: 'rgba(217, 119, 6, 0.1)',
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 6,
-    },
-    userCardBadgeText: {
-        fontSize: 10,
-        fontWeight: '800',
-        color: COLORS.primary,
-        textTransform: 'uppercase',
-    },
-    userCardFollowBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: COLORS.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    userCardFollowingBtn: {
-        backgroundColor: COLORS.surfaceHighlight,
-    },
-    sectionHeader: {
-        marginBottom: 24,
-    },
-    sectionHeaderTitle: {
-        fontSize: 18,
-        fontWeight: '900',
-        color: COLORS.textPrimary,
-        marginLeft: 20, // Match container padding
-        marginBottom: 16,
-        letterSpacing: -0.3,
-    },
-    suggestedListContent: {
-        paddingHorizontal: 16,
-        gap: 12,
-    },
-    suggestedUserCard: {
-        width: 130,
-        backgroundColor: COLORS.surface,
-        borderRadius: 20,
-        padding: 16,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: COLORS.surfaceLight,
-    },
-    suggestedAvatar: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        marginBottom: 10,
-    },
-    suggestedName: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: COLORS.textPrimary,
-        marginBottom: 12,
-    },
-    suggestedFollowBtn: {
-        backgroundColor: 'rgba(217, 119, 6, 0.15)',
-        paddingVertical: 6,
-        paddingHorizontal: 16,
-        borderRadius: 10,
-        width: '100%',
-        alignItems: 'center',
-    },
-    suggestedFollowText: {
-        fontSize: 12,
-        fontWeight: '800',
-        color: COLORS.primary,
-    },
-    emptyContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingTop: 60,
-        paddingHorizontal: 40,
-    },
-    emptyIconCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: 'rgba(217, 119, 6, 0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 20,
-    },
-    emptyTitle: {
-        fontSize: 20,
-        fontWeight: '900',
-        color: COLORS.textPrimary,
-        marginBottom: 8,
-    },
-    emptySubtitle: {
-        fontSize: 14,
-        color: COLORS.textMuted,
-        textAlign: 'center',
-        lineHeight: 20,
-    },
-};

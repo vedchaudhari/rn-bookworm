@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import COLORS from '../constants/colors';
 import { useAuthStore } from '../store/authContext';
 import { API_URL } from '../constants/api';
@@ -10,8 +11,10 @@ import LikeButton from '../components/LikeButton';
 import CommentSection from '../components/CommentSection';
 import FollowButton from '../components/FollowButton';
 import GlassCard from '../components/GlassCard';
+import SafeScreen from '../components/SafeScreen';
 
 export default function BookDetailScreen() {
+    const insets = useSafeAreaInsets();
     const { bookId } = useLocalSearchParams();
     const [book, setBook] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -88,17 +91,21 @@ export default function BookDetailScreen() {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
-            </View>
+            <SafeScreen>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                </View>
+            </SafeScreen>
         );
     }
 
     if (!book) {
         return (
-            <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>Book not found</Text>
-            </View>
+            <SafeScreen>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>Book not found</Text>
+                </View>
+            </SafeScreen>
         );
     }
 
@@ -112,108 +119,111 @@ export default function BookDetailScreen() {
                     headerTintColor: COLORS.textPrimary,
                     headerShadowVisible: false,
                     headerTitleAlign: 'center',
+                    headerStatusBarHeight: insets.top,
                 }}
             />
-            <View style={styles.container}>
-                {/* Modern Tabs */}
-                <View style={styles.tabContainer}>
-                    {['details', 'comments', 'read'].map(tab => (
-                        <TouchableOpacity
-                            key={tab}
-                            onPress={() => setActiveTab(tab)}
-                            style={[styles.tab, activeTab === tab && styles.tabActive]}
-                        >
-                            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* Content */}
-                {activeTab === 'details' && (
-                    <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                        <Image source={{ uri: book.image }} style={styles.bookImage} contentFit="cover" />
-
-                        <View style={styles.infoSection}>
-                            <View style={styles.headerInfoCentered}>
-                                <Text style={styles.titleCentered}>{book.title}</Text>
-                                {book.author && <Text style={styles.authorCentered}>by {book.author}</Text>}
-
-                                <View style={styles.ratingCentered}>
-                                    {renderRatingStars(book.rating)}
-                                </View>
-
-                                {book.genre && (
-                                    <View style={styles.genreBadgeCentered}>
-                                        <Text style={styles.genreText}>{book.genre}</Text>
-                                    </View>
-                                )}
-                            </View>
-
-                            <Text style={styles.captionCentered}>{book.caption}</Text>
-
-                            <View style={styles.detailDivider} />
-
-                            <GlassCard style={styles.userSectionCentered}>
-                                <TouchableOpacity style={styles.profileRow} onPress={() => router.push({ pathname: '/user-profile', params: { userId: book.user._id } })}>
-                                    <Image source={{ uri: book.user.profileImage }} style={styles.avatarSmall} />
-                                    <View>
-                                        <Text style={styles.usernameSmall}>{book.user.username}</Text>
-                                        <Text style={styles.userLevelSmall}>Lvl {book.user.level || 1}</Text>
-                                    </View>
-                                </TouchableOpacity>
-
-                                {book.user._id !== user.id && (
-                                    <View style={styles.userActionsRow}>
-                                        <FollowButton
-                                            userId={book.user._id}
-                                            initialFollowing={book.user.isFollowing || false}
-                                        />
-                                        <TouchableOpacity onPress={handleMessageUser} style={styles.glassIconButton}>
-                                            <Ionicons name="chatbubble-outline" size={18} color={COLORS.textPrimary} />
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-                            </GlassCard>
-
-                            <View style={styles.statsRowLarge}>
-                                <LikeButton
-                                    bookId={book._id}
-                                    initialLiked={book.isLiked}
-                                    initialCount={book.likeCount || 0}
-                                    size={28}
-                                />
-                                <View style={styles.statLarge}>
-                                    <Ionicons name="chatbubble-outline" size={28} color={COLORS.textSecondary} />
-                                    <View>
-                                        <Text style={styles.statValLarge}>{book.commentCount || 0}</Text>
-                                        <Text style={styles.statLabLarge}>COMMENTS</Text>
-                                    </View>
-                                </View>
-                            </View>
-                        </View>
-                    </ScrollView>
-                )}
-
-                {activeTab === 'comments' && (
-                    <CommentSection bookId={book._id} />
-                )}
-
-                {activeTab === 'read' && (
-                    <View style={styles.readTab}>
-                        <Ionicons name="book-outline" size={80} color={COLORS.primary} />
-                        <Text style={styles.readTitle}>Read this book</Text>
-                        <Text style={styles.readSubtitle}>
-                            Dive into the full content and chapters
-                        </Text>
-                        <TouchableOpacity onPress={handleReadBook} style={styles.readButton}>
-                            <Ionicons name="book-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-                            <Text style={styles.readButtonText}>Start Reading</Text>
-                        </TouchableOpacity>
+            <SafeScreen top={true} bottom={false}>
+                <View style={[styles.container, { paddingTop: 0 }]}>
+                    {/* Modern Tabs */}
+                    <View style={styles.tabContainer}>
+                        {['details', 'comments', 'read'].map(tab => (
+                            <TouchableOpacity
+                                key={tab}
+                                onPress={() => setActiveTab(tab)}
+                                style={[styles.tab, activeTab === tab && styles.tabActive]}
+                            >
+                                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+                                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
                     </View>
-                )}
-            </View>
+
+                    {/* Content */}
+                    {activeTab === 'details' && (
+                        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                            <Image source={{ uri: book.image }} style={styles.bookImage} contentFit="cover" />
+
+                            <View style={styles.infoSection}>
+                                <View style={styles.headerInfoCentered}>
+                                    <Text style={styles.titleCentered}>{book.title}</Text>
+                                    {book.author && <Text style={styles.authorCentered}>by {book.author}</Text>}
+
+                                    <View style={styles.ratingCentered}>
+                                        {renderRatingStars(book.rating)}
+                                    </View>
+
+                                    {book.genre && (
+                                        <View style={styles.genreBadgeCentered}>
+                                            <Text style={styles.genreText}>{book.genre}</Text>
+                                        </View>
+                                    )}
+                                </View>
+
+                                <Text style={styles.captionCentered}>{book.caption}</Text>
+
+                                <View style={styles.detailDivider} />
+
+                                <GlassCard style={styles.userSectionCentered}>
+                                    <TouchableOpacity style={styles.profileRow} onPress={() => router.push({ pathname: '/user-profile', params: { userId: book.user._id } })}>
+                                        <Image source={{ uri: book.user.profileImage }} style={styles.avatarSmall} />
+                                        <View>
+                                            <Text style={styles.usernameSmall}>{book.user.username}</Text>
+                                            <Text style={styles.userLevelSmall}>Lvl {book.user.level || 1}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+
+                                    {book.user._id !== user.id && (
+                                        <View style={styles.userActionsRow}>
+                                            <FollowButton
+                                                userId={book.user._id}
+                                                initialFollowing={book.user.isFollowing || false}
+                                            />
+                                            <TouchableOpacity onPress={handleMessageUser} style={styles.glassIconButton}>
+                                                <Ionicons name="chatbubble-outline" size={18} color={COLORS.textPrimary} />
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                </GlassCard>
+
+                                <View style={styles.statsRowLarge}>
+                                    <LikeButton
+                                        bookId={book._id}
+                                        initialLiked={book.isLiked}
+                                        initialCount={book.likeCount || 0}
+                                        size={28}
+                                    />
+                                    <View style={styles.statLarge}>
+                                        <Ionicons name="chatbubble-outline" size={28} color={COLORS.textSecondary} />
+                                        <View>
+                                            <Text style={styles.statValLarge}>{book.commentCount || 0}</Text>
+                                            <Text style={styles.statLabLarge}>COMMENTS</Text>
+                                        </View>
+                                    </View>
+                                </View>
+                            </View>
+                        </ScrollView>
+                    )}
+
+                    {activeTab === 'comments' && (
+                        <CommentSection bookId={book._id} />
+                    )}
+
+                    {activeTab === 'read' && (
+                        <View style={styles.readTab}>
+                            <Ionicons name="book-outline" size={80} color={COLORS.primary} />
+                            <Text style={styles.readTitle}>Read this book</Text>
+                            <Text style={styles.readSubtitle}>
+                                Dive into the full content and chapters
+                            </Text>
+                            <TouchableOpacity onPress={handleReadBook} style={styles.readButton}>
+                                <Ionicons name="book-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                                <Text style={styles.readButtonText}>Start Reading</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
+            </SafeScreen>
         </>
     );
 }

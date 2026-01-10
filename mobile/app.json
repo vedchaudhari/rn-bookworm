@@ -20,6 +20,7 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+    "backgroundColor": "#0A0908",
     "plugins": [
       "expo-router",
       [
@@ -28,9 +29,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#0A0908",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#0A0908"
           }
         }
       ]

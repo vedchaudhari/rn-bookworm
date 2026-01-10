@@ -13,7 +13,7 @@ import LikeButton from '../../components/LikeButton';
 import GlassCard from '../../components/GlassCard';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-// import SafeScreen from '../../components/SafeScreen';
+import SafeScreen from "../../components/SafeScreen";
 
 export const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -98,60 +98,58 @@ export default function Home() {
   };
 
   const renderItem = ({ item, index }) => (
-    <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+    <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
       <TouchableOpacity
         onPress={() => router.push({ pathname: '/book-detail', params: { bookId: item._id } })}
         activeOpacity={0.9}
-        style={{ marginBottom: 24 }}
+        style={styles.bookCard}
       >
-        <GlassCard style={styles.bookCard}>
-          <View style={styles.bookImageContainer}>
-            <Image
-              source={{ uri: item.image }}
-              style={styles.bookImage}
-              contentFit='cover'
-              transition={500}
-            />
-            <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.2)' }} />
+        <View style={styles.bookImageContainer}>
+          <Image
+            source={{ uri: item.image }}
+            style={styles.bookImage}
+            contentFit='cover'
+            transition={500}
+          />
+          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.1)' }} />
+        </View>
+
+        <View style={styles.floatHeader}>
+          <TouchableOpacity
+            style={styles.userInfo}
+            onPress={() => router.push({ pathname: '/user-profile', params: { userId: item.user._id } })}
+          >
+            <Image source={{ uri: item.user.profileImage }} style={styles.avatar} />
+            <Text style={styles.username}>{item.user.username}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.bookDetails}>
+          <Text style={styles.bookTitle}>{item.title}</Text>
+          <View style={styles.ratingContainer}>
+            {renderRatingStars(item.rating)}
           </View>
+          <Text style={styles.caption} numberOfLines={3}>{item.caption}</Text>
 
-          <View style={styles.floatHeader}>
-            <TouchableOpacity
-              style={styles.userInfo}
-              onPress={() => router.push({ pathname: '/user-profile', params: { userId: item.user._id } })}
-            >
-              <Image source={{ uri: item.user.profileImage }} style={styles.avatar} />
-              <Text style={styles.username}>{item.user.username}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.bookDetails}>
-            <Text style={styles.bookTitle}>{item.title}</Text>
-            <View style={styles.ratingContainer}>
-              {renderRatingStars(item.rating)}
-            </View>
-            <Text style={styles.caption} numberOfLines={3}>{item.caption}</Text>
-
-            <View style={styles.cardFooter}>
-              <Text style={styles.date}>{formatPublishDate(item.createdAt)}</Text>
-              <View style={styles.socialGroup}>
-                <LikeButton
-                  bookId={item._id}
-                  initialLiked={item.isLiked}
-                  initialCount={item.likeCount || 0}
-                  size={22}
-                />
-                <TouchableOpacity
-                  style={styles.commentInfo}
-                  onPress={() => router.push({ pathname: '/book-detail', params: { bookId: item._id, tab: 'comments' } })}
-                >
-                  <Ionicons name="chatbubble-outline" size={20} color={COLORS.textSecondary} />
-                  <Text style={styles.commentCount}>{item.commentCount || 0}</Text>
-                </TouchableOpacity>
-              </View>
+          <View style={styles.cardFooter}>
+            <Text style={styles.date}>{formatPublishDate(item.createdAt)}</Text>
+            <View style={styles.socialGroup}>
+              <LikeButton
+                bookId={item._id}
+                initialLiked={item.isLiked}
+                initialCount={item.likeCount || 0}
+                size={22}
+              />
+              <TouchableOpacity
+                style={styles.commentInfo}
+                onPress={() => router.push({ pathname: '/book-detail', params: { bookId: item._id, tab: 'comments' } })}
+              >
+                <Ionicons name="chatbubble-outline" size={20} color={COLORS.textSecondary} />
+                <Text style={styles.commentCount}>{item.commentCount || 0}</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </GlassCard>
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -159,58 +157,60 @@ export default function Home() {
   if (loading) return <Loader size="large" />;
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={books}
-        renderItem={renderItem}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => fetchBooks(1, true)}
-            colors={[COLORS.primary]}
-            tintColor={COLORS.primary}
-          />
-        }
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.1}
-        ListHeaderComponent={
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Feed</Text>
-            <Text style={styles.headerSubtitle}>Curated stories for your shelf</Text>
+    <SafeScreen>
+      <View style={styles.container}>
+        <FlatList
+          data={books}
+          renderItem={renderItem}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => fetchBooks(1, true)}
+              colors={[COLORS.primary]}
+              tintColor={COLORS.primary}
+            />
+          }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.1}
+          ListHeaderComponent={
+            <View style={styles.header}>
+              <Text style={styles.headerTitle}>Feed</Text>
+              <Text style={styles.headerSubtitle}>Curated stories for your shelf</Text>
 
-            {/* Tab Switcher */}
-            <View style={styles.tabContainer}>
-              <TouchableOpacity
-                style={[styles.tab, activeTab === 'all' && styles.activeTab]}
-                onPress={() => handleTabChange('all')}
-              >
-                <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
-                  All Books
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tab, activeTab === 'following' && styles.activeTab]}
-                onPress={() => handleTabChange('following')}
-              >
-                <Text style={[styles.tabText, activeTab === 'following' && styles.activeTabText]}>
-                  Following
-                </Text>
-              </TouchableOpacity>
+              {/* Tab Switcher */}
+              <View style={styles.tabContainer}>
+                <TouchableOpacity
+                  style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+                  onPress={() => handleTabChange('all')}
+                >
+                  <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+                    All Books
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tab, activeTab === 'following' && styles.activeTab]}
+                  onPress={() => handleTabChange('following')}
+                >
+                  <Text style={[styles.tabText, activeTab === 'following' && styles.activeTabText]}>
+                    Following
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        }
-        ListFooterComponent={hasMore && books.length > 0 ? <ActivityIndicator style={styles.footerLoader} size="small" color={COLORS.primary} /> : null}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="book-outline" size={60} color={COLORS.textSecondary} />
-            <Text style={styles.emptyText}>No recommendations yet</Text>
-            <Text style={styles.emptySubtext}>Be the first to share a book!</Text>
-          </View>
-        }
-      />
-    </View>
+          }
+          ListFooterComponent={hasMore && books.length > 0 ? <ActivityIndicator style={styles.footerLoader} size="small" color={COLORS.primary} /> : null}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="book-outline" size={60} color={COLORS.textSecondary} />
+              <Text style={styles.emptyText}>No recommendations yet</Text>
+              <Text style={styles.emptySubtext}>Be the first to share a book!</Text>
+            </View>
+          }
+        />
+      </View>
+    </SafeScreen>
   );
 }

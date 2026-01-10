@@ -17,9 +17,10 @@ export default function TabLayout() {
                 headerShown: false,
                 tabBarActiveTintColor: COLORS.primary,
                 tabBarInactiveTintColor: COLORS.textSecondary, // Lighter grey for better visibility
-                tabBarShowLabel: false,
+                //tabBarShowLabel: false,
                 tabBarStyle: {
                     position: 'absolute',
+                    marginBottom: 28,
                     bottom: 20,
                     left: 20,
                     right: 20,
@@ -53,22 +54,22 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="create"
+                name="explore"
                 options={{
-                    title: "Create",
+                    title: "Explore",
                     tabBarIcon: ({ color, size }) => (<Ionicons
-                        name="add-circle-outline"
+                        name="compass-outline"
                         size={size}
                         color={color}
                     />)
                 }}
             />
             <Tabs.Screen
-                name="explore"
+                name="create"
                 options={{
-                    title: "Explore",
+                    title: "Create",
                     tabBarIcon: ({ color, size }) => (<Ionicons
-                        name="compass-outline"
+                        name="add-circle-outline"
                         size={size}
                         color={color}
                     />)

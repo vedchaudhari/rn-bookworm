@@ -2,11 +2,14 @@ import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'rea
 import React, { useState, useEffect } from 'react';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import COLORS from '../constants/colors';
 import { useAuthStore } from '../store/authContext';
 import { API_URL } from '../constants/api';
+import SafeScreen from '../components/SafeScreen';
 
 export default function BookReaderScreen() {
+    const insets = useSafeAreaInsets();
     const { bookId, bookTitle } = useLocalSearchParams();
     const [content, setContent] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -45,9 +48,11 @@ export default function BookReaderScreen() {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
-            </View>
+            <SafeScreen>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                </View>
+            </SafeScreen>
         );
     }
 
@@ -60,6 +65,7 @@ export default function BookReaderScreen() {
                     headerStyle: { backgroundColor: COLORS.cardBackground },
                     headerTintColor: COLORS.textPrimary,
                     headerShadowVisible: false,
+                    headerStatusBarHeight: insets.top,
                     headerRight: () => (
                         <View style={styles.headerControls}>
                             <TouchableOpacity onPress={decreaseFontSize} style={styles.fontButton}>
@@ -73,40 +79,42 @@ export default function BookReaderScreen() {
                     ),
                 }}
             />
-            <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-                {content?.chapters && content.chapters.length > 0 ? (
-                    content.chapters.map((chapter, index) => (
-                        <View key={index} style={styles.chapter}>
-                            <Text style={[styles.chapterTitle, { fontSize: fontSize + 4 }]}>
-                                {chapter.title}
-                            </Text>
-                            <Text style={[styles.chapterContent, { fontSize }]}>
-                                {chapter.content}
+            <SafeScreen top={true} bottom={false}>
+                <ScrollView style={[styles.container, { paddingTop: 0 }]} contentContainerStyle={styles.content}>
+                    {content?.chapters && content.chapters.length > 0 ? (
+                        content.chapters.map((chapter, index) => (
+                            <View key={index} style={styles.chapter}>
+                                <Text style={[styles.chapterTitle, { fontSize: fontSize + 4 }]}>
+                                    {chapter.title}
+                                </Text>
+                                <Text style={[styles.chapterContent, { fontSize }]}>
+                                    {chapter.content}
+                                </Text>
+                            </View>
+                        ))
+                    ) : content?.content ? (
+                        <Text style={[styles.mainContent, { fontSize }]}>
+                            {content.content}
+                        </Text>
+                    ) : (
+                        <View style={styles.emptyContainer}>
+                            <Ionicons name="document-text-outline" size={60} color={COLORS.textSecondary} />
+                            <Text style={styles.emptyText}>No content available yet</Text>
+                            <Text style={styles.emptySubtext}>
+                                The author hasn't added any content to this book
                             </Text>
                         </View>
-                    ))
-                ) : content?.content ? (
-                    <Text style={[styles.mainContent, { fontSize }]}>
-                        {content.content}
-                    </Text>
-                ) : (
-                    <View style={styles.emptyContainer}>
-                        <Ionicons name="document-text-outline" size={60} color={COLORS.textSecondary} />
-                        <Text style={styles.emptyText}>No content available yet</Text>
-                        <Text style={styles.emptySubtext}>
-                            The author hasn't added any content to this book
-                        </Text>
-                    </View>
-                )}
+                    )}
 
-                {content && (
-                    <View style={styles.footer}>
-                        <Text style={styles.footerText}>
-                            📖 Read count: {content.readCount || 0}
-                        </Text>
-                    </View>
-                )}
-            </ScrollView>
+                    {content && (
+                        <View style={styles.footer}>
+                            <Text style={styles.footerText}>
+                                📖 Read count: {content.readCount || 0}
+                            </Text>
+                        </View>
+                    )}
+                </ScrollView>
+            </SafeScreen>
         </>
     );
 }

@@ -9,8 +9,9 @@ import { useAuthStore } from '../../store/authContext';
 import LogoutButton from '../../components/LogoutButton';
 import SafeScreen from '../../components/SafeScreen';
 
+import styles from '../../assets/styles/profile.styles';
+
 const { width } = Dimensions.get('window');
-const COLUMN_WIDTH = width / 3;
 
 export default function Profile() {
   const { user: currentUser, token, isCheckingAuth } = useAuthStore();
@@ -145,27 +146,34 @@ export default function Profile() {
       onPress={() => router.push({ pathname: '/user-profile', params: { userId: item.id || item._id } })}
     >
       <Image source={{ uri: item.profileImage }} style={styles.userStripAvatar} />
-      <Text style={styles.userStripName} numberOfLines={1}>{item.username}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.userStripName} numberOfLines={1}>{item.username}</Text>
+      </View>
     </TouchableOpacity>
   );
 
   if (loading && !refreshing) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      <SafeScreen>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      </SafeScreen>
     );
   }
 
   return (
     <SafeScreen>
       <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} />}
+        showsVerticalScrollIndicator={false}
       >
 
         <View style={styles.profileHeaderCentered}>
           <LogoutButton />
-          <Image source={{ uri: currentUser?.profileImage }} style={styles.avatarLarge} />
+          <View style={styles.avatarWrapper}>
+            <Image source={{ uri: currentUser?.profileImage }} style={styles.avatarLarge} />
+          </View>
           <Text style={styles.usernameCentered}>{currentUser?.username}</Text>
           <Text style={styles.emailCentered}>{currentUser?.email}</Text>
           {currentUser?.bio && <Text style={styles.bioCentered}>{currentUser.bio}</Text>}
@@ -176,13 +184,36 @@ export default function Profile() {
             <Text style={styles.statNumber}>{books.length}</Text>
             <Text style={styles.statLabel}>Posts</Text>
           </TouchableOpacity>
+          <View style={styles.statDivider} />
           <TouchableOpacity onPress={() => handleStatClick('followers')} style={styles.statBox}>
             <Text style={styles.statNumber}>{stats.followers}</Text>
             <Text style={styles.statLabel}>Followers</Text>
           </TouchableOpacity>
+          <View style={styles.statDivider} />
           <TouchableOpacity onPress={() => handleStatClick('following')} style={styles.statBox}>
             <Text style={styles.statNumber}>{stats.following}</Text>
             <Text style={styles.statLabel}>Following</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.tabSwitcher}>
+          <TouchableOpacity
+            onPress={() => setActiveView('posts')}
+            style={[styles.tab, activeView === 'posts' && styles.tabActive]}
+          >
+            <Text style={[styles.tabText, activeView === 'posts' && styles.tabTextActive]}>Posts</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleStatClick('followers')}
+            style={[styles.tab, activeView === 'followers' && styles.tabActive]}
+          >
+            <Text style={[styles.tabText, activeView === 'followers' && styles.tabTextActive]}>Followers</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleStatClick('following')}
+            style={[styles.tab, activeView === 'following' && styles.tabActive]}
+          >
+            <Text style={[styles.tabText, activeView === 'following' && styles.tabTextActive]}>Following</Text>
           </TouchableOpacity>
         </View>
 
@@ -193,203 +224,43 @@ export default function Profile() {
             keyExtractor={(i) => i._id}
             numColumns={3}
             scrollEnabled={false}
+            contentContainerStyle={styles.gridContent}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
+                <Text style={styles.emptyText}>You haven't recommended any books yet.</Text>
+                <TouchableOpacity style={styles.addButton} onPress={() => router.push('/create')}>
+                  <Text style={styles.addButtonText}>Share your first book</Text>
+                </TouchableOpacity>
+              </View>
+            }
           />
         )}
 
-        {activeView === 'followers' && (
-          <FlatList horizontal data={followers} renderItem={renderUserStrip} />
-        )}
-
-        {activeView === 'following' && (
-          <FlatList horizontal data={following} renderItem={renderUserStrip} />
+        {(activeView === 'followers' || activeView === 'following') && (
+          <View style={styles.stripContainer}>
+            {loadingUsers ? (
+              <ActivityIndicator color={COLORS.primary} style={{ marginTop: 20 }} />
+            ) : (
+              <FlatList
+                horizontal
+                data={activeView === 'followers' ? followers : following}
+                renderItem={renderUserStrip}
+                keyExtractor={(item) => item.id || item._id}
+                showsHorizontalScrollIndicator={false}
+                ListEmptyComponent={
+                  <View style={[styles.emptyContainer, { width: width - 40 }]}>
+                    <Text style={styles.emptyText}>
+                      {activeView === 'followers' ? "No followers yet." : "You're not following anyone yet."}
+                    </Text>
+                  </View>
+                }
+              />
+            )}
+          </View>
         )}
 
       </ScrollView>
     </SafeScreen>
   );
 }
-
-const styles = {
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  profileHeaderCentered: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    position: 'relative',
-  },
-  avatarWrapper: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  avatarLarge: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: COLORS.surfaceLight,
-  },
-  activeGlow: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: COLORS.success,
-    borderWidth: 3,
-    borderColor: COLORS.background,
-  },
-  usernameCentered: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: COLORS.textPrimary,
-    letterSpacing: -0.5,
-  },
-  emailCentered: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  bioCentered: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginTop: 12,
-    paddingHorizontal: 40,
-    lineHeight: 22,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    marginHorizontal: 20,
-    borderRadius: 24,
-    paddingVertical: 20,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-  },
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: COLORS.surfaceLight,
-    height: '60%',
-    alignSelf: 'center',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: COLORS.white,
-    textShadowColor: 'rgba(217, 119, 6, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  statLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    textTransform: 'uppercase',
-    marginTop: 4,
-    letterSpacing: 0.5,
-  },
-  statBoxActive: {
-    borderBottomWidth: 3,
-    borderBottomColor: COLORS.primary,
-  },
-  statLabelActive: {
-    color: COLORS.primary,
-  },
-  stripContainer: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-  },
-  stripTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: COLORS.textPrimary,
-    marginBottom: 16,
-    letterSpacing: -0.3,
-  },
-  stripContent: {
-    paddingVertical: 10,
-    gap: 16,
-  },
-  userStripItem: {
-    alignItems: 'center',
-    width: 90,
-  },
-  userStripAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: COLORS.surfaceLight,
-  },
-  userStripName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    textAlign: 'center',
-  },
-  booksHeader: {
-    marginTop: 40,
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: COLORS.textPrimary,
-    letterSpacing: -0.5,
-  },
-  gridContent: {
-    paddingHorizontal: 2,
-  },
-  bookItem: {
-    width: COLUMN_WIDTH - 4,
-    height: (COLUMN_WIDTH - 4) * 1.5,
-    margin: 2,
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  bookImage: {
-    width: '100%',
-    height: '100%',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    color: COLORS.textMuted,
-    marginTop: 12,
-    fontWeight: '600',
-    marginBottom: 20,
-  },
-  addButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 14,
-  },
-};

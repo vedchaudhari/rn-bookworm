@@ -7,6 +7,7 @@ export const useNotificationStore = create((set, get) => ({
     unreadCount: 0,
     socket: null,
     isConnected: false,
+    userStatuses: {}, // { userId: { status: 'online'|'offline', lastActive: Date } }
 
     // Connect to WebSocket
     connect: (userId) => {
@@ -31,6 +32,25 @@ export const useNotificationStore = create((set, get) => ({
                 notifications: [notification, ...notifications],
                 unreadCount: unreadCount + 1,
             });
+        });
+
+        socket.on('user_status', ({ userId, status, lastActive }) => {
+            const { userStatuses } = get();
+            set({
+                userStatuses: {
+                    ...userStatuses,
+                    [userId]: { status, lastActive }
+                }
+            });
+        });
+
+        socket.on('active_users', (userIds) => {
+            const { userStatuses } = get();
+            const newStatuses = { ...userStatuses };
+            userIds.forEach(id => {
+                newStatuses[id] = { status: 'online', lastActive: new Date() };
+            });
+            set({ userStatuses: newStatuses });
         });
 
         set({ socket });

@@ -2,12 +2,15 @@ import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react
 import React, { useState, useEffect } from 'react';
 import { useLocalSearchParams, Stack, useRouter, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import COLORS from '../constants/colors';
 import { useAuthStore } from '../store/authContext';
 import { API_URL } from '../constants/api';
 import FollowButton from '../components/FollowButton';
+import SafeScreen from '../components/SafeScreen';
 
 export default function FollowersListScreen() {
+    const insets = useSafeAreaInsets();
     const { userId, username, type } = useLocalSearchParams();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -78,9 +81,11 @@ export default function FollowersListScreen() {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
-            </View>
+            <SafeScreen>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                </View>
+            </SafeScreen>
         );
     }
 
@@ -93,23 +98,26 @@ export default function FollowersListScreen() {
                     headerStyle: { backgroundColor: COLORS.cardBackground },
                     headerTintColor: COLORS.textPrimary,
                     headerShadowVisible: false,
+                    headerStatusBarHeight: insets.top,
                 }}
             />
-            <View style={styles.container}>
-                <FlatList
-                    data={users}
-                    renderItem={renderUser}
-                    keyExtractor={(item) => item._id}
-                    contentContainerStyle={styles.listContent}
-                    ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <Text style={styles.emptyText}>
-                                {isFollowers ? 'No followers yet' : 'Not following anyone yet'}
-                            </Text>
-                        </View>
-                    }
-                />
-            </View>
+            <SafeScreen top={true} bottom={false}>
+                <View style={[styles.container, { paddingTop: 0 }]}>
+                    <FlatList
+                        data={users}
+                        renderItem={renderUser}
+                        keyExtractor={(item) => item._id}
+                        contentContainerStyle={styles.listContent}
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                <Text style={styles.emptyText}>
+                                    {isFollowers ? 'No followers yet' : 'Not following anyone yet'}
+                                </Text>
+                            </View>
+                        }
+                    />
+                </View>
+            </SafeScreen>
         </>
     );
 }

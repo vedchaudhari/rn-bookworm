@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from "expo-image-picker";
 import { useAuthStore } from '../../store/authContext';
 import { API_URL } from '../../constants/api';
+import SafeScreen from '../../components/SafeScreen';
 
 export default function CreateTab() {
   const [title, setTitle] = useState("");
@@ -135,135 +136,137 @@ export default function CreateTab() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView contentContainerStyle={styles.container} style={styles.scrollViewStyle}>
-        <View style={styles.card}>
-          {/* HEADER */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Add Book Recommendation</Text>
-            <Text style={styles.subtitle}>Share your favorite reads with others</Text>
-          </View>
+    <SafeScreen>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView contentContainerStyle={styles.container} style={styles.scrollViewStyle}>
+          <View style={styles.card}>
+            {/* HEADER */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Add Book Recommendation</Text>
+              <Text style={styles.subtitle}>Share your favorite reads with others</Text>
+            </View>
 
-          {/*Book title*/}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Book Title</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="book-outline"
-                size={20}
-                color={COLORS.textSecondary}
-                style={styles.inputIcon}
-              />
+            {/*Book title*/}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Book Title</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons
+                  name="book-outline"
+                  size={20}
+                  color={COLORS.textSecondary}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder='Enter book title'
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={title}
+                  onChangeText={setTitle}
+                />
+              </View>
+            </View>
+
+            {/*Author*/}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Author</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color={COLORS.textSecondary}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder='Enter author name'
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={author}
+                  onChangeText={setAuthor}
+                />
+              </View>
+            </View>
+
+            {/*Genre*/}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Genre</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons
+                  name="library-outline"
+                  size={20}
+                  color={COLORS.textSecondary}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder='Enter genre (e.g., Fiction, Mystery)'
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={genre}
+                  onChangeText={setGenre}
+                />
+              </View>
+            </View>
+
+            {/*Rating*/}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Rating</Text>
+              {renderRatingPicker()}
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Book Image</Text>
+
+              <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+
+                {
+                  image
+                    ? (<Image source={{ uri: image }} style={styles.previewImage} />)
+                    : (
+                      <View style={styles.placeholderContainer}>
+                        <Ionicons name="image-outline" size={40} color={COLORS.textSecondary} />
+                        <Text style={styles.placeholderText}>Tap to select image</Text>
+                      </View>
+                    )
+                }
+
+              </TouchableOpacity>
+            </View>
+
+            {/*Captions*/}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Caption</Text>
               <TextInput
-                style={styles.input}
-                placeholder='Enter book title'
-                placeholderTextColor={COLORS.textSecondary}
-                value={title}
-                onChangeText={setTitle}
+                style={styles.textArea}
+                value={caption}
+                onChangeText={setCaption}
+                placeholder='Enter captions'
+                placeholderTextColor={COLORS.placeholderText}
+                multiline
               />
             </View>
-          </View>
 
-          {/*Author*/}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Author</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color={COLORS.textSecondary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder='Enter author name'
-                placeholderTextColor={COLORS.textSecondary}
-                value={author}
-                onChangeText={setAuthor}
-              />
-            </View>
-          </View>
-
-          {/*Genre*/}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Genre</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="library-outline"
-                size={20}
-                color={COLORS.textSecondary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder='Enter genre (e.g., Fiction, Mystery)'
-                placeholderTextColor={COLORS.textSecondary}
-                value={genre}
-                onChangeText={setGenre}
-              />
-            </View>
-          </View>
-
-          {/*Rating*/}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Rating</Text>
-            {renderRatingPicker()}
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Book Image</Text>
-
-            <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-
+            {/*Upload button*/}
+            <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
               {
-                image
-                  ? (<Image source={{ uri: image }} style={styles.previewImage} />)
-                  : (
-                    <View style={styles.placeholderContainer}>
-                      <Ionicons name="image-outline" size={40} color={COLORS.textSecondary} />
-                      <Text style={styles.placeholderText}>Tap to select image</Text>
-                    </View>
-                  )
+                loading ?
+                  (<ActivityIndicator color={COLORS.white} />)
+                  : <>
+                    <Ionicons
+                      name="cloud-upload-outline"
+                      size={20}
+                      color={COLORS.white}
+                      style={styles.buttonIcon}
+                    />
+                    <Text style={styles.buttonText}>Share</Text>
+                  </>
               }
-
             </TouchableOpacity>
+
           </View>
-
-          {/*Captions*/}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Caption</Text>
-            <TextInput
-              style={styles.textArea}
-              value={caption}
-              onChangeText={setCaption}
-              placeholder='Enter captions'
-              placeholderTextColor={COLORS.placeholderText}
-              multiline
-            />
-          </View>
-
-          {/*Upload button*/}
-          <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
-            {
-              loading ?
-                (<ActivityIndicator color={COLORS.white} />)
-                : <>
-                  <Ionicons
-                    name="cloud-upload-outline"
-                    size={20}
-                    color={COLORS.white}
-                    style={styles.buttonIcon}
-                  />
-                  <Text style={styles.buttonText}>Share</Text>
-                </>
-            }
-          </TouchableOpacity>
-
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeScreen>
   )
 }
