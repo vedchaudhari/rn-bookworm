@@ -13,6 +13,8 @@ import LikeButton from '../../components/LikeButton';
 import GlassCard from '../../components/GlassCard';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+// import SafeScreen from '../../components/SafeScreen';
+
 export const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 export default function Home() {
@@ -50,6 +52,7 @@ export default function Home() {
       setHasMore(pageNum < data.totalPages);
       setPage(pageNum);
     } catch (error) {
+      console.log("Fetching books")
       console.log("Error fetching books:", error);
     } finally {
       if (refresh) {

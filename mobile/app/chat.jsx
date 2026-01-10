@@ -17,7 +17,7 @@ export default function ChatScreen() {
     const [sending, setSending] = useState(false);
     const flatListRef = useRef(null);
 
-    const { messages, fetchMessages, sendMessage, markAsRead, addReceivedMessage } = useMessageStore();
+    const { messages, fetchMessages, sendMessage, markAsRead, addReceivedMessage, setActiveConversation } = useMessageStore();
     const { token, user } = useAuthStore();
     const { socket } = useNotificationStore();
 
@@ -33,11 +33,12 @@ export default function ChatScreen() {
         }
 
         return () => {
+            setActiveConversation(null);
             if (socket) {
                 socket.off('new_message', handleNewMessage);
             }
         };
-    }, [userId]);
+    }, [userId, socket]);
 
     const handleNewMessage = (message) => {
         const senderId = message.sender._id || message.sender;
@@ -83,8 +84,9 @@ export default function ChatScreen() {
         setSending(false);
 
         if (result.success) {
+            // Inverted list: Scroll to offset 0 (bottom)
             setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
+                flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
             }, 100);
         } else {
             Alert.alert('Error', 'Failed to send message');
@@ -92,7 +94,7 @@ export default function ChatScreen() {
     };
 
     const renderMessage = ({ item }) => {
-        const isMe = (item.sender._id || item.sender) === user.id;
+        const isMe = (item.sender._id || item.sender) === user.id || item.sender._id === 'me';
 
         return (
             <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage]}>
@@ -120,6 +122,7 @@ export default function ChatScreen() {
 
                     <Text style={[styles.messageTime, isMe ? styles.myTime : styles.theirTime]}>
                         {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {item.pending && <Ionicons name="time-outline" size={10} color="rgba(255,255,255,0.7)" style={{ marginLeft: 4 }} />}
                     </Text>
                 </View>
             </View>
@@ -142,8 +145,8 @@ export default function ChatScreen() {
             <View style={[styles.container, { paddingBottom: insets.bottom }]}>
                 <KeyboardAvoidingView
                     style={styles.keyboardContainer}
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 100}
                 >
                     <FlatList
                         ref={flatListRef}
@@ -151,7 +154,7 @@ export default function ChatScreen() {
                         renderItem={renderMessage}
                         keyExtractor={(item, index) => item._id || index.toString()}
                         contentContainerStyle={styles.messagesList}
-                        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+                        inverted
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
                                 <Text style={styles.emptyText}>Start the conversation!</Text>

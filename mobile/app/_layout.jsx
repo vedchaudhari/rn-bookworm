@@ -7,6 +7,7 @@ import { useFonts } from "expo-font";
 import { useAuthStore } from "../store/authContext";
 import { useSocialStore } from "../store/socialStore";
 import { useNotificationStore } from '../store/notificationStore';
+import { useMessageStore } from "../store/messageStore";
 import { useEffect } from "react";
 
 SplashScreen.preventAutoHideAsync();
@@ -38,12 +39,18 @@ export default function RootLayout() {
     const inAuthScreen = segments[0] === "(auth)";
     const isSignedIn = user && token;
 
-    if (!isSignedIn && !inAuthScreen) router.replace("/(auth)");
-    else if (isSignedIn && inAuthScreen) router.replace("/(tabs)");
+    // Use a small timeout to ensure navigation occurs after mount
+    const timer = setTimeout(() => {
+      if (!isSignedIn && !inAuthScreen) router.replace("/(auth)");
+      else if (isSignedIn && inAuthScreen) router.replace("/(tabs)");
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [user, token, segments, isCheckingAuth, navigationState]);
 
   // Connect socket when user is logged in
-  const { connect, disconnect } = useNotificationStore();
+  const { connect, disconnect, socket } = useNotificationStore();
+  const { addReceivedMessage } = useMessageStore();
 
   useEffect(() => {
     if (user && token) {
@@ -53,7 +60,20 @@ export default function RootLayout() {
     }
 
     return () => disconnect();
-  }, [user, token]);
+  }, [user?.id, token]);
+
+  // Global message listener
+  useEffect(() => {
+    if (socket) {
+      socket.on('new_message', (message) => {
+        addReceivedMessage(message);
+      });
+    }
+
+    return () => {
+      if (socket) socket.off('new_message');
+    }
+  }, [socket]);
 
   return (
     <SafeAreaProvider>

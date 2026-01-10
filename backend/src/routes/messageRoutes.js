@@ -88,7 +88,7 @@ router.get("/conversation/:userId", protectRoute, async (req, res) => {
         );
 
         res.json({
-            messages: messages.reverse(), // Reverse to show oldest first
+            messages: messages, // Returns newest first (Descending)
             currentPage: page,
             totalMessages,
             totalPages: Math.ceil(totalMessages / limit),
