@@ -12,21 +12,50 @@ export const useNotificationStore = create((set, get) => ({
     // Connect to WebSocket
     connect: (userId) => {
         const socket = io(API_URL, {
-            transports: ['websocket'],
+            transports: ['websocket', 'polling'], // Allow polling fallback
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            timeout: 10000,
+            autoConnect: true,
         });
 
         socket.on('connect', () => {
-            console.log('Socket connected');
+            console.log('✅ Socket connected successfully!');
+            console.log('Socket ID:', socket.id);
+            console.log('Transport:', socket.io.engine.transport.name);
             socket.emit('authenticate', userId);
             set({ isConnected: true });
         });
 
-        socket.on('disconnect', () => {
-            console.log('Socket disconnected');
+        socket.on('connect_error', (error) => {
+            console.error('❌ Socket connection error:', error.message);
+            console.error('Error details:', error);
+        });
+
+        socket.on('disconnect', (reason) => {
+            console.log('⚠️  Socket disconnected. Reason:', reason);
             set({ isConnected: false });
         });
 
+        socket.on('reconnect', (attemptNumber) => {
+            console.log('🔄 Socket reconnected after', attemptNumber, 'attempts');
+        });
+
+        socket.on('reconnect_attempt', (attemptNumber) => {
+            console.log('🔄 Reconnection attempt', attemptNumber);
+        });
+
+        socket.on('reconnect_error', (error) => {
+            console.error('❌ Reconnection error:', error.message);
+        });
+
+        socket.on('reconnect_failed', () => {
+            console.error('❌ Reconnection failed after all attempts');
+        });
+
         socket.on('notification', (notification) => {
+            console.log('📬 New notification received:', notification);
             const { notifications, unreadCount } = get();
             set({
                 notifications: [notification, ...notifications],
