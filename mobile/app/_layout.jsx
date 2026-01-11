@@ -25,8 +25,10 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    if (fontsLoaded && !isCheckingAuth) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, isCheckingAuth]);
 
   useEffect(() => {
     checkAuth();
@@ -35,19 +37,17 @@ export default function RootLayout() {
 
   // handle navigation based on the auth state
   useEffect(() => {
-    if (isCheckingAuth || !navigationState?.key) return;
+    if (isCheckingAuth || !navigationState?.key || !fontsLoaded) return;
 
     const inAuthScreen = segments[0] === "(auth)";
     const isSignedIn = user && token;
 
-    // Use a small timeout to ensure navigation occurs after mount
-    const timer = setTimeout(() => {
-      if (!isSignedIn && !inAuthScreen) router.replace("/(auth)");
-      else if (isSignedIn && inAuthScreen) router.replace("/(tabs)");
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, [user, token, segments, isCheckingAuth, navigationState]);
+    if (!isSignedIn && !inAuthScreen) {
+      router.replace("/(auth)");
+    } else if (isSignedIn && inAuthScreen) {
+      router.replace("/(tabs)");
+    }
+  }, [user, token, segments, isCheckingAuth, navigationState, fontsLoaded]);
 
   // Connect socket when user is logged in
   const { connect, disconnect, socket } = useNotificationStore();
