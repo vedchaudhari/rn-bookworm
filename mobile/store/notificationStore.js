@@ -11,21 +11,37 @@ export const useNotificationStore = create((set, get) => ({
 
     // Connect to WebSocket
     connect: (userId) => {
+        if (!userId) {
+            console.log('⚠️ Cannot connect socket: No userId provided');
+            return;
+        }
+
+        const { socket: existingSocket } = get();
+        if (existingSocket) {
+            console.log('Using existing socket connection');
+            if (!existingSocket.connected) {
+                existingSocket.connect();
+            }
+            existingSocket.emit('authenticate', userId);
+            return;
+        }
+
         let disconnectTimer = null;
 
+        console.log('🔌 Initializing new socket connection...');
         const socket = io(API_URL, {
             transports: ['websocket', 'polling'],
             reconnection: true,
-            reconnectionAttempts: Infinity, // Keep trying forever
-            reconnectionDelay: 500, // Start fast
-            reconnectionDelayMax: 5000, // Maximum delay between attempts
-            randomizationFactor: 0.5,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
             timeout: 20000,
             autoConnect: true,
+            forceNew: true, // Force a new connection instance
         });
 
         socket.on('connect', () => {
-            console.log('✅ Socket connected successfully!');
+            console.log('✅ Socket connected successfully!', socket.id);
             if (disconnectTimer) {
                 clearTimeout(disconnectTimer);
                 disconnectTimer = null;
@@ -107,8 +123,13 @@ export const useNotificationStore = create((set, get) => ({
     disconnect: () => {
         const { socket } = get();
         if (socket) {
+            console.log('🔌 Disconnecting socket manually');
+            socket.off('connect');
+            socket.off('disconnect');
+            socket.off('notification');
+            socket.off('user_status');
             socket.disconnect();
-            set({ socket: null, isConnected: false });
+            set({ socket: null, isConnected: false, userStatuses: {} });
         }
     },
 
