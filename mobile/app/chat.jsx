@@ -73,6 +73,7 @@ export default function ChatScreen() {
     const isTyping = typingStatus[userId];
 
     useEffect(() => {
+        console.log('[Chat] isTyping changed:', isTyping, 'for user:', userId);
         if (isOnline) {
             pulseOpacity.value = withRepeat(
                 withSequence(
@@ -105,7 +106,7 @@ export default function ChatScreen() {
     // Refresh messages when socket reconnects
     useEffect(() => {
         if (isConnected) {
-            console.log('Socket reconnected, refreshing messages...');
+            console.log('[Chat] Socket reconnected (isConnected=true), refreshing messages...');
             loadMessages();
         }
     }, [isConnected]);
@@ -118,7 +119,7 @@ export default function ChatScreen() {
                 appState.current.match(/inactive|background/) &&
                 nextAppState === 'active'
             ) {
-                console.log('Chat active, refreshing messages...');
+                console.log('[Chat] App active, refreshing messages...');
                 loadMessages();
                 markAsRead(userId, token);
             }

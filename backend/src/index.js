@@ -43,6 +43,7 @@ io.on("connection", (socket) => {
 
   // User authentication
   socket.on("authenticate", async (userId) => {
+    console.log(`[Backend] User authenticated: ${userId} (Socket: ${socket.id})`);
     socket.userId = userId; // Store userId for faster lookup
     // Cancel any pending disconnect timeout for this user
     if (disconnectTimeouts.has(userId)) {
@@ -76,12 +77,19 @@ io.on("connection", (socket) => {
   // Typing indicators
   socket.on("typing_start", ({ receiverId }) => {
     socket.userId = socket.userId || Array.from(connectedUsers.entries()).find(([uid, set]) => set.has(socket.id))?.[0];
-    if (!socket.userId) return; // Should be authenticated
+    if (!socket.userId) {
+      console.log(`[Backend] typing_start ignored: Unauthenticated socket ${socket.id}`);
+      return;
+    }
+
+    console.log(`[Backend] typing_start: ${socket.userId} -> ${receiverId}`);
 
     if (connectedUsers.has(receiverId)) {
       connectedUsers.get(receiverId).forEach((socketId) => {
         io.to(socketId).emit("typing_start", { senderId: socket.userId });
       });
+    } else {
+      console.log(`[Backend] receiver ${receiverId} not found/offline`);
     }
   });
 

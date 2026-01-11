@@ -23,6 +23,10 @@ export const useNotificationStore = create((set, get) => ({
             if (!existingSocket.connected) {
                 existingSocket.connect();
             }
+            if (!existingSocket.connected) {
+                existingSocket.connect();
+            }
+            console.log('[Store] Re-emitting authenticate for existing socket');
             existingSocket.emit('authenticate', userId);
             return;
         }
@@ -47,6 +51,7 @@ export const useNotificationStore = create((set, get) => ({
                 clearTimeout(disconnectTimer);
                 disconnectTimer = null;
             }
+            console.log('[Store] Authenticating socket with userId:', userId);
             socket.emit('authenticate', userId);
             set({ isConnected: true });
         });
@@ -118,6 +123,7 @@ export const useNotificationStore = create((set, get) => ({
         });
 
         socket.on('typing_start', ({ senderId }) => {
+            console.log('[Store] Received typing_start from:', senderId);
             set((state) => ({
                 typingStatus: { ...state.typingStatus, [senderId]: true }
             }));
@@ -286,7 +292,10 @@ export const useNotificationStore = create((set, get) => ({
     // Send typing start
     sendTypingStart: (receiverId) => {
         const { socket } = get();
-        if (socket) socket.emit('typing_start', { receiverId });
+        if (socket) {
+            console.log('[Store] Sending typing_start to:', receiverId);
+            socket.emit('typing_start', { receiverId });
+        }
     },
 
     // Send typing stop
