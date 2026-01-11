@@ -28,5 +28,9 @@
 
 // console.log("API_URL configured as:", API_URL);
 
+// const laptop_ip = "192.168.1.35";
+
+// export const API_URL = `http://${laptop_ip}:3000`;
+
 
 export const API_URL = `https://api-bookworm.backend-portfolio-api.online`;

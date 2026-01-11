@@ -163,7 +163,7 @@ export default function Profile() {
   }
 
   return (
-    <SafeScreen>
+    <SafeScreen isTabScreen={true}>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} />}
         showsVerticalScrollIndicator={false}

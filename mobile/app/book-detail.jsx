@@ -122,8 +122,8 @@ export default function BookDetailScreen() {
                     headerStatusBarHeight: insets.top,
                 }}
             />
-            <SafeScreen top={true} bottom={false}>
-                <View style={[styles.container, { paddingTop: 0 }]}>
+            <SafeScreen top={false} bottom={false}>
+                <View style={[styles.container]}>
                     {/* Modern Tabs */}
                     <View style={styles.tabContainer}>
                         {['details', 'comments', 'read'].map(tab => (
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingBottom: 40,
+        paddingBottom: 60,
     },
     bookImage: {
         width: '100%',

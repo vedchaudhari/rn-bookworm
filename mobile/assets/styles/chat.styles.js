@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     },
     messageContainer: {
         flexDirection: 'row',
-        marginBottom: 20,
+        marginBottom: 10,
         alignItems: 'flex-end',
         gap: 10,
     },

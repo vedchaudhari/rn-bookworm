@@ -1,4 +1,5 @@
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
@@ -106,6 +107,11 @@ export default function Messages() {
         </TouchableOpacity>
     );
 
+    const insets = useSafeAreaInsets();
+    const TAB_BAR_HEIGHT = 64;
+    const TAB_BAR_BOTTOM = Math.max(insets.bottom, 16);
+    const TAB_BAR_SPACE = TAB_BAR_HEIGHT + TAB_BAR_BOTTOM + 20;
+
     if (loading) {
         return (
             <SafeScreen>
@@ -117,7 +123,7 @@ export default function Messages() {
     }
 
     return (
-        <SafeScreen>
+        <SafeScreen top={true} bottom={false}>
             <View style={styles.container}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Messages</Text>
@@ -132,7 +138,7 @@ export default function Messages() {
                     data={conversations}
                     renderItem={renderConversation}
                     keyExtractor={(item) => item.conversationId}
-                    contentContainerStyle={styles.listContent}
+                    contentContainerStyle={[styles.listContent, { paddingBottom: TAB_BAR_SPACE }]}
                     refreshControl={
                         <RefreshControl
                             refreshing={refreshing}

@@ -12,6 +12,7 @@ import { useMessageStore } from '../store/messageStore';
 import { useAuthStore } from '../store/authContext';
 import { useNotificationStore } from '../store/notificationStore';
 import SafeScreen from '../components/SafeScreen';
+import { Keyboard } from 'react-native';
 
 import styles from '../assets/styles/chat.styles';
 
@@ -19,11 +20,28 @@ export default function ChatScreen() {
     const { userId, username, profileImage } = useLocalSearchParams();
     const [messageText, setMessageText] = useState('');
     const [sending, setSending] = useState(false);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
     const flatListRef = useRef(null);
 
     const { messages, fetchMessages, sendMessage, markAsRead, addReceivedMessage, setActiveConversation } = useMessageStore();
     const { token, user } = useAuthStore();
     const { socket, userStatuses } = useNotificationStore();
+
+    useEffect(() => {
+        const show = Keyboard.addListener("keyboardDidShow", (e) => {
+            setKeyboardHeight(e.endCoordinates.height);
+        });
+
+        const hide = Keyboard.addListener("keyboardDidHide", () => {
+            setKeyboardHeight(0);
+        });
+
+        return () => {
+            show.remove();
+            hide.remove();
+        };
+    }, []);
+
 
     const conversationMessages = messages[userId] || [];
 
@@ -208,64 +226,72 @@ export default function ChatScreen() {
                 }}
             />
 
-            <KeyboardAvoidingView
+            {/* <KeyboardAvoidingView
                 style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-            >
-                <View style={[styles.container, { paddingTop: insets.top }]}>
-                    <FlatList
-                        ref={flatListRef}
-                        data={conversationMessages}
-                        renderItem={renderMessage}
-                        keyExtractor={(item, index) => item._id || index.toString()}
-                        contentContainerStyle={[styles.messagesList, { paddingBottom: 20 }]}
-                        inverted
-                        showsVerticalScrollIndicator={false}
-                        ListEmptyComponent={
-                            <View style={styles.emptyContainer}>
-                                <View style={styles.emptyIconCircle}>
-                                    <Ionicons name="chatbubbles-outline" size={32} color={COLORS.primary} />
-                                </View>
-                                <Text style={styles.emptyText}>Start a literary conversation with {username}</Text>
+            > */}
+            <View style={[styles.container]}>
+                <FlatList
+                    ref={flatListRef}
+                    data={conversationMessages}
+                    renderItem={renderMessage}
+                    keyExtractor={(item, index) => item._id || index.toString()}
+                    contentContainerStyle={[styles.messagesList, { paddingBottom: 20 }]}
+                    inverted
+                    showsVerticalScrollIndicator={false}
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            <View style={styles.emptyIconCircle}>
+                                <Ionicons name="chatbubbles-outline" size={32} color={COLORS.primary} />
                             </View>
-                        }
-                    />
-
-                    <View style={[styles.inputWrapper, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-                        <View style={styles.inputContainer}>
-                            <TouchableOpacity onPress={handlePickImage} style={styles.iconButton}>
-                                <Ionicons name="add" size={24} color={COLORS.primary} />
-                            </TouchableOpacity>
-
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Type a message..."
-                                placeholderTextColor={COLORS.textMuted}
-                                value={messageText}
-                                onChangeText={setMessageText}
-                                multiline
-                                maxLength={1000}
-                            />
-
-                            <TouchableOpacity
-                                onPress={handleSend}
-                                disabled={!messageText.trim() || sending}
-                                style={[
-                                    styles.sendButton,
-                                    (!messageText.trim() || sending) && styles.sendButtonDisabled
-                                ]}
-                            >
-                                {sending ? (
-                                    <ActivityIndicator size="small" color="#fff" />
-                                ) : (
-                                    <Ionicons name="send" size={18} color="#fff" />
-                                )}
-                            </TouchableOpacity>
+                            <Text style={styles.emptyText}>Start a literary conversation with {username}</Text>
                         </View>
+                    }
+                />
+
+                <View
+                    style={[
+                        styles.inputWrapper,
+                        {
+                            marginBottom: keyboardHeight ? keyboardHeight : insets.bottom,
+                            paddingBottom: keyboardHeight || insets.bottom > 0 ? 8 : 16
+                        },
+                    ]}
+                >
+                    <View style={styles.inputContainer}>
+                        <TouchableOpacity onPress={handlePickImage} style={styles.iconButton}>
+                            <Ionicons name="add" size={24} color={COLORS.primary} />
+                        </TouchableOpacity>
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Type a message..."
+                            placeholderTextColor={COLORS.textMuted}
+                            value={messageText}
+                            onChangeText={setMessageText}
+                            multiline
+                            maxLength={1000}
+                        />
+
+                        <TouchableOpacity
+                            onPress={handleSend}
+                            disabled={!messageText.trim() || sending}
+                            style={[
+                                styles.sendButton,
+                                (!messageText.trim() || sending) && styles.sendButtonDisabled
+                            ]}
+                        >
+                            {sending ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                                <Ionicons name="send" size={18} color="#fff" />
+                            )}
+                        </TouchableOpacity>
                     </View>
                 </View>
-            </KeyboardAvoidingView>
+            </View>
+            {/* </KeyboardAvoidingView> */}
         </View>
     );
 }

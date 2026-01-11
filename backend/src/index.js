@@ -33,16 +33,29 @@ const io = new Server(httpServer, {
   },
 });
 
-// Store connected users
+// Store connected users: Map<userId, Set<socketId>>
 const connectedUsers = new Map();
+// Store disconnect timeouts: Map<userId, timeoutId>
+const disconnectTimeouts = new Map();
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
   // User authentication
   socket.on("authenticate", async (userId) => {
-    connectedUsers.set(userId, socket.id);
-    console.log(`User ${userId} authenticated with socket ${socket.id}`);
+    // Cancel any pending disconnect timeout for this user
+    if (disconnectTimeouts.has(userId)) {
+      clearTimeout(disconnectTimeouts.get(userId));
+      disconnectTimeouts.delete(userId);
+      console.log(`Cancelled disconnect timeout for user ${userId}`);
+    }
+
+    // Add socket to user's set
+    if (!connectedUsers.has(userId)) {
+      connectedUsers.set(userId, new Set());
+    }
+    connectedUsers.get(userId).add(socket.id);
+    console.log(`User ${userId} authenticated with socket ${socket.id}. Total sockets: ${connectedUsers.get(userId).size}`);
 
     // Update user status in DB
     try {
@@ -60,22 +73,39 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", async () => {
-    // Remove user from connected users
-    for (const [userId, socketId] of connectedUsers.entries()) {
-      if (socketId === socket.id) {
-        connectedUsers.delete(userId);
-        console.log(`User ${userId} disconnected`);
+    let disconnectedUserId = null;
 
-        // Update user status in DB
-        const now = new Date();
-        try {
-          await User.findByIdAndUpdate(userId, { lastActiveDate: now });
-        } catch (err) {
-          console.error("Error updating user status:", err);
+    // Find the user who owned this socket
+    for (const [userId, sockets] of connectedUsers.entries()) {
+      if (sockets.has(socket.id)) {
+        sockets.delete(socket.id);
+        disconnectedUserId = userId;
+        console.log(`Socket ${socket.id} removed from user ${userId}. Remaining: ${sockets.size}`);
+
+        if (sockets.size === 0) {
+          // No more active sockets for this user, start grace period
+          console.log(`Starting 10s grace period for user ${userId}`);
+          const timeoutId = setTimeout(async () => {
+            if (connectedUsers.has(userId) && connectedUsers.get(userId).size === 0) {
+              connectedUsers.delete(userId);
+              disconnectTimeouts.delete(userId);
+              console.log(`User ${userId} marked as offline after grace period`);
+
+              // Update user status in DB
+              const now = new Date();
+              try {
+                await User.findByIdAndUpdate(userId, { lastActiveDate: now });
+              } catch (err) {
+                console.error("Error updating user status:", err);
+              }
+
+              // Broadcast offline status
+              io.emit("user_status", { userId, status: "offline", lastActive: now });
+            }
+          }, 10000); // 10 second grace period
+
+          disconnectTimeouts.set(userId, timeoutId);
         }
-
-        // Broadcast offline status
-        io.emit("user_status", { userId, status: "offline", lastActive: now });
         break;
       }
     }

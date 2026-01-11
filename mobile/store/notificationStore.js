@@ -11,31 +11,49 @@ export const useNotificationStore = create((set, get) => ({
 
     // Connect to WebSocket
     connect: (userId) => {
+        let disconnectTimer = null;
+
         const socket = io(API_URL, {
-            transports: ['websocket', 'polling'], // Allow polling fallback
+            transports: ['websocket', 'polling'],
             reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            timeout: 10000,
+            reconnectionAttempts: Infinity, // Keep trying forever
+            reconnectionDelay: 500, // Start fast
+            reconnectionDelayMax: 5000, // Maximum delay between attempts
+            randomizationFactor: 0.5,
+            timeout: 20000,
             autoConnect: true,
         });
 
         socket.on('connect', () => {
             console.log('✅ Socket connected successfully!');
-            console.log('Socket ID:', socket.id);
-            console.log('Transport:', socket.io.engine.transport.name);
+            if (disconnectTimer) {
+                clearTimeout(disconnectTimer);
+                disconnectTimer = null;
+            }
             socket.emit('authenticate', userId);
             set({ isConnected: true });
         });
 
         socket.on('connect_error', (error) => {
             console.error('❌ Socket connection error:', error.message);
-            console.error('Error details:', error);
         });
 
         socket.on('disconnect', (reason) => {
             console.log('⚠️  Socket disconnected. Reason:', reason);
-            set({ isConnected: false });
+
+            // If it's a deliberate disconnect by the client, set immediately
+            if (reason === 'io client disconnect') {
+                set({ isConnected: false });
+                return;
+            }
+
+            // Otherwise, wait 5 seconds before showing "disconnected" in UI
+            // to handle transient drops seamlessly
+            if (disconnectTimer) clearTimeout(disconnectTimer);
+            disconnectTimer = setTimeout(() => {
+                set({ isConnected: false });
+                disconnectTimer = null;
+            }, 5000);
         });
 
         socket.on('reconnect', (attemptNumber) => {

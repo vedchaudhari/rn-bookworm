@@ -1,5 +1,5 @@
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView, TextInput, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native'
-import React, { useState } from 'react'
+import { View, Text, Platform, ScrollView, TextInput, TouchableOpacity, Alert, Image, ActivityIndicator, Keyboard } from 'react-native'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'expo-router';
 import styles from '../../assets/styles/create.styles';
 import COLORS from '../../constants/colors';
@@ -18,6 +18,22 @@ export default function CreateTab() {
   const [loading, setLoading] = useState(false);
   const [genre, setGenre] = useState("General");
   const [author, setAuthor] = useState("");
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   const { token } = useAuthStore();
 
@@ -136,12 +152,16 @@ export default function CreateTab() {
   }
 
   return (
-    <SafeScreen>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView contentContainerStyle={styles.container} style={styles.scrollViewStyle}>
+    <SafeScreen isTabScreen={true}>
+      <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.container,
+            { paddingBottom: keyboardHeight ? keyboardHeight + 20 : 40 }
+          ]}
+          style={styles.scrollViewStyle}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.card}>
             {/* HEADER */}
             <View style={styles.header}>
@@ -266,7 +286,7 @@ export default function CreateTab() {
 
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </SafeScreen>
   )
 }

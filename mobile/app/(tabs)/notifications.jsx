@@ -1,4 +1,5 @@
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -128,6 +129,11 @@ export default function Notifications() {
         );
     };
 
+    const insets = useSafeAreaInsets();
+    const TAB_BAR_HEIGHT = 64;
+    const TAB_BAR_BOTTOM = Math.max(insets.bottom, 16);
+    const TAB_BAR_SPACE = TAB_BAR_HEIGHT + TAB_BAR_BOTTOM + 20;
+
     if (loading) {
         return (
             <SafeScreen>
@@ -139,7 +145,7 @@ export default function Notifications() {
     }
 
     return (
-        <SafeScreen>
+        <SafeScreen top={true} bottom={false}>
             <View style={styles.container}>
                 {/* Header */}
                 <View style={styles.header}>
@@ -163,7 +169,7 @@ export default function Notifications() {
                     data={notifications}
                     renderItem={renderNotification}
                     keyExtractor={(item) => item._id}
-                    contentContainerStyle={styles.listContent}
+                    contentContainerStyle={[styles.listContent, { paddingBottom: TAB_BAR_SPACE }]}
                     refreshControl={
                         <RefreshControl
                             refreshing={refreshing}

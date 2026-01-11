@@ -7,9 +7,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  ScrollView
+  ScrollView,
+  Keyboard
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Image } from "react-native";
 import styles from "../../assets/styles/login.styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +25,22 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   const { isLoading, login, isCheckingAuth } = useAuthStore();
 
@@ -42,14 +59,14 @@ export default function Login() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: COLORS.background }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-    >
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <SafeScreen>
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            paddingBottom: keyboardHeight ? keyboardHeight + 20 : insets.bottom + 20
+          }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           style={{ backgroundColor: COLORS.background }}
@@ -136,6 +153,6 @@ export default function Login() {
           </View>
         </ScrollView>
       </SafeScreen>
-    </KeyboardAvoidingView>
+    </View >
   );
 }

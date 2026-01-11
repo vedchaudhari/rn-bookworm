@@ -255,20 +255,32 @@ router.post("/follow/:userId", protectRoute, async (req, res) => {
 router.get("/followers/:userId", protectRoute, async (req, res) => {
     try {
         const { userId } = req.params;
+        const currentUserId = req.user._id;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
 
         const followers = await Follow.find({ following: userId })
-            .populate("follower", "username profileImage level")
+            .populate("follower", "username profileImage level bio")
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
 
-        // Filter out null followers (in case user was deleted)
-        const validFollowers = followers
-            .filter(f => f.follower != null)
-            .map((f) => f.follower);
+        // Filter out null followers and add isFollowing status
+        const validFollowers = await Promise.all(
+            followers
+                .filter(f => f.follower != null)
+                .map(async (f) => {
+                    const isFollowing = await Follow.findOne({
+                        follower: currentUserId,
+                        following: f.follower._id
+                    });
+                    return {
+                        ...f.follower.toObject(),
+                        isFollowing: !!isFollowing
+                    };
+                })
+        );
 
         const totalFollowers = await Follow.countDocuments({ following: userId });
 
@@ -288,20 +300,32 @@ router.get("/followers/:userId", protectRoute, async (req, res) => {
 router.get("/following/:userId", protectRoute, async (req, res) => {
     try {
         const { userId } = req.params;
+        const currentUserId = req.user._id;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
 
         const following = await Follow.find({ follower: userId })
-            .populate("following", "username profileImage level")
+            .populate("following", "username profileImage level bio")
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
 
-        // Filter out null following (in case user was deleted)
-        const validFollowing = following
-            .filter(f => f.following != null)
-            .map((f) => f.following);
+        // Filter out null following and add isFollowing status
+        const validFollowing = await Promise.all(
+            following
+                .filter(f => f.following != null)
+                .map(async (f) => {
+                    const isFollowing = await Follow.findOne({
+                        follower: currentUserId,
+                        following: f.following._id
+                    });
+                    return {
+                        ...f.following.toObject(),
+                        isFollowing: !!isFollowing
+                    };
+                })
+        );
 
         const totalFollowing = await Follow.countDocuments({ follower: userId });
 

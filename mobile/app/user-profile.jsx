@@ -152,8 +152,8 @@ export default function UserProfile() {
     }
 
     return (
-        <SafeScreen top={true} bottom={false}>
-            <View style={[styles.container, { paddingTop: 0 }]}>
+        <SafeScreen top={false} bottom={false}>
+            <View style={[styles.container]}>
                 <Stack.Screen
                     options={{
                         headerShown: true,

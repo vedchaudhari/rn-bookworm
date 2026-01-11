@@ -20,8 +20,7 @@ export default function TabLayout() {
                 //tabBarShowLabel: false,
                 tabBarStyle: {
                     position: 'absolute',
-                    marginBottom: 28,
-                    bottom: 20,
+                    bottom: Math.max(insets.bottom, 16),
                     left: 20,
                     right: 20,
                     backgroundColor: COLORS.surface + 'F2', // High opacity for "premium" feel

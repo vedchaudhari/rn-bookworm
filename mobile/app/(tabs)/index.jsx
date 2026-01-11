@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react'
 import { useAuthStore } from '../../store/authContext'
@@ -154,16 +155,21 @@ export default function Home() {
     </Animated.View>
   );
 
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 64;
+  const TAB_BAR_BOTTOM = Math.max(insets.bottom, 16);
+  const TAB_BAR_SPACE = TAB_BAR_HEIGHT + TAB_BAR_BOTTOM + 20;
+
   if (loading) return <Loader size="large" />;
 
   return (
-    <SafeScreen>
+    <SafeScreen top={true} bottom={false}>
       <View style={styles.container}>
         <FlatList
           data={books}
           renderItem={renderItem}
           keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[styles.listContainer, { paddingBottom: TAB_BAR_SPACE }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl

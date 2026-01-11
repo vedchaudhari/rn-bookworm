@@ -37,14 +37,20 @@ export default function FollowersListScreen() {
                 ? `${API_URL}/api/social/followers/${userId}`
                 : `${API_URL}/api/social/following/${userId}`;
 
+            console.log('Fetching users from:', endpoint);
             const response = await fetch(endpoint, {
                 headers: { 'Authorization': `Bearer ${token}` },
             });
 
             const data = await response.json();
+            console.log('Raw API Response:', data);
             if (!response.ok) throw new Error(data.message);
 
-            setUsers(data.users || []);
+            // Backend returns 'followers' or 'following' depending on the endpoint
+            const usersList = isFollowers ? (data.followers || []) : (data.following || []);
+            console.log('Users list:', usersList);
+            console.log('Users count:', usersList.length);
+            setUsers(usersList);
             setLoading(false);
         } catch (error) {
             console.error('Error fetching users:', error);
@@ -95,19 +101,19 @@ export default function FollowersListScreen() {
                 options={{
                     headerShown: true,
                     title: `${username}'s ${isFollowers ? 'Followers' : 'Following'}`,
-                    headerStyle: { backgroundColor: COLORS.cardBackground },
+                    headerStyle: { backgroundColor: COLORS.cardBg },
                     headerTintColor: COLORS.textPrimary,
                     headerShadowVisible: false,
                     headerStatusBarHeight: insets.top,
                 }}
             />
-            <SafeScreen top={true} bottom={false}>
-                <View style={[styles.container, { paddingTop: 0 }]}>
+            <SafeScreen top={false} bottom={false}>
+                <View style={[styles.container]}>
                     <FlatList
                         data={users}
                         renderItem={renderUser}
                         keyExtractor={(item) => item._id}
-                        contentContainerStyle={styles.listContent}
+                        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 20 }]}
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
                                 <Text style={styles.emptyText}>

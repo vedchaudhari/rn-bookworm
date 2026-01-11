@@ -1,4 +1,5 @@
 import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -246,6 +247,11 @@ export default function Explore() {
         return trending;
     };
 
+    const insets = useSafeAreaInsets();
+    const TAB_BAR_HEIGHT = 64;
+    const TAB_BAR_BOTTOM = Math.max(insets.bottom, 16);
+    const TAB_BAR_SPACE = TAB_BAR_HEIGHT + TAB_BAR_BOTTOM + 20;
+
     if (loading) {
         return (
             <SafeScreen>
@@ -257,7 +263,7 @@ export default function Explore() {
     }
 
     return (
-        <SafeScreen>
+        <SafeScreen top={true} bottom={false}>
             <View style={styles.container}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Explore</Text>
@@ -304,7 +310,7 @@ export default function Explore() {
                     numColumns={searchQuery && searchType === 'users' ? 1 : 2}
                     key={searchQuery && searchType === 'users' ? 'users-list' : 'books-grid'}
                     columnWrapperStyle={searchQuery && searchType === 'users' ? null : styles.columnWrapper}
-                    contentContainerStyle={styles.listContent}
+                    contentContainerStyle={[styles.listContent, { paddingBottom: TAB_BAR_SPACE }]}
                     showsVerticalScrollIndicator={false}
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />

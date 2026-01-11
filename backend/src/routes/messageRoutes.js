@@ -44,10 +44,12 @@ router.post("/send/:receiverId", protectRoute, async (req, res) => {
         // Emit real-time message via WebSocket
         const io = req.app.get("io");
         const connectedUsers = req.app.get("connectedUsers");
-        const receiverSocketId = connectedUsers.get(receiverId.toString());
+        const receiverSockets = connectedUsers.get(receiverId.toString());
 
-        if (receiverSocketId) {
-            io.to(receiverSocketId).emit("new_message", newMessage);
+        if (receiverSockets && receiverSockets.size > 0) {
+            receiverSockets.forEach(socketId => {
+                io.to(socketId).emit("new_message", newMessage);
+            });
         }
 
         res.status(201).json(newMessage);
