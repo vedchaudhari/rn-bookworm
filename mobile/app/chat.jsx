@@ -254,7 +254,7 @@ export default function ChatScreen() {
                     style={[
                         styles.inputWrapper,
                         {
-                            marginBottom: keyboardHeight ? keyboardHeight : insets.bottom,
+                            marginBottom: keyboardHeight ? keyboardHeight + 50 : insets.bottom,
                             paddingBottom: keyboardHeight || insets.bottom > 0 ? 8 : 16
                         },
                     ]}
