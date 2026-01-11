@@ -35,7 +35,7 @@ export const useNotificationStore = create((set, get) => ({
 
         console.log('🔌 Initializing new socket connection...');
         const socket = io(API_URL, {
-            transports: ['websocket', 'polling'],
+            transports: ['websocket'], // Force WebSocket for instant connection
             reconnection: true,
             reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
@@ -47,6 +47,13 @@ export const useNotificationStore = create((set, get) => ({
 
         socket.on('connect', () => {
             console.log('✅ Socket connected successfully!', socket.id);
+            console.log('🚀 Transport used:', socket.io.engine.transport.name); // Log transport type
+
+            // Upgrade listener
+            socket.io.engine.on("upgrade", () => {
+                console.log("🚀 Transport upgraded to:", socket.io.engine.transport.name);
+            });
+
             if (disconnectTimer) {
                 clearTimeout(disconnectTimer);
                 disconnectTimer = null;

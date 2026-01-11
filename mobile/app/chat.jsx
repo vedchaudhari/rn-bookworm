@@ -183,17 +183,23 @@ export default function ChatScreen() {
         if (!text.trim()) {
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
             sendTypingStop(userId);
+            typingTimeoutRef.current = null;
             return;
         }
 
-        // If not already scheduled to stop (meaning actively typing), send start
+        // Send start event immediately if we aren't already considered "typing" locally
+        // We use typingTimeoutRef as a proxy for "is currently typing"
         if (!typingTimeoutRef.current) {
+            console.log('[Chat] Starting typing...');
             sendTypingStart(userId);
         }
 
-        // Debounce stop
+        // Clear existing stop timer
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+        // Schedule stop
         typingTimeoutRef.current = setTimeout(() => {
+            console.log('[Chat] Stopping typing (debounce)...');
             sendTypingStop(userId);
             typingTimeoutRef.current = null;
         }, 2000);
