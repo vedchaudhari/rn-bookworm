@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Readsphere",
-    "slug": "readsphere",
+    "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -45,6 +45,7 @@
       "eas": {
         "projectId": "a9968a30-b85f-49a0-8973-3a362a1880f3"
       }
-    }
+    },
+    "owner": "vedchaudhari07"
   }
 }
