@@ -1,4 +1,4 @@
-import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, AppState } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,7 +25,8 @@ export default function ChatScreen() {
 
     const { messages, fetchMessages, sendMessage, markAsRead, addReceivedMessage, setActiveConversation } = useMessageStore();
     const { token, user } = useAuthStore();
-    const { socket, userStatuses } = useNotificationStore();
+    const { socket, userStatuses, typingStatus, sendTypingStart, sendTypingStop, isConnected } = useNotificationStore();
+    const typingTimeoutRef = useRef(null);
 
     useEffect(() => {
         const show = Keyboard.addListener("keyboardDidShow", (e) => {
@@ -68,6 +69,9 @@ export default function ChatScreen() {
     const displayStatus = getDisplayStatus();
     const pulseOpacity = useSharedValue(0.4);
 
+
+    const isTyping = typingStatus[userId];
+
     useEffect(() => {
         if (isOnline) {
             pulseOpacity.value = withRepeat(
@@ -97,6 +101,35 @@ export default function ChatScreen() {
             }
         };
     }, [userId, socket, isOnline]);
+
+    // Refresh messages when socket reconnects
+    useEffect(() => {
+        if (isConnected) {
+            console.log('Socket reconnected, refreshing messages...');
+            loadMessages();
+        }
+    }, [isConnected]);
+
+    // Refresh messages when app comes to foreground
+    const appState = useRef(AppState.currentState);
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            if (
+                appState.current.match(/inactive|background/) &&
+                nextAppState === 'active'
+            ) {
+                console.log('Chat active, refreshing messages...');
+                loadMessages();
+                markAsRead(userId, token);
+            }
+
+            appState.current = nextAppState;
+        });
+
+        return () => {
+            subscription.remove();
+        };
+    }, [userId, token]);
 
     const handleNewMessage = (message) => {
         const senderId = message.sender._id || message.sender;
@@ -135,7 +168,34 @@ export default function ChatScreen() {
 
     const handleSend = async () => {
         if (!messageText.trim() || sending) return;
+
+        // Stop typing immediately when sending
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        sendTypingStop(userId);
+
         await createAndSendMessage(messageText.trim(), null);
+    };
+
+    const handleTextChange = (text) => {
+        setMessageText(text);
+
+        if (!text.trim()) {
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            sendTypingStop(userId);
+            return;
+        }
+
+        // If not already scheduled to stop (meaning actively typing), send start
+        if (!typingTimeoutRef.current) {
+            sendTypingStart(userId);
+        }
+
+        // Debounce stop
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+            sendTypingStop(userId);
+            typingTimeoutRef.current = null;
+        }, 2000);
     };
 
     const createAndSendMessage = async (text, image) => {
@@ -214,7 +274,11 @@ export default function ChatScreen() {
                             </View>
                             <View style={styles.headerInfo}>
                                 <Text style={styles.headerName}>{username}</Text>
-                                <Text style={styles.headerStatus}>{displayStatus}</Text>
+                                {isTyping ? (
+                                    <Text style={[styles.headerStatus, { color: COLORS.primary, textTransform: 'none' }]}>Typing...</Text>
+                                ) : (
+                                    <Text style={styles.headerStatus}>{displayStatus}</Text>
+                                )}
                             </View>
                         </View>
                     ),
@@ -269,7 +333,7 @@ export default function ChatScreen() {
                             placeholder="Type a message..."
                             placeholderTextColor={COLORS.textMuted}
                             value={messageText}
-                            onChangeText={setMessageText}
+                            onChangeText={handleTextChange}
                             multiline
                             maxLength={1000}
                         />

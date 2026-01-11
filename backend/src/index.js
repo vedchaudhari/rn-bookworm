@@ -43,6 +43,7 @@ io.on("connection", (socket) => {
 
   // User authentication
   socket.on("authenticate", async (userId) => {
+    socket.userId = userId; // Store userId for faster lookup
     // Cancel any pending disconnect timeout for this user
     if (disconnectTimeouts.has(userId)) {
       clearTimeout(disconnectTimeouts.get(userId));
@@ -70,6 +71,29 @@ io.on("connection", (socket) => {
     // Send list of currently active users to the new user
     const activeUserIds = Array.from(connectedUsers.keys());
     socket.emit("active_users", activeUserIds);
+  });
+
+  // Typing indicators
+  socket.on("typing_start", ({ receiverId }) => {
+    socket.userId = socket.userId || Array.from(connectedUsers.entries()).find(([uid, set]) => set.has(socket.id))?.[0];
+    if (!socket.userId) return; // Should be authenticated
+
+    if (connectedUsers.has(receiverId)) {
+      connectedUsers.get(receiverId).forEach((socketId) => {
+        io.to(socketId).emit("typing_start", { senderId: socket.userId });
+      });
+    }
+  });
+
+  socket.on("typing_stop", ({ receiverId }) => {
+    socket.userId = socket.userId || Array.from(connectedUsers.entries()).find(([uid, set]) => set.has(socket.id))?.[0];
+    if (!socket.userId) return;
+
+    if (connectedUsers.has(receiverId)) {
+      connectedUsers.get(receiverId).forEach((socketId) => {
+        io.to(socketId).emit("typing_stop", { senderId: socket.userId });
+      });
+    }
   });
 
   socket.on("disconnect", async () => {

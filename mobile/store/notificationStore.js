@@ -8,6 +8,7 @@ export const useNotificationStore = create((set, get) => ({
     socket: null,
     isConnected: false,
     userStatuses: {}, // { userId: { status: 'online'|'offline', lastActive: Date } }
+    typingStatus: {}, // { userId: boolean }
 
     // Connect to WebSocket
     connect: (userId) => {
@@ -114,6 +115,18 @@ export const useNotificationStore = create((set, get) => ({
                 newStatuses[id] = { status: 'online', lastActive: new Date() };
             });
             set({ userStatuses: newStatuses });
+        });
+
+        socket.on('typing_start', ({ senderId }) => {
+            set((state) => ({
+                typingStatus: { ...state.typingStatus, [senderId]: true }
+            }));
+        });
+
+        socket.on('typing_stop', ({ senderId }) => {
+            set((state) => ({
+                typingStatus: { ...state.typingStatus, [senderId]: false }
+            }));
         });
 
         set({ socket });
@@ -268,6 +281,18 @@ export const useNotificationStore = create((set, get) => ({
             console.error('Error deleting notification:', error);
             return { success: false, error: error.message };
         }
+    },
+
+    // Send typing start
+    sendTypingStart: (receiverId) => {
+        const { socket } = get();
+        if (socket) socket.emit('typing_start', { receiverId });
+    },
+
+    // Send typing stop
+    sendTypingStop: (receiverId) => {
+        const { socket } = get();
+        if (socket) socket.emit('typing_stop', { receiverId });
     },
 
     // Reset store
