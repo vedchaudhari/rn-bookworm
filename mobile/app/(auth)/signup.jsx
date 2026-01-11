@@ -8,7 +8,8 @@ import {
   Platform,
   Alert,
   ScrollView,
-  Keyboard
+  Keyboard,
+  Image
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import styles from "../../assets/styles/signup.styles";
@@ -82,7 +83,8 @@ export default function Signup() {
             <View>
               <View style={styles.card}>
                 <View style={styles.header}>
-                  <Text style={styles.title}>BookWorm 🐛</Text>
+                  <Image source={require("../../assets/images/icon.png")} style={{ width: 60, height: 60, marginBottom: 12, borderRadius: 12 }} resizeMode="contain" />
+                  <Text style={styles.title}>Readsphere</Text>
                   <Text style={styles.subtitle}>Create your account</Text>
                 </View>
 
