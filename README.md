@@ -1,4 +1,4 @@
-# 📚 Readsphere - Social Reading Platform
+# 📚 Readsphere - Social Reading & recommending Platform
 
 <div align="center">
 
