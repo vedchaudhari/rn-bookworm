@@ -1,0 +1,217 @@
+// styles/profile.styles.ts
+import { StyleSheet, Dimensions } from "react-native";
+import COLORS from "../../constants/colors";
+import {
+    SPACING,
+    PADDING,
+    MARGIN,
+    GAP,
+    FONT_SIZE,
+    TYPOGRAPHY,
+    BORDER_RADIUS,
+    RADIUS,
+    SHADOWS,
+    COMPONENT_SIZES,
+    BORDER_WIDTH,
+} from "../../constants/styleConstants";
+
+const { width } = Dimensions.get('window');
+const COLUMN_WIDTH = width / 3;
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: COLORS.background,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: COLORS.background,
+    },
+    profileHeaderCentered: {
+        alignItems: 'center',
+        paddingVertical: PADDING.section.vertical,
+        paddingHorizontal: PADDING.section.horizontal,
+        position: 'relative',
+    },
+    avatarWrapper: {
+        position: 'relative',
+        marginBottom: MARGIN.item.large,
+        padding: 3,
+        borderRadius: BORDER_RADIUS.circular,
+        borderWidth: BORDER_WIDTH.thin,
+        borderColor: COLORS.primary,
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
+        elevation: 8,
+    },
+    avatarLarge: {
+        width: COMPONENT_SIZES.avatar.profile,
+        height: COMPONENT_SIZES.avatar.profile,
+        borderRadius: RADIUS.avatar.large,
+        borderWidth: BORDER_WIDTH.massive,
+        borderColor: COLORS.background,
+    },
+    usernameCentered: {
+        fontSize: FONT_SIZE.massive,
+        fontWeight: '800',
+        color: COLORS.textPrimary,
+        marginBottom: SPACING.xs,
+    },
+    emailCentered: {
+        fontSize: FONT_SIZE.md,
+        color: COLORS.textSecondary,
+        fontWeight: '500',
+    },
+    bioCentered: {
+        fontSize: FONT_SIZE.md,
+        color: COLORS.textSecondary,
+        textAlign: 'center',
+        marginTop: SPACING.xxl,
+        paddingHorizontal: SPACING.massive,
+        lineHeight: 22,
+        fontWeight: '400',
+        opacity: 0.9,
+    },
+    statsRow: {
+        flexDirection: 'row',
+        backgroundColor: COLORS.cardBg,
+        marginHorizontal: MARGIN.item.large,
+        borderRadius: RADIUS.card.medium,
+        paddingVertical: SPACING.xxl,
+        borderWidth: BORDER_WIDTH.thin,
+        borderColor: COLORS.border,
+        marginBottom: MARGIN.section.medium,
+        marginTop: SPACING.md,
+    },
+    statBox: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    statDivider: {
+        width: 1,
+        backgroundColor: COLORS.border,
+        height: '50%',
+        alignSelf: 'center',
+    },
+    statNumber: {
+        fontSize: FONT_SIZE.xxl,
+        fontWeight: '700',
+        color: COLORS.textPrimary,
+        marginBottom: SPACING.xs,
+    },
+    statLabel: {
+        ...TYPOGRAPHY.caption,
+        color: COLORS.textMuted,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    tabSwitcher: {
+        flexDirection: 'row',
+        backgroundColor: COLORS.surface,
+        marginHorizontal: MARGIN.item.large,
+        padding: SPACING.xs,
+        borderRadius: BORDER_RADIUS.xl,
+        marginBottom: MARGIN.item.large,
+        borderWidth: BORDER_WIDTH.thin,
+        borderColor: COLORS.border,
+    },
+    tab: {
+        flex: 1,
+        paddingVertical: SPACING.md + 2,
+        alignItems: 'center',
+        borderRadius: BORDER_RADIUS.md,
+    },
+    tabActive: {
+        backgroundColor: COLORS.surfaceHighlight,
+    },
+    tabText: {
+        fontSize: FONT_SIZE.sm,
+        fontWeight: '600',
+        color: COLORS.textSecondary,
+    },
+    tabTextActive: {
+        color: COLORS.textPrimary,
+    },
+    gridContent: {
+        paddingHorizontal: SPACING.md,
+        paddingBottom: 100,
+    },
+    bookItem: {
+        width: COLUMN_WIDTH - 10,
+        height: (COLUMN_WIDTH - 10) * 1.5,
+        margin: 5,
+        backgroundColor: COLORS.surface,
+        borderRadius: BORDER_RADIUS.md,
+        overflow: 'hidden',
+        ...SHADOWS.light,
+    },
+    bookImage: {
+        width: '100%',
+        height: '100%',
+    },
+    stripContainer: {
+        marginTop: SPACING.md + 2,
+        paddingBottom: 100,
+    },
+    userStripItem: {
+        alignItems: 'center',
+        width: 90,
+        marginHorizontal: SPACING.md,
+    },
+    userStripAvatar: {
+        width: COMPONENT_SIZES.avatar.xlarge,
+        height: COMPONENT_SIZES.avatar.xlarge,
+        borderRadius: COMPONENT_SIZES.avatar.xlarge / 2,
+        marginBottom: SPACING.md,
+        borderWidth: BORDER_WIDTH.thick,
+        borderColor: COLORS.surface,
+    },
+    userStripName: {
+        fontSize: FONT_SIZE.xs,
+        fontWeight: '600',
+        color: COLORS.textPrimary,
+        textAlign: 'center',
+    },
+    logoutButton: {
+        position: 'absolute',
+        top: MARGIN.item.large,
+        right: MARGIN.item.large,
+        zIndex: 10,
+        backgroundColor: COLORS.surface,
+        padding: SPACING.md + 2,
+        borderRadius: SPACING.massive,
+        borderWidth: BORDER_WIDTH.thin,
+        borderColor: COLORS.border,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingVertical: SPACING.giant,
+        paddingHorizontal: SPACING.massive,
+        opacity: 0.8,
+    },
+    emptyText: {
+        color: COLORS.textSecondary,
+        marginTop: SPACING.xl,
+        fontWeight: '500',
+        textAlign: 'center',
+        fontSize: FONT_SIZE.base,
+    },
+    addButton: {
+        marginTop: MARGIN.item.large,
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: PADDING.card.horizontal,
+        paddingVertical: SPACING.lg,
+        borderRadius: BORDER_RADIUS.lg,
+    },
+    addButtonText: {
+        color: COLORS.white,
+        fontWeight: '700',
+        fontSize: FONT_SIZE.md,
+    },
+});
+
+export default styles;

@@ -1,0 +1,26 @@
+# Standard Ignores
+node_modules/
+.DS_Store
+*.log
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+web-build/
+.expo/
+
+# Sub-projects
+backend/node_modules/
+backend/dist/
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+
+# OS specific
+Thumbs.db
+[Ee]thernet [Cc]onf*
+.vscode/
+.idea/
