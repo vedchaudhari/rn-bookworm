@@ -6,6 +6,7 @@ import { asyncHandler } from "../middleware/asyncHandler";
 
 const router = express.Router();
 
+//generate token payload interface
 interface GenerateTokenPayload {
     userId: string;
 }
