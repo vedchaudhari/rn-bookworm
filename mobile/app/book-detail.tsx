@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, ListRenderItemInfo } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, ListRenderItemInfo } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import COLORS from '../constants/colors';
 import { useAuthStore } from '../store/authContext';
 import { apiClient } from '../lib/apiClient';
+import { useUIStore } from '../store/uiStore';
 import LikeButton from '../components/LikeButton';
 import CommentSection from '../components/CommentSection';
 import FollowButton from '../components/FollowButton';
@@ -48,6 +49,7 @@ export default function BookDetailScreen() {
 
     const { token, user } = useAuthStore();
     const { balance, sendTip, fetchBalance } = useCurrencyStore();
+    const { showAlert } = useUIStore();
     const router = useRouter();
 
     useEffect(() => {
@@ -65,7 +67,7 @@ export default function BookDetailScreen() {
     };
 
     const handleMessageUser = () => {
-        if (book?.user?._id === user?._id) { Alert.alert('Info', 'This is your own book'); return; }
+        if (book?.user?._id === user?._id) { showAlert({ title: 'Info', message: 'This is your own book', type: 'info' }); return; }
         router.push({ pathname: '/chat', params: { userId: book!.user._id, username: book!.user.username, profileImage: book!.user.profileImage } });
     };
 
@@ -82,7 +84,7 @@ export default function BookDetailScreen() {
         } else if (book?.hasContent) {
             router.push({ pathname: '/book-reader', params: { bookId: book._id, bookTitle: book.title } });
         } else {
-            Alert.alert('Info', 'This book has no content available to read.');
+            showAlert({ title: 'Info', message: 'This book has no content available to read.', type: 'info' });
         }
     };
 
@@ -94,11 +96,11 @@ export default function BookDetailScreen() {
         setIsTipping(false);
 
         if (result.success) {
-            Alert.alert('Success', `You tipped ${amount} Ink Drops to ${book.user.username}!`);
+            showAlert({ title: 'Success', message: `You tipped ${amount} Ink Drops to ${book.user.username}!`, type: 'success' });
             setShowTipModal(false);
             fetchBalance(token);
         } else {
-            Alert.alert('Error', result.error || 'Failed to send tip');
+            showAlert({ title: 'Error', message: result.error || 'Failed to send tip', type: 'error' });
         }
     };
 

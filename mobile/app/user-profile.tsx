@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl, Dimensions, Alert, StyleSheet, ListRenderItemInfo } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl, Dimensions, StyleSheet, ListRenderItemInfo } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,9 @@ import { apiClient } from '../lib/apiClient';
 import { useAuthStore } from '../store/authContext';
 import FollowButton from '../components/FollowButton';
 import GlassCard from '../components/GlassCard';
+import KeyboardScreen from '../components/KeyboardScreen';
 import SafeScreen from '../components/SafeScreen';
+import { useUIStore } from '../store/uiStore';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = width / 3;
@@ -23,6 +25,7 @@ export default function UserProfile() {
     const { userId } = useLocalSearchParams<{ userId: string }>();
     const { user: currentUser, token } = useAuthStore();
     const router = useRouter();
+    const { showAlert } = useUIStore();
 
     const [user, setUser] = useState<UserProfile | null>(null);
     const [books, setBooks] = useState<Book[]>([]);
@@ -74,16 +77,45 @@ export default function UserProfile() {
                 allowsEditing: true,
                 aspect: [1, 1],
                 quality: 0.5,
-                base64: true
+                base64: false
             });
-            if (!result.canceled && result.assets[0].base64) {
-                const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
-                setUser(prev => prev ? { ...prev, profileImage: base64Img } : null);
 
-                await apiClient.put('/api/users/update-profile-image', { profileImage: base64Img });
+            if (!result.canceled && result.assets[0].uri) {
+                const fileUri = result.assets[0].uri;
+                const fileName = fileUri.split('/').pop() || 'profile.jpg';
+                const fileExtension = fileName.split('.').pop() || 'jpg';
+                const contentType = `image/${fileExtension === 'png' ? 'png' : 'jpeg'}`;
+
+                // 1. Get Presigned URL
+                const { uploadUrl, finalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
+                    '/api/messages/presigned-url',
+                    { fileName, contentType, folder: 'profiles' }
+                );
+
+                // 2. Upload to S3
+                const blobRes = await fetch(fileUri);
+                const blob = await blobRes.blob();
+
+                const uploadRes = await fetch(uploadUrl, {
+                    method: 'PUT',
+                    body: blob,
+                    headers: { 'Content-Type': contentType }
+                });
+
+                if (!uploadRes.ok) throw new Error('Cloud upload failed');
+
+                // 3. Update Profile Backend
+                await apiClient.put('/api/users/update-profile-image', { profileImage: finalUrl });
+
+                // Update Local UI
+                setUser(prev => prev ? { ...prev, profileImage: finalUrl } : null);
+
+                // Update Auth Store if it's the current user (which it is)
+                // Assuming useAuthStore has a way to update or we just re-fetch
+                fetchData();
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to update profile image');
+            showAlert({ title: 'Error', message: error.message || 'Failed to update profile image', type: 'error' });
             fetchData();
         }
     };
@@ -114,7 +146,11 @@ export default function UserProfile() {
                     </TouchableOpacity>
                 </View>
 
-                <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[COLORS.primary]} />}>
+                <KeyboardScreen
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+                    withScrollView={true}
+                >
                     <View style={styles.profileHeaderCentered}>
                         <TouchableOpacity style={styles.avatarWrapper} onPress={isOwnProfile ? handleUpdateProfileImage : undefined} activeOpacity={isOwnProfile ? 0.7 : 1}>
                             <Image source={{ uri: user?.profileImage }} style={styles.avatarLarge} />
@@ -156,7 +192,7 @@ export default function UserProfile() {
                     </View>
                     <View style={styles.booksHeader}><Text style={styles.sectionTitle}>Bookshelf</Text></View>
                     {books.length > 0 ? <FlatList data={books} renderItem={renderBookItem} keyExtractor={(item, index) => `${item._id || 'book'}-${index}`} numColumns={3} scrollEnabled={false} contentContainerStyle={styles.gridContent} /> : <View style={styles.emptyContainer}><Ionicons name="book-outline" size={48} color={COLORS.textMuted} /><Text style={styles.emptyText}>Empty bookshelf</Text></View>}
-                </ScrollView>
+                </KeyboardScreen>
             </View>
         </SafeScreen>
     );

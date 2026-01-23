@@ -1,4 +1,4 @@
-import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, Alert, AppState, AppStateStatus, KeyboardEvent, ListRenderItemInfo, Modal } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,8 +10,9 @@ import COLORS from '../constants/colors';
 import { useMessageStore } from '../store/messageStore';
 import { useAuthStore } from '../store/authContext';
 import { useNotificationStore } from '../store/notificationStore';
+import { apiClient } from '../lib/apiClient';
 import SafeScreen from '../components/SafeScreen';
-import { Keyboard } from 'react-native';
+import { useUIStore } from '../store/uiStore';
 import styles from '../assets/styles/chat.styles';
 
 interface Message {
@@ -31,7 +32,6 @@ export default function ChatScreen() {
     const displayAvatar = profileImage && profileImage !== 'undefined' ? profileImage : DEFAULT_AVATAR;
     const [messageText, setMessageText] = useState('');
     const [sending, setSending] = useState(false);
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [showPreview, setShowPreview] = useState(false);
@@ -39,16 +39,11 @@ export default function ChatScreen() {
 
     const { messages, fetchMessages, sendMessage, markAsRead, addReceivedMessage, setActiveConversation, editMessage, deleteMessageForMe, deleteMessageForEveryone, updateLocalEditedMessage, updateLocalDeletedMessage, clearChatHistory } = useMessageStore();
     const { token, user } = useAuthStore();
+    const { showAlert } = useUIStore();
     const { socket, userStatuses, typingStatus, sendTypingStart, sendTypingStop, isConnected } = useNotificationStore();
     const typingTimeoutRef = useRef<any>(null);
 
     const isSelf = user?._id === userId || user?.id === userId;
-
-    useEffect(() => {
-        const show = Keyboard.addListener("keyboardDidShow", (e: KeyboardEvent) => { setKeyboardHeight(e.endCoordinates.height); });
-        const hide = Keyboard.addListener("keyboardDidHide", () => { setKeyboardHeight(0); });
-        return () => { show.remove(); hide.remove(); };
-    }, []);
 
     const conversationMessages = (messages[userId!] || []) as Message[];
     const userStatus = userStatuses[userId!] || { status: 'offline', lastActive: null };
@@ -89,6 +84,11 @@ export default function ChatScreen() {
                 socket.off('new_message', handleNewMessage);
                 socket.off('message_edited', handleMessageEdited);
                 socket.off('message_deleted', handleMessageDeleted);
+            }
+            // Clean up typing timeout to prevent memory leaks
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = null;
             }
         };
     }, [userId, socket, isOnline]);
@@ -133,23 +133,55 @@ export default function ChatScreen() {
                 allowsEditing: true,
                 aspect: [1, 1],
                 quality: 0.8,
-                base64: true
+                base64: false // NO BASE64
             });
 
-            if (!result.canceled && result.assets[0].base64) {
-                const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
-                setSelectedImage(base64Img);
+            if (!result.canceled && result.assets[0].uri) {
+                setSelectedImage(result.assets[0].uri);
                 setShowPreview(true);
             }
-        } catch (error) { Alert.alert('Error', 'Failed to pick image'); }
+        } catch (error) { showAlert({ title: 'Error', message: 'Failed to pick image', type: 'error' }); }
     };
 
     const handleConfirmSendImage = async () => {
-        if (!selectedImage) return;
-        const img = selectedImage;
-        setShowPreview(false);
-        setSelectedImage(null);
-        await createAndSendMessage(undefined, img);
+        if (!selectedImage || sending) return;
+        setSending(true);
+
+        try {
+            const fileUri = selectedImage;
+            const fileName = fileUri.split('/').pop() || 'image.jpg';
+            const fileExtension = fileName.split('.').pop() || 'jpg';
+            const contentType = `image/${fileExtension === 'png' ? 'png' : 'jpeg'}`;
+
+            // 1. Get Presigned URL
+            const { uploadUrl, finalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
+                '/api/messages/presigned-url',
+                { fileName, contentType }
+            );
+
+            // 2. Upload to S3
+            // Convert file URI to blob for upload
+            const blobResponse = await fetch(fileUri);
+            const blob = await blobResponse.blob();
+
+            const uploadResponse = await fetch(uploadUrl, {
+                method: 'PUT',
+                body: blob,
+                headers: { 'Content-Type': contentType }
+            });
+
+            if (!uploadResponse.ok) throw new Error('S3 upload failed');
+
+            // 3. Send Message with final URL
+            setShowPreview(false);
+            setSelectedImage(null);
+            await createAndSendMessage(undefined, finalUrl);
+        } catch (error: any) {
+            console.error('Upload error:', error);
+            showAlert({ title: 'Error', message: 'Failed to upload image. Please try again.', type: 'error' });
+        } finally {
+            setSending(false);
+        }
     };
 
     const handleSend = async () => {
@@ -161,7 +193,7 @@ export default function ChatScreen() {
             setEditingMessageId(null);
             setMessageText('');
             const result = await editMessage(msgId, text, token!);
-            if (!result.success) Alert.alert('Error', result.error || 'Failed to edit message');
+            if (!result.success) showAlert({ title: 'Error', message: result.error || 'Failed to edit message', type: 'error' });
             return;
         }
 
@@ -177,27 +209,16 @@ export default function ChatScreen() {
 
         if (item.isDeleted) return;
 
-        const options: any[] = [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete for Me', onPress: () => { deleteMessageForMe(item._id, token!); } },
-        ];
-
-        if (isMe) {
-            options.push({
-                text: 'Edit',
-                onPress: () => {
-                    setEditingMessageId(item._id);
-                    setMessageText(item.text);
-                }
-            });
-            options.push({
-                text: 'Delete for Everyone',
-                onPress: () => { deleteMessageForEveryone(item._id, token!); },
-                style: 'destructive'
-            });
-        }
-
-        Alert.alert('Message Options', undefined, options);
+        showAlert({
+            title: 'Message Options',
+            message: 'What would you like to do with this message?',
+            showCancel: true,
+            confirmText: isMe ? 'Delete for Everyone' : 'Delete for Me',
+            onConfirm: () => {
+                if (isMe) deleteMessageForEveryone(item._id, token!);
+                else deleteMessageForMe(item._id, token!);
+            }
+        });
     };
 
     const handleTextChange = (text: string) => {
@@ -221,7 +242,7 @@ export default function ChatScreen() {
         const result = await sendMessage(userId!, text || '', image, token!);
         setSending(false);
         if (result.success) setTimeout(() => { flatListRef.current?.scrollToOffset({ offset: 0, animated: true }); }, 100);
-        else Alert.alert('Error', 'Failed to send message');
+        else showAlert({ title: 'Error', message: 'Failed to send message', type: 'error' });
     };
 
     const renderMessage = ({ item, index }: ListRenderItemInfo<any>) => {
@@ -292,92 +313,93 @@ export default function ChatScreen() {
         <SafeScreen top={true} bottom={false}>
             <Stack.Screen options={{ headerShown: false }} />
 
-            <View style={styles.container}>
-                {/* Custom Header */}
-                <View style={[styles.headerRow, { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border }]}>
-                    <TouchableOpacity onPress={() => router.back()} style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}>
-                        <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
-                    </TouchableOpacity>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+            >
+                <View style={styles.container}>
+                    {/* Custom Header */}
+                    <View style={[styles.headerRow, { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border }]}>
+                        <TouchableOpacity onPress={() => router.back()} style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}>
+                            <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
+                        </TouchableOpacity>
 
-                    <View style={styles.avatarContainer}>
-                        <Image source={{ uri: displayAvatar }} style={styles.headerAvatar} />
-                        {isOnline && <Animated.View style={[styles.statusDot, animatedStatusStyle]} />}
-                    </View>
-
-                    <View style={[styles.headerInfo, { flex: 1, marginLeft: 12 }]}>
-                        <Text style={styles.headerName}>{isSelf ? 'Saved Messages' : username}</Text>
-                        {isTyping && !isSelf ? (
-                            <Text style={[styles.headerStatus, { color: COLORS.primary, textTransform: 'none' }]}>Typing...</Text>
-                        ) : (
-                            <Text style={styles.headerStatus}>{displayStatus}</Text>
-                        )}
-                    </View>
-
-                    <TouchableOpacity
-                        onPress={() => {
-                            Alert.alert(
-                                'Clear Chat',
-                                'Are you sure you want to clear your local chat history? This cannot be undone.',
-                                [
-                                    { text: 'Cancel', style: 'cancel' },
-                                    { text: 'Clear', onPress: () => clearChatHistory(userId!, token!), style: 'destructive' }
-                                ]
-                            );
-                        }}
-                        style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}
-                    >
-                        <Ionicons name="trash-outline" size={20} color={COLORS.textMuted} />
-                    </TouchableOpacity>
-                </View>
-
-                <FlatList
-                    ref={flatListRef}
-                    data={conversationMessages}
-                    renderItem={renderMessage}
-                    keyExtractor={(item, index) => `${item._id || 'msg'}-${index}`}
-                    contentContainerStyle={[styles.messagesList, { paddingBottom: 20 }]}
-                    inverted
-                    showsVerticalScrollIndicator={false}
-                    ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <View style={styles.emptyIconCircle}>
-                                <Ionicons name="chatbubbles-outline" size={32} color={COLORS.primary} />
-                            </View>
-                            <Text style={styles.emptyText}>Start a literary conversation with {username}</Text>
+                        <View style={styles.avatarContainer}>
+                            <Image source={{ uri: displayAvatar }} style={styles.headerAvatar} />
+                            {isOnline && <Animated.View style={[styles.statusDot, animatedStatusStyle]} />}
                         </View>
-                    }
-                />
 
-                <View style={[
-                    styles.inputWrapper,
-                    {
-                        marginBottom: keyboardHeight ? keyboardHeight + 10 : insets.bottom,
-                        paddingBottom: keyboardHeight > 0 ? 8 : 16
-                    }
-                ]}>
-                    <View style={styles.inputContainer}>
-                        <TouchableOpacity onPress={handlePickImage} style={styles.iconButton}>
-                            <Ionicons name="add" size={24} color={COLORS.primary} />
-                        </TouchableOpacity>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Type a message..."
-                            placeholderTextColor={COLORS.textMuted}
-                            value={messageText}
-                            onChangeText={handleTextChange}
-                            multiline
-                            maxLength={1000}
-                        />
+                        <View style={[styles.headerInfo, { flex: 1, marginLeft: 12 }]}>
+                            <Text style={styles.headerName}>{isSelf ? 'Saved Messages' : username}</Text>
+                            {isTyping && !isSelf ? (
+                                <Text style={[styles.headerStatus, { color: COLORS.primary, textTransform: 'none' }]}>Typing...</Text>
+                            ) : (
+                                <Text style={styles.headerStatus}>{displayStatus}</Text>
+                            )}
+                        </View>
+
                         <TouchableOpacity
-                            onPress={handleSend}
-                            disabled={!messageText.trim() || sending}
-                            style={[styles.sendButton, (!messageText.trim() || sending) && styles.sendButtonDisabled]}
+                            onPress={() => {
+                                showAlert({
+                                    title: 'Clear Chat',
+                                    message: 'Are you sure you want to clear your local chat history? This cannot be undone.',
+                                    showCancel: true,
+                                    confirmText: 'Clear',
+                                    type: 'warning',
+                                    onConfirm: () => clearChatHistory(userId!, token!)
+                                });
+                            }}
+                            style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}
                         >
-                            {sending ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="send" size={18} color="#fff" />}
+                            <Ionicons name="trash-outline" size={20} color={COLORS.textMuted} />
                         </TouchableOpacity>
                     </View>
+
+                    <FlatList
+                        ref={flatListRef}
+                        data={conversationMessages}
+                        renderItem={renderMessage}
+                        keyExtractor={(item, index) => `${item._id || 'msg'}-${index}`}
+                        contentContainerStyle={[styles.messagesList, { paddingBottom: 20 }]}
+                        inverted
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                <View style={styles.emptyIconCircle}>
+                                    <Ionicons name="chatbubbles-outline" size={32} color={COLORS.primary} />
+                                </View>
+                                <Text style={styles.emptyText}>Start a literary conversation with {username}</Text>
+                            </View>
+                        }
+                    />
+
+                    <View style={[styles.inputWrapper, { paddingBottom: insets.bottom || 16 }]}>
+                        <View style={styles.inputContainer}>
+                            <TouchableOpacity onPress={handlePickImage} style={styles.iconButton}>
+                                <Ionicons name="add" size={24} color={COLORS.primary} />
+                            </TouchableOpacity>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Type a message..."
+                                placeholderTextColor={COLORS.textMuted}
+                                value={messageText}
+                                onChangeText={handleTextChange}
+                                multiline
+                                maxLength={1000}
+                            />
+                            <TouchableOpacity
+                                onPress={handleSend}
+                                disabled={!messageText.trim() || sending}
+                                style={[styles.sendButton, (!messageText.trim() || sending) && styles.sendButtonDisabled]}
+                            >
+                                {sending ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="send" size={18} color="#fff" />}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                 </View>
-            </View>
+            </KeyboardAvoidingView>
 
             <Modal visible={showPreview} transparent animationType="fade" onRequestClose={() => setShowPreview(false)}>
                 <View style={styles.previewOverlay}>

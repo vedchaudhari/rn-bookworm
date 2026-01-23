@@ -1,4 +1,4 @@
-import { SplashScreen, Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
+import { SplashScreen, Stack, useRouter } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppState, AppStateStatus } from 'react-native';
 import SafeScreen from "../components/SafeScreen";
@@ -14,13 +14,12 @@ import { useEffect, useRef } from "react";
 import COLORS from "../constants/colors";
 import { Socket } from "socket.io-client";
 
+import GlobalAlert from "../components/GlobalAlert";
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-    const router = useRouter();
-    const segments = useSegments();
-    const navigationState = useRootNavigationState();
-    const { checkAuth, user, token, isCheckingAuth } = useAuthStore();
+    const { checkAuth, user, token, isCheckingAuth, isAuthLoading } = useAuthStore();
     const { hydrate } = useSocialStore();
 
     const [fontsLoaded] = useFonts({
@@ -28,29 +27,15 @@ export default function RootLayout() {
     });
 
     useEffect(() => {
-        if (fontsLoaded && !isCheckingAuth) {
+        if (fontsLoaded && !isAuthLoading) {
             SplashScreen.hideAsync();
         }
-    }, [fontsLoaded, isCheckingAuth]);
+    }, [fontsLoaded, isAuthLoading]);
 
     useEffect(() => {
         checkAuth();
         hydrate();
     }, []);
-
-    // handle navigation based on the auth state
-    useEffect(() => {
-        if (isCheckingAuth || !navigationState?.key || !fontsLoaded) return;
-
-        const inAuthScreen = segments[0] === "(auth)";
-        const isSignedIn = user && token;
-
-        if (!isSignedIn && !inAuthScreen) {
-            router.replace("/(auth)");
-        } else if (isSignedIn && inAuthScreen) {
-            router.replace("/(tabs)");
-        }
-    }, [user, token, segments, isCheckingAuth, navigationState, fontsLoaded]);
 
     // Connect socket when user is logged in
     const { connect, disconnect, socket, fetchUnreadCount: fetchNotifUnread } = useNotificationStore();
@@ -124,6 +109,33 @@ export default function RootLayout() {
         };
     }, [user?._id, user?.id, token, isCheckingAuth]);
 
+    // Determine authentication status
+    const isAuthenticated = !!(user && token);
+    const router = useRouter();
+
+    // Force redirect based on auth state
+    useEffect(() => {
+        if (!isAuthLoading && !isCheckingAuth) {
+            if (isAuthenticated) {
+                // If on auth screens while authenticated, move to home
+                router.replace('/(tabs)');
+            } else {
+                // If on app screens while unauthenticated, move to login
+                router.replace('/(auth)');
+            }
+        }
+    }, [isAuthenticated, isAuthLoading, isCheckingAuth]);
+
+    // ====================================================================
+    // AUTH GATE: Prevent navigation rendering until auth state is resolved
+    // This eliminates the flicker where Home screen briefly appears before
+    // Login screen for unauthenticated users
+    // ====================================================================
+    if (!fontsLoaded || isAuthLoading) {
+        // Keep splash screen visible until ready
+        return null;
+    }
+
     return (
         <ErrorBoundary>
             <SafeAreaProvider>
@@ -137,13 +149,20 @@ export default function RootLayout() {
                         animation: 'slide_from_right',
                     }}
                 >
-                    <Stack.Screen name="(tabs)" />
-                    <Stack.Screen name="(auth)" />
-                    <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
-                    <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
-                    <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
+                    {/* Conditional rendering: only render routes user has access to */}
+                    {isAuthenticated ? (
+                        <>
+                            <Stack.Screen name="(tabs)" />
+                            <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
+                            <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
+                            <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
+                        </>
+                    ) : (
+                        <Stack.Screen name="(auth)" />
+                    )}
                 </Stack>
                 <StatusBar style="light" />
+                <GlobalAlert />
             </SafeAreaProvider>
         </ErrorBoundary>
     );

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import Constants from 'expo-constants';
 // import { RewardedAd, RewardedAdEventType, TestIds } from 'react-native-google-mobile-ads';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import COLORS from '../../constants/colors';
 import { ADMOB_CONFIG, AD_FREQUENCY } from '../../constants/monetization';
+import { useUIStore } from '../../store/uiStore';
 
 interface RewardedAdButtonProps {
     bookId: string;
@@ -17,6 +18,7 @@ interface RewardedAdButtonProps {
  * Allows users to watch a video ad to unlock Premium books for 24 hours
  */
 const RewardedAdButton = ({ bookId, onUnlocked }: RewardedAdButtonProps) => {
+    const { showAlert } = useUIStore();
     const [isLoading, setIsLoading] = useState(true);
     const [adLoaded, setAdLoaded] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(false);
@@ -120,20 +122,20 @@ const RewardedAdButton = ({ bookId, onUnlocked }: RewardedAdButtonProps) => {
 
             if (onUnlocked) onUnlocked();
 
-            Alert.alert(
-                '🎉 Book Unlocked!',
-                'You can now read this book for the next 24 hours.',
-                [{ text: 'Start Reading', style: 'default' }]
-            );
+            showAlert({
+                title: '🎉 Book Unlocked!',
+                message: 'You can now read this book for the next 24 hours.',
+                type: 'success'
+            });
         } catch (error) {
             console.error('Error unlocking book:', error);
-            Alert.alert('Error', 'Failed to unlock book. Please try again.');
+            showAlert({ title: 'Error', message: 'Failed to unlock book. Please try again.', type: 'error' });
         }
     };
 
     const handleWatchAd = async () => {
         if (!adLoaded || !rewardedAd) {
-            Alert.alert('Ad Not Ready', 'Please wait for the ad to load.');
+            showAlert({ title: 'Ad Not Ready', message: 'Please wait for the ad to load.', type: 'warning' });
             return;
         }
 
@@ -141,7 +143,7 @@ const RewardedAdButton = ({ bookId, onUnlocked }: RewardedAdButtonProps) => {
             await rewardedAd.show();
         } catch (error) {
             console.error('Error showing rewarded ad:', error);
-            Alert.alert('Error', 'Failed to show ad. Please try again.');
+            showAlert({ title: 'Error', message: 'Failed to show ad. Please try again.', type: 'error' });
         }
     };
 

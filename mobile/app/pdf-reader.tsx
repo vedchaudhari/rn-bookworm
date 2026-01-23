@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { StyleSheet, View, ActivityIndicator, Text, TouchableOpacity, Platform, Alert } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, Text, TouchableOpacity, Platform } from 'react-native';
 import { useAuthStore } from '../store/authContext';
+import { useUIStore } from '../store/uiStore';
 import { WebView } from 'react-native-webview';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import SafeScreen from '../components/SafeScreen';
@@ -13,6 +14,7 @@ export default function PdfReaderScreen() {
     const { pdfUrl, title, bookId } = useLocalSearchParams<{ pdfUrl: string, title: string, bookId: string }>();
     const router = useRouter();
     const { token } = useAuthStore();
+    const { showAlert } = useUIStore();
     const [isLoading, setIsLoading] = useState(true);
     const [pdfBase64, setPdfBase64] = useState<string | null>(null);
     const [hasError, setHasError] = useState(false);
@@ -100,7 +102,7 @@ export default function PdfReaderScreen() {
             });
             setHasError(true);
             setIsLoading(false);
-            Alert.alert('Error', 'Failed to load PDF. Check your connection or the file source.');
+            showAlert({ title: 'Error', message: 'Failed to load PDF. Check your connection or the file source.', type: 'error' });
         }
     };
 
@@ -180,7 +182,7 @@ export default function PdfReaderScreen() {
         setIsLoading(false);
         setHasError(true);
         if (Platform.OS === 'ios') {
-            Alert.alert('Error', 'Failed to load PDF.');
+            showAlert({ title: 'Error', message: 'Failed to load PDF.', type: 'error' });
         }
     };
 

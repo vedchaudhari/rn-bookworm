@@ -1,5 +1,4 @@
 import express, { Request, Response } from "express";
-import cloudinary from "../lib/cloudinary";
 import Book, { IBookDocument } from "../models/Book";
 import Follow from "../models/Follow";
 import protectRoute from "../middleware/auth.middleware";
@@ -9,6 +8,7 @@ import { enrichBooksWithInteractions } from "../lib/bookInteractionService";
 import { getSignedUrlForFile, deleteFileFromS3 } from "../lib/s3";
 import { checkBookAccess } from "../middleware/access.middleware";
 import { asyncHandler } from "../middleware/asyncHandler";
+import { redis, CACHE_KEYS, TTL } from "../lib/redis";
 
 const router = express.Router();
 
@@ -48,16 +48,12 @@ router.post("/", protectRoute, asyncHandler(async (req: Request, res: Response) 
         return res.status(400).json({ message: "Please provide all required fields" });
     }
 
-    // upload the image to cloudinary
-    const uploadResponse = await cloudinary.uploader.upload(image);
-    const imageUrl = uploadResponse.secure_url;
-
     // save to the database
     const newBook = new Book({
         title,
         caption,
         rating,
-        image: imageUrl,
+        image, // Image is already an S3 URL from frontend
         user: req.user!._id,
         genre: genre || "General",
         author: author || "",
@@ -78,6 +74,12 @@ router.post("/", protectRoute, asyncHandler(async (req: Request, res: Response) 
     if (bookCount === 25) await checkAchievements(req.user!._id, "BOOK_LOVER_25");
     if (bookCount === 50) await checkAchievements(req.user!._id, "BOOK_LOVER_50");
 
+    // Clear Global Feed Cache
+    try {
+        const keys = await redis.keys('feed:global:*');
+        if (keys.length > 0) await redis.del(...keys);
+    } catch (e) { console.error('Redis invalidation error:', e); }
+
     res.status(201).json(newBook);
 }));
 
@@ -87,62 +89,92 @@ router.get("/", protectRoute, asyncHandler(async (req: Request, res: Response) =
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    const books = await Book.find()
-        .sort({ createdAt: -1 }) // desc
-        .skip(skip)
-        .limit(limit)
-        .populate("user", "username profileImage level");
+    const cacheKey = CACHE_KEYS.FEED_GLOBAL(page, limit);
+
+    try {
+        const cached = await redis.get(cacheKey);
+        if (cached) return res.json(cached);
+    } catch (e) { console.error('Redis error:', e); }
+
+    const [books, totalBooks] = await Promise.all([
+        Book.find()
+            .sort({ createdAt: -1 }) // desc
+            .skip(skip)
+            .limit(limit)
+            .populate("user", "username profileImage level"),
+        Book.countDocuments()
+    ]);
 
     const booksWithCounts = await enrichBooksWithInteractions(books, req.user!._id);
     const booksWithSignedUrls = await signBookUrls(booksWithCounts);
 
-    const totalBooks = await Book.countDocuments();
-
-    res.send({
+    const responseData = {
         books: booksWithSignedUrls,
         currentPage: page,
         totalBooks,
         totalPages: Math.ceil(totalBooks / limit),
-    });
+    };
+
+    try {
+        await redis.set(cacheKey, responseData, { ex: TTL.FEED });
+    } catch (e) { console.error('Redis set error:', e); }
+
+    res.send(responseData);
 }));
 
 router.get("/following", protectRoute, asyncHandler(async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
+    const userId = req.user!._id;
+
+    const cacheKey = CACHE_KEYS.FEED_FOLLOWING(userId.toString(), page, limit);
+
+    try {
+        const cached = await redis.get(cacheKey);
+        if (cached) return res.json(cached);
+    } catch (e) { console.error('Redis error:', e); }
 
     // 1. Get the list of users followed by the current user
-    const following = await Follow.find({ follower: req.user!._id }).select("following");
+    const following = await Follow.find({ follower: userId }).select("following");
     const followingIds = following.map((f) => f.following);
 
     if (followingIds.length === 0) {
-        return res.send({
+        const emptyResponse = {
             books: [],
             currentPage: page,
             totalBooks: 0,
             totalPages: 0,
-        });
+        };
+        return res.send(emptyResponse);
     }
 
     // 2. Find books created by those users
-    const books = await Book.find({ user: { $in: followingIds } })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate("user", "username profileImage level");
+    const [books, totalBooks] = await Promise.all([
+        Book.find({ user: { $in: followingIds } })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate("user", "username profileImage level"),
+        Book.countDocuments({ user: { $in: followingIds } })
+    ]);
 
     // 3. Add like and comment counts
-    const booksWithCounts = await enrichBooksWithInteractions(books, req.user!._id);
+    const booksWithCounts = await enrichBooksWithInteractions(books, userId);
     const booksWithSignedUrls = await signBookUrls(booksWithCounts);
 
-    const totalBooks = await Book.countDocuments({ user: { $in: followingIds } });
-
-    res.send({
+    const responseData = {
         books: booksWithSignedUrls,
         currentPage: page,
         totalBooks,
         totalPages: Math.ceil(totalBooks / limit),
-    });
+    };
+
+    try {
+        await redis.set(cacheKey, responseData, { ex: TTL.FEED });
+    } catch (e) { console.error('Redis set error:', e); }
+
+    res.send(responseData);
 }));
 
 // get recommended books by the logged in user
@@ -173,19 +205,19 @@ router.delete("/:id", protectRoute, asyncHandler(async (req: Request, res: Respo
         await deleteFileFromS3(book.pdfUrl);
     }
 
-    // delete image from S3 or cloduinary
+    // delete image from S3 if it exists
     if (book.image && book.image.includes("amazonaws.com")) {
         await deleteFileFromS3(book.image);
-    } else if (book.image && book.image.includes("cloudinary")) {
-        try {
-            const publicId = book.image.split("/").pop()?.split(".")[0];
-            if (publicId) await cloudinary.uploader.destroy(publicId);
-        } catch (deleteError) {
-            console.log("Error deleting image from cloudinary", deleteError);
-        }
     }
 
     await book.deleteOne();
+
+    // Clear Global Feed Cache
+    try {
+        const keys = await redis.keys('feed:global:*');
+        if (keys.length > 0) await redis.del(...keys);
+    } catch (e) { console.error('Redis invalidation error:', e); }
+
     res.json({ message: "Book deleted successfully" });
 }));
 

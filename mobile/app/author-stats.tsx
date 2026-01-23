@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, Alert, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, Dimensions } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../constants/colors';
 import { API_URL } from '../constants/api';
 import { useAuthStore } from '../store/authContext';
+import { useUIStore } from '../store/uiStore';
 import SafeScreen from '../components/SafeScreen';
 import GlassCard from '../components/GlassCard';
 import { formatPublishDate } from '../lib/utils';
@@ -30,6 +31,7 @@ export default function AuthorStats() {
     const [loading, setLoading] = useState(true);
 
     const { token } = useAuthStore();
+    const { showAlert } = useUIStore();
 
     useEffect(() => {
         fetchStats();
@@ -44,7 +46,7 @@ export default function AuthorStats() {
             if (!response.ok) throw new Error(data.message);
             setStats(data.stats);
         } catch (error: any) {
-            Alert.alert('Error', 'Failed to load statistics');
+            showAlert({ title: 'Error', message: 'Failed to load statistics', type: 'error' });
         } finally {
             setLoading(false);
         }

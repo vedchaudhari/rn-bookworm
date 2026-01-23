@@ -1,4 +1,4 @@
-import { View, Text, Platform, ScrollView, TextInput, TouchableOpacity, Alert, Image, ActivityIndicator, Keyboard, KeyboardEvent, Switch } from 'react-native';
+import { View, Text, Platform, TextInput, TouchableOpacity, Image, ActivityIndicator, Keyboard, KeyboardEvent, Switch } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import styles from '../../assets/styles/create.styles';
@@ -8,7 +8,11 @@ import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuthStore } from '../../store/authContext';
 import { API_URL } from '../../constants/api';
+import { apiClient } from '../../lib/apiClient';
+import { useUIStore } from '../../store/uiStore';
+import KeyboardScreen from '../../components/KeyboardScreen';
 import SafeScreen from '../../components/SafeScreen';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CreateTab() {
     const [title, setTitle] = useState("");
@@ -22,24 +26,10 @@ export default function CreateTab() {
     const [file, setFile] = useState<any>(null); // For book content
     const [keepPdf, setKeepPdf] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-    useEffect(() => {
-        const show = Keyboard.addListener("keyboardDidShow", (e: KeyboardEvent) => {
-            setKeyboardHeight(e.endCoordinates.height);
-        });
-
-        const hide = Keyboard.addListener("keyboardDidHide", () => {
-            setKeyboardHeight(0);
-        });
-
-        return () => {
-            show.remove();
-            hide.remove();
-        };
-    }, []);
-
+    const insets = useSafeAreaInsets();
     const { token } = useAuthStore();
+    const { showAlert } = useUIStore();
     const router = useRouter();
 
     const pickImage = async () => {
@@ -47,7 +37,7 @@ export default function CreateTab() {
             const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
             if (!permissionResult.granted) {
-                Alert.alert("Permission required", "Permission to access the media library is required.");
+                showAlert({ title: "Permission required", message: "Permission to access the media library is required.", type: "warning" });
                 return;
             }
 
@@ -56,7 +46,7 @@ export default function CreateTab() {
                 allowsEditing: true,
                 aspect: [4, 3],
                 quality: 0.5,
-                base64: true
+                base64: false
             })
 
             if (!result.canceled) {
@@ -65,7 +55,7 @@ export default function CreateTab() {
             }
         } catch (error) {
             console.error(error);
-            Alert.alert("Error", "There was a problem selecting your image");
+            showAlert({ title: "Error", message: "There was a problem selecting your image", type: "error" });
         }
     }
 
@@ -79,20 +69,20 @@ export default function CreateTab() {
             if (result.assets && result.assets.length > 0) {
                 const pickedFile = result.assets[0];
                 if (pickedFile.size && pickedFile.size > 10 * 1024 * 1024) {
-                    Alert.alert("File too large", "Please select a file smaller than 10MB");
+                    showAlert({ title: "File too large", message: "Please select a file smaller than 10MB", type: "warning" });
                     return;
                 }
                 setFile(pickedFile);
             }
         } catch (error) {
             console.error("Error picking document:", error);
-            Alert.alert("Error", "Failed to select document");
+            showAlert({ title: "Error", message: "Failed to select document", type: "error" });
         }
     };
 
     const handleSubmit = async () => {
-        if (!title || !imageBase64 || !caption) {
-            Alert.alert("Incomplete form", "All fields are required")
+        if (!image || !title || !caption) {
+            showAlert({ title: "Incomplete form", message: "All fields are required", type: "warning" });
             return;
         }
 
@@ -100,12 +90,31 @@ export default function CreateTab() {
             setLoading(true);
             setUploadProgress(0);
 
-            // 1. Create Book First
-            const imageRes = await fetch(image!);
-            const imageBlob = await imageRes.blob();
-            const imageType = imageBlob.type || "image/jpeg";
-            const imageDataUrl = `data:${imageType};base64,${imageBase64}`;
+            // 1. Upload Cover Image to S3
+            const fileUri = image;
+            const fileName = fileUri.split('/').pop() || 'cover.jpg';
+            const fileExtension = fileName.split('.').pop() || 'jpg';
+            const contentType = `image/${fileExtension === 'png' ? 'png' : 'jpeg'}`;
 
+            // Get Presigned URL for covers
+            const { uploadUrl, finalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
+                '/api/messages/presigned-url',
+                { fileName, contentType, folder: 'covers' }
+            );
+
+            // Upload to S3
+            const imageBlobRes = await fetch(fileUri);
+            const imageBlob = await imageBlobRes.blob();
+
+            const s3UploadRes = await fetch(uploadUrl, {
+                method: 'PUT',
+                body: imageBlob,
+                headers: { 'Content-Type': contentType }
+            });
+
+            if (!s3UploadRes.ok) throw new Error('Cover upload failed');
+
+            // 2. Create Book with S3 URL
             const res = await fetch(
                 `${API_URL}/api/books`,
                 {
@@ -118,7 +127,7 @@ export default function CreateTab() {
                         title,
                         caption,
                         rating: rating.toString(),
-                        image: imageDataUrl,
+                        image: finalUrl, // S3 URL
                         genre,
                         author,
                     }),
@@ -195,10 +204,11 @@ export default function CreateTab() {
                 });
             }
 
-            Alert.alert(
-                "Success",
-                file ? "Book created and all chapters published via upload!" : "Your book recommendation has been posted!"
-            );
+            showAlert({
+                title: "Success",
+                message: file ? "Book created and all chapters published via upload!" : "Your book recommendation has been posted!",
+                type: "success"
+            });
 
             setTitle("");
             setCaption("");
@@ -212,7 +222,7 @@ export default function CreateTab() {
 
         } catch (error: any) {
             console.error("Error creating post: ", error);
-            Alert.alert("Error", error.message || "Something went wrong");
+            showAlert({ title: "Error", message: error.message || "Something went wrong", type: "error" });
         } finally {
             setLoading(false);
         }
@@ -237,199 +247,193 @@ export default function CreateTab() {
 
     return (
         <SafeScreen isTabScreen={true}>
-            <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-                <ScrollView
-                    contentContainerStyle={[
-                        styles.container,
-                        { paddingBottom: keyboardHeight ? keyboardHeight + 20 : 40 }
-                    ]}
-                    style={{ flex: 1 }}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    <View style={styles.card}>
-                        <View style={styles.header}>
-                            <Text style={styles.title}>Add Book Recommendation</Text>
-                            <Text style={styles.subtitle}>Share your favorite reads with others</Text>
-                        </View>
+            <KeyboardScreen
+                contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 40 }]}
+                style={{ flex: 1, backgroundColor: COLORS.background }}
+            >
+                <View style={styles.card}>
+                    <View style={styles.header}>
+                        <Text style={styles.title}>Add Book Recommendation</Text>
+                        <Text style={styles.subtitle}>Share your favorite reads with others</Text>
+                    </View>
 
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Book Title</Text>
-                            <View style={styles.inputContainer}>
-                                <Ionicons
-                                    name="book-outline"
-                                    size={20}
-                                    color={COLORS.textSecondary}
-                                    style={styles.inputIcon}
-                                />
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder='Enter book title'
-                                    placeholderTextColor={COLORS.textSecondary}
-                                    value={title}
-                                    onChangeText={setTitle}
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Author</Text>
-                            <View style={styles.inputContainer}>
-                                <Ionicons
-                                    name="person-outline"
-                                    size={20}
-                                    color={COLORS.textSecondary}
-                                    style={styles.inputIcon}
-                                />
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder='Enter author name'
-                                    placeholderTextColor={COLORS.textSecondary}
-                                    value={author}
-                                    onChangeText={setAuthor}
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Genre</Text>
-                            <View style={styles.inputContainer}>
-                                <Ionicons
-                                    name="library-outline"
-                                    size={20}
-                                    color={COLORS.textSecondary}
-                                    style={styles.inputIcon}
-                                />
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder='Enter genre (e.g., Fiction, Mystery)'
-                                    placeholderTextColor={COLORS.textSecondary}
-                                    value={genre}
-                                    onChangeText={setGenre}
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Rating</Text>
-                            {renderRatingPicker()}
-                        </View>
-
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Book Image</Text>
-
-                            <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-                                {
-                                    image
-                                        ? (<Image source={{ uri: image }} style={styles.previewImage} />)
-                                        : (
-                                            <View style={styles.placeholderContainer}>
-                                                <Ionicons name="image-outline" size={40} color={COLORS.textSecondary} />
-                                                <Text style={styles.placeholderText}>Tap to select image</Text>
-                                            </View>
-                                        )
-                                }
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Caption</Text>
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Book Title</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons
+                                name="book-outline"
+                                size={20}
+                                color={COLORS.textSecondary}
+                                style={styles.inputIcon}
+                            />
                             <TextInput
-                                style={styles.textArea}
-                                value={caption}
-                                onChangeText={setCaption}
-                                placeholder='Enter captions'
+                                style={styles.input}
+                                placeholder='Enter book title'
                                 placeholderTextColor={COLORS.textSecondary}
-                                multiline
+                                value={title}
+                                onChangeText={setTitle}
                             />
                         </View>
+                    </View>
 
-                        {/* File Upload Section */}
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Book Content (Optional)</Text>
-                            <Text style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 8 }}>Upload a TXT or PDF file to automatically create chapters.</Text>
-
-                            <TouchableOpacity
-                                style={[styles.imagePicker, { height: 80, flexDirection: 'row', gap: 12, justifyContent: 'center', alignItems: 'center' }]}
-                                onPress={pickDocument}
-                            >
-                                <Ionicons name={file ? "document" : "cloud-upload"} size={32} color={COLORS.primary} />
-                                <View style={{ alignItems: 'center' }}>
-                                    <Text style={{ color: COLORS.textPrimary, fontWeight: '600', textAlign: 'center' }}>
-                                        {file ? file.name : "Upload Book File"}
-                                    </Text>
-                                    <Text style={{ color: COLORS.textSecondary, fontSize: 12, textAlign: 'center' }}>
-                                        {file ? `${(file.size / 1024).toFixed(1)} KB` : "Supports TXT, PDF (Max 10MB)"}
-                                    </Text>
-                                </View>
-                                {file && (
-                                    <TouchableOpacity onPress={(e) => { e.stopPropagation(); setFile(null); }}>
-                                        <Ionicons name="close-circle" size={24} color={COLORS.error} />
-                                    </TouchableOpacity>
-                                )}
-                            </TouchableOpacity>
-
-                            {/* PDF Options */}
-                            {file?.mimeType === 'application/pdf' && (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingHorizontal: 4 }}>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.textPrimary }}>Read as PDF</Text>
-                                        <Text style={{ fontSize: 12, color: COLORS.textSecondary }}>Keep original layout instead of converting to text</Text>
-                                    </View>
-                                    <Switch
-                                        value={keepPdf}
-                                        onValueChange={setKeepPdf}
-                                        trackColor={{ false: '#767577', true: COLORS.primary }}
-                                        thumbColor={'#f4f3f4'}
-                                    />
-                                </View>
-                            )}
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Author</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons
+                                name="person-outline"
+                                size={20}
+                                color={COLORS.textSecondary}
+                                style={styles.inputIcon}
+                            />
+                            <TextInput
+                                style={styles.input}
+                                placeholder='Enter author name'
+                                placeholderTextColor={COLORS.textSecondary}
+                                value={author}
+                                onChangeText={setAuthor}
+                            />
                         </View>
+                    </View>
 
-                        <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Genre</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons
+                                name="library-outline"
+                                size={20}
+                                color={COLORS.textSecondary}
+                                style={styles.inputIcon}
+                            />
+                            <TextInput
+                                style={styles.input}
+                                placeholder='Enter genre (e.g., Fiction, Mystery)'
+                                placeholderTextColor={COLORS.textSecondary}
+                                value={genre}
+                                onChangeText={setGenre}
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Rating</Text>
+                        {renderRatingPicker()}
+                    </View>
+
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Book Image</Text>
+
+                        <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
                             {
-                                loading ? (
-                                    uploadProgress > 0 && uploadProgress < 100 ? (
-                                        <View style={{ width: '100%', alignItems: 'center' }}>
-                                            <Text style={styles.buttonText}>Uploading: {uploadProgress}%</Text>
-                                            <View style={{
-                                                width: '80%',
-                                                height: 4,
-                                                backgroundColor: 'rgba(255,255,255,0.3)',
-                                                borderRadius: 2,
-                                                marginTop: 8,
-                                                overflow: 'hidden'
-                                            }}>
-                                                <View style={{
-                                                    width: `${uploadProgress}%`,
-                                                    height: '100%',
-                                                    backgroundColor: COLORS.white,
-                                                    borderRadius: 2
-                                                }} />
-                                            </View>
-                                        </View>
-                                    ) : (
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                            <ActivityIndicator color={COLORS.white} />
-                                            {uploadProgress >= 100 && (
-                                                <Text style={styles.buttonText}>Processing Book...</Text>
-                                            )}
+                                image
+                                    ? (<Image source={{ uri: image }} style={styles.previewImage} />)
+                                    : (
+                                        <View style={styles.placeholderContainer}>
+                                            <Ionicons name="image-outline" size={40} color={COLORS.textSecondary} />
+                                            <Text style={styles.placeholderText}>Tap to select image</Text>
                                         </View>
                                     )
-                                ) : <>
-                                    <Ionicons
-                                        name="cloud-upload-outline"
-                                        size={20}
-                                        color={COLORS.white}
-                                        style={styles.buttonIcon}
-                                    />
-                                    <Text style={styles.buttonText}>{file ? "Share & Publish" : "Share"}</Text>
-                                </>
                             }
                         </TouchableOpacity>
-
                     </View>
-                </ScrollView>
-            </View>
+
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Caption</Text>
+                        <TextInput
+                            style={styles.textArea}
+                            value={caption}
+                            onChangeText={setCaption}
+                            placeholder='Enter captions'
+                            placeholderTextColor={COLORS.textSecondary}
+                            multiline
+                        />
+                    </View>
+
+                    {/* File Upload Section */}
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Book Content (Optional)</Text>
+                        <Text style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 8 }}>Upload a TXT or PDF file to automatically create chapters.</Text>
+
+                        <TouchableOpacity
+                            style={[styles.imagePicker, { height: 80, flexDirection: 'row', gap: 12, justifyContent: 'center', alignItems: 'center' }]}
+                            onPress={pickDocument}
+                        >
+                            <Ionicons name={file ? "document" : "cloud-upload"} size={32} color={COLORS.primary} />
+                            <View style={{ alignItems: 'center' }}>
+                                <Text style={{ color: COLORS.textPrimary, fontWeight: '600', textAlign: 'center' }}>
+                                    {file ? file.name : "Upload Book File"}
+                                </Text>
+                                <Text style={{ color: COLORS.textSecondary, fontSize: 12, textAlign: 'center' }}>
+                                    {file ? `${(file.size / 1024).toFixed(1)} KB` : "Supports TXT, PDF (Max 10MB)"}
+                                </Text>
+                            </View>
+                            {file && (
+                                <TouchableOpacity onPress={(e) => { e.stopPropagation(); setFile(null); }}>
+                                    <Ionicons name="close-circle" size={24} color={COLORS.error} />
+                                </TouchableOpacity>
+                            )}
+                        </TouchableOpacity>
+
+                        {/* PDF Options */}
+                        {file?.mimeType === 'application/pdf' && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingHorizontal: 4 }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.textPrimary }}>Read as PDF</Text>
+                                    <Text style={{ fontSize: 12, color: COLORS.textSecondary }}>Keep original layout instead of converting to text</Text>
+                                </View>
+                                <Switch
+                                    value={keepPdf}
+                                    onValueChange={setKeepPdf}
+                                    trackColor={{ false: '#767577', true: COLORS.primary }}
+                                    thumbColor={'#f4f3f4'}
+                                />
+                            </View>
+                        )}
+                    </View>
+
+                    <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
+                        {
+                            loading ? (
+                                uploadProgress > 0 && uploadProgress < 100 ? (
+                                    <View style={{ width: '100%', alignItems: 'center' }}>
+                                        <Text style={styles.buttonText}>Uploading: {uploadProgress}%</Text>
+                                        <View style={{
+                                            width: '80%',
+                                            height: 4,
+                                            backgroundColor: 'rgba(255,255,255,0.3)',
+                                            borderRadius: 2,
+                                            marginTop: 8,
+                                            overflow: 'hidden'
+                                        }}>
+                                            <View style={{
+                                                width: `${uploadProgress}%`,
+                                                height: '100%',
+                                                backgroundColor: COLORS.white,
+                                                borderRadius: 2
+                                            }} />
+                                        </View>
+                                    </View>
+                                ) : (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                        <ActivityIndicator color={COLORS.white} />
+                                        {uploadProgress >= 100 && (
+                                            <Text style={styles.buttonText}>Processing Book...</Text>
+                                        )}
+                                    </View>
+                                )
+                            ) : <>
+                                <Ionicons
+                                    name="cloud-upload-outline"
+                                    size={20}
+                                    color={COLORS.white}
+                                    style={styles.buttonIcon}
+                                />
+                                <Text style={styles.buttonText}>{file ? "Share & Publish" : "Share"}</Text>
+                            </>
+                        }
+                    </TouchableOpacity>
+
+                </View>
+            </KeyboardScreen>
         </SafeScreen>
-    )
+    );
 }

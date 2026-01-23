@@ -114,6 +114,36 @@ export const getSignedUrlForFile = async (s3Url: string, expiresIn: number = 360
 };
 
 /**
+ * Generates a presigned URL for uploading a file to S3
+ * @param fileName Desired filename
+ * @param contentType File MIME type
+ * @param folder S3 folder (e.g. 'chat', 'covers', 'profiles')
+ * @returns Object containing the upload URL and the final destination URL
+ */
+export const getPresignedPutUrl = async (fileName: string, contentType: string, folder: string = 'chat'): Promise<{ uploadUrl: string; finalUrl: string }> => {
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    if (!bucketName) throw new Error('AWS_S3_BUCKET_NAME is not defined');
+
+    const key = `${folder}/${Date.now()}-${fileName.replace(/\s+/g, '_')}`;
+
+    const command = new PutObjectCommand({
+        Bucket: bucketName,
+        Key: key,
+        ContentType: contentType,
+    });
+
+    try {
+        const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 600 }); // 10 minutes
+        const finalUrl = `https://${bucketName}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`;
+
+        return { uploadUrl, finalUrl };
+    } catch (error) {
+        console.error('Error generating presigned PUT URL:', error);
+        throw error;
+    }
+};
+
+/**
  * Deletes a file from S3 given its full S3 URL or Key
  * @param s3UrlOrKey Full S3 URL or the S3 Key
  */

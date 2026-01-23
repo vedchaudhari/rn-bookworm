@@ -320,4 +320,32 @@ router.put("/profile", protectRoute, async (req: Request, res: Response) => {
     }
 });
 
+// Update Profile Image
+router.put("/update-profile-image", protectRoute, async (req: Request, res: Response) => {
+    try {
+        const { profileImage } = req.body;
+        const userId = req.user!._id;
+
+        if (!profileImage) {
+            return res.status(400).json({ message: "Profile image URL is required" });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: { profileImage } },
+            { new: true }
+        ).select("-password");
+
+        if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+        // Invalidate Redis cache
+        await redis.del(CACHE_KEYS.USER_PROFILE(userId.toString()));
+
+        res.json({ success: true, user: updatedUser });
+    } catch (error: any) {
+        console.error("Error updating profile image:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
 export default router;

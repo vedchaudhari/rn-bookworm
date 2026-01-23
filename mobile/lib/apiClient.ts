@@ -1,13 +1,32 @@
 // mobile/lib/apiClient.ts
 import { API_URL } from '../constants/api';
-import { useAuthStore } from '../store/authContext';
-import { Alert } from 'react-native';
 
 interface RequestOptions extends RequestInit {
     params?: Record<string, string | number | boolean>;
 }
 
+export type UnauthorizedCallback = () => void;
+
 class ApiClient {
+    private authToken: string | null = null;
+    private unauthorizedCallback: UnauthorizedCallback | null = null;
+
+    /**
+     * Set the authorization token to be used for all subsequent requests.
+     */
+    setAuthToken(token: string | null) {
+        this.authToken = token;
+        console.log('[ApiClient] Auth token updated');
+    }
+
+    /**
+     * Register a callback to be executed when a 401 Unauthorized response is received.
+     */
+    registerUnauthorizedCallback(callback: UnauthorizedCallback) {
+        this.unauthorizedCallback = callback;
+        console.log('[ApiClient] Unauthorized callback registered');
+    }
+
     private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
         const { params, headers: customHeaders, ...restOptions } = options;
 
@@ -31,9 +50,8 @@ class ApiClient {
         }
 
         // 3. Inject Auth Token
-        const token = useAuthStore.getState().token;
-        if (token && !headers.has('Authorization')) {
-            headers.set('Authorization', `Bearer ${token}`);
+        if (this.authToken && !headers.has('Authorization')) {
+            headers.set('Authorization', `Bearer ${this.authToken}`);
         }
 
         try {
@@ -44,9 +62,10 @@ class ApiClient {
 
             // 4. Handle common status codes
             if (response.status === 401) {
-                // Unauthorized: Global logout if token expired
-                console.warn('[ApiClient] 401 Unauthorized detected. Logging out...');
-                useAuthStore.getState().logout();
+                console.warn('[ApiClient] 401 Unauthorized detected.');
+                if (this.unauthorizedCallback) {
+                    this.unauthorizedCallback();
+                }
                 throw new Error('Unauthorized. Please log in again.');
             }
 

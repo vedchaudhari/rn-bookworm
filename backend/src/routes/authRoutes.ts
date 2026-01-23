@@ -41,6 +41,12 @@ router.post("/register", asyncHandler(async (req: Request<{}, {}, RegisterBody>,
         return res.status(400).json({ message: "Username should be at least 3 characters long" });
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email format" });
+    }
+
     // check if user already exists
     const existingEmail = await User.findOne({ email });
     if (existingEmail) {

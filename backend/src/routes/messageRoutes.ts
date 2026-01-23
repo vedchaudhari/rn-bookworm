@@ -5,13 +5,31 @@ import Message, { IMessageDocument } from "../models/Message";
 import User, { IUserDocument } from "../models/User";
 import { Server } from "socket.io";
 import { redis, CACHE_KEYS, TTL } from "../lib/redis";
+import { getPresignedPutUrl } from "../lib/s3";
 
 const router = express.Router();
 
 interface SendMessageBody {
     text?: string;
-    image?: string;
+    image?: string; // This should now always be a URL
 }
+
+// Get presigned URL for chat image upload
+router.get("/presigned-url", protectRoute, async (req: Request, res: Response) => {
+    try {
+        const { fileName, contentType, folder } = req.query;
+
+        if (!fileName || !contentType) {
+            return res.status(400).json({ message: "fileName and contentType are required" });
+        }
+
+        const data = await getPresignedPutUrl(fileName as string, contentType as string, (folder as string) || 'chat');
+        res.json(data);
+    } catch (error) {
+        console.error("Error generating presigned URL:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
 
 // Send a message
 router.post("/send/:receiverId", protectRoute, async (req: Request, res: Response) => {
@@ -34,15 +52,6 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
 
         if (trimmedText && trimmedText.length > 1000) {
             return res.status(400).json({ message: "Message is too long (max 1000 characters)" });
-        }
-
-        // Validate image size (base64)
-        if (image) {
-            const imageSizeBytes = Buffer.from(image.split(',')[1] || image, 'base64').length;
-            const maxImageSize = 5 * 1024 * 1024; // 5MB
-            if (imageSizeBytes > maxImageSize) {
-                return res.status(400).json({ message: "Image too large (max 5MB)" });
-            }
         }
 
         // Check if receiver exists

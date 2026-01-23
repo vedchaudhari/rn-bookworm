@@ -78,6 +78,8 @@ const messageSchema = new Schema<IMessageDocument>(
 // Indexes for efficient queries
 messageSchema.index({ conversationId: 1, createdAt: -1 });
 messageSchema.index({ receiver: 1, read: 1 });
+messageSchema.index({ sender: 1, receiver: 1, createdAt: -1 }); // Optimize "last message" aggregation
+messageSchema.index({ conversationId: 1, deletedFor: 1 });     // Optimize filtering deleted messages
 
 // Generate conversation ID from two user IDs (always in same order)
 messageSchema.statics.getConversationId = function (

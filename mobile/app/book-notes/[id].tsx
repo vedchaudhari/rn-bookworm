@@ -8,7 +8,6 @@ import {
     TouchableOpacity,
     TextInput,
     RefreshControl,
-    Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import SafeScreen from '../../components/SafeScreen';
@@ -27,6 +26,7 @@ import {
 } from '../../constants/styleConstants';
 import { useBookNoteStore } from '../../store/bookNoteStore';
 import { useBookshelfStore } from '../../store/bookshelfStore';
+import { useUIStore } from '../../store/uiStore';
 import { Ionicons } from '@expo/vector-icons';
 import type { NoteType, Visibility } from '../../lib/api/bookNoteApi';
 
@@ -89,6 +89,7 @@ export default function BookNotesScreen() {
         loadMore,
         clearError,
     } = useBookNoteStore();
+    const { showAlert } = useUIStore();
 
     const { items } = useBookshelfStore();
     const bookshelfItem = items.find((item) => item._id === id);
@@ -145,25 +146,20 @@ export default function BookNotesScreen() {
     };
 
     const handleNotePress = (note: any) => {
-        Alert.alert(
-            note.type.charAt(0).toUpperCase() + note.type.slice(1),
-            `Page ${note.pageNumber}${note.chapterName ? ` • ${note.chapterName}` : ''}\n\n${note.highlightedText || note.userNote
-            }`,
-            [
-                { text: 'Close', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: () => handleDeleteNote(note._id),
-                },
-            ]
-        );
+        showAlert({
+            title: note.type.charAt(0).toUpperCase() + note.type.slice(1),
+            message: `Page ${note.pageNumber}${note.chapterName ? ` • ${note.chapterName}` : ''}\n\n${note.highlightedText || note.userNote}`,
+            showCancel: true,
+            confirmText: 'Delete',
+            type: 'warning',
+            onConfirm: () => handleDeleteNote(note._id),
+        });
     };
 
     const handleDeleteNote = async (noteId: string) => {
         const success = await deleteNote(noteId);
         if (success) {
-            Alert.alert('Deleted', 'Note removed successfully');
+            showAlert({ title: 'Deleted', message: 'Note removed successfully', type: 'success' });
         }
     };
 

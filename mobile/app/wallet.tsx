@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../constants/colors';
 import { useAuthStore } from '../store/authContext';
 import { useCurrencyStore } from '../store/currencyStore';
+import { useUIStore } from '../store/uiStore';
 import { INK_DROPS_CONFIG } from '../constants/monetization';
 import SafeScreen from '../components/SafeScreen';
 import GlassCard from '../components/GlassCard';
@@ -12,6 +13,7 @@ import GlassCard from '../components/GlassCard';
 export default function WalletScreen() {
     const { token } = useAuthStore();
     const { balance, transactions, isLoading, fetchBalance, fetchTransactions, purchaseInkDrops } = useCurrencyStore();
+    const { showAlert } = useUIStore();
     const [refreshing, setRefreshing] = useState(false);
     const router = useRouter();
 
@@ -35,9 +37,9 @@ export default function WalletScreen() {
         if (!token) return;
         const result = await purchaseInkDrops(productId, token);
         if (result.success) {
-            Alert.alert('Success', 'Thank you for your purchase! Your balance has been updated.');
+            showAlert({ title: 'Success', message: 'Thank you for your purchase! Your balance has been updated.', type: 'success' });
         } else {
-            Alert.alert('Purchase Failed', result.error || 'Something went wrong');
+            showAlert({ title: 'Purchase Failed', message: result.error || 'Something went wrong', type: 'error' });
         }
     };
 

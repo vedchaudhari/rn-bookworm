@@ -39,9 +39,6 @@ const REQUIRED_ENV_VARS = [
     "AWS_SECRET_ACCESS_KEY",
     "AWS_REGION",
     "AWS_S3_BUCKET_NAME",
-    "CLOUDINARY_CLOUD_NAME",
-    "CLOUDINARY_API_KEY",
-    "CLOUDINARY_API_SECRET"
 ];
 
 const validateEnv = () => {
@@ -108,8 +105,36 @@ app.use("/api/challenges", challengeRoutes);
 app.use("/api/chapters", chapterRoutes);
 app.use("/api/currency", currencyRoutes);
 
+// Rate Limiting
+import rateLimit from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
+
 // Global Error Handler (Must be after routes)
 app.use(errorHandler);
+
+// Rate Limiter Configuration
+const limiter = rateLimit({
+    // TODO: Switch back to RedisStore once Upstash compatibility adapter is implemented
+    // store: new RedisStore({
+    //     // @ts-ignore - Upstash Redis client is compatible enough for this usage or will fall back
+    //     sendCommand: (...args: string[]) => redis.call(args[0], ...args.slice(1)),
+    // }),
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: { status: 429, message: "Too many requests, please try again later." }
+});
+
+// Apply rate limiter to all api routes
+app.use('/api', limiter);
+
+// Request Timeout Middleware
+app.use((req, res, next) => {
+    req.setTimeout(30000); // 30 seconds
+    res.setTimeout(30000);
+    next();
+});
 
 const startServer = async () => {
     try {

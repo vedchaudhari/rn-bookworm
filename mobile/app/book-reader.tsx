@@ -1,10 +1,11 @@
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import COLORS from '../constants/colors';
 import { useAuthStore } from '../store/authContext';
+import { useUIStore } from '../store/uiStore';
 import { API_URL } from '../constants/api';
 import SafeScreen from '../components/SafeScreen';
 import { useSubscriptionStore } from '../store/subscriptionStore';
@@ -37,6 +38,7 @@ export default function BookReaderScreen() {
     const scrollViewRef = useRef<ScrollView>(null);
     const { token } = useAuthStore();
     const { isPro } = useSubscriptionStore();
+    const { showAlert } = useUIStore();
     const router = useRouter();
 
     // 1. Fetch Chapter List on Mount
@@ -93,7 +95,7 @@ export default function BookReaderScreen() {
             }
         } catch (error) {
             console.error('Error fetching chapters:', error);
-            Alert.alert('Error', 'Failed to load book chapters');
+            showAlert({ title: 'Error', message: 'Failed to load book chapters', type: 'error' });
             setLoading(false);
         }
     };
@@ -117,7 +119,7 @@ export default function BookReaderScreen() {
 
         } catch (error) {
             console.error('Error fetching chapter content:', error);
-            Alert.alert('Error', 'Failed to load chapter content');
+            showAlert({ title: 'Error', message: 'Failed to load chapter content', type: 'error' });
             setLoadingChapter(false);
             setLoading(false);
         }
@@ -149,9 +151,12 @@ export default function BookReaderScreen() {
         } else {
             // Last chapter finished
             markChapterComplete(chapters[currentChapterIndex].chapterNumber);
-            Alert.alert('Congratulations!', 'You have completed this book!', [
-                { text: 'Awesome', onPress: () => router.back() }
-            ]);
+            showAlert({
+                title: 'Congratulations!',
+                message: 'You have completed this book!',
+                type: 'success',
+                onConfirm: () => router.back()
+            });
         }
     };
 

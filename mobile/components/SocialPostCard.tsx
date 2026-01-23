@@ -1,6 +1,6 @@
 // f:\rn-wss-android\rn-bookworm\mobile\components\SocialPostCard.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from 'expo-router';
@@ -12,6 +12,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import BookmarkButton from './BookmarkButton';
 import { useAuthStore } from '../store/authContext';
 import { apiClient } from '../lib/apiClient';
+import { useUIStore } from '../store/uiStore';
 
 interface Book {
     _id: string;
@@ -79,30 +80,27 @@ const localStyles = StyleSheet.create({
 const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }) => {
     const router = useRouter();
     const { user, token } = useAuthStore();
+    const { showAlert } = useUIStore();
     const isOwner = (user?._id || user?.id)?.toString() === ((post.user as any)?._id || (post.user as any)?.id || (typeof post.user === 'string' ? post.user : null))?.toString();
     const [showDropdown, setShowDropdown] = React.useState(false);
 
     const handleDelete = () => {
         setShowDropdown(false);
-        Alert.alert(
-            "Delete Book",
-            "Are you sure you want to delete this book?",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            await apiClient.delete(`/api/books/${post._id}`);
-                            if (onDelete) onDelete(post._id);
-                        } catch (error: any) {
-                            Alert.alert("Error", error.message || "Failed to delete book");
-                        }
-                    }
+        showAlert({
+            title: "Delete Book",
+            message: "Are you sure you want to delete this book?",
+            showCancel: true,
+            confirmText: "Delete",
+            type: "warning",
+            onConfirm: async () => {
+                try {
+                    await apiClient.delete(`/api/books/${post._id}`);
+                    if (onDelete) onDelete(post._id);
+                } catch (error: any) {
+                    showAlert({ title: "Error", message: error.message || "Failed to delete book", type: "error" });
                 }
-            ]
-        );
+            }
+        });
     };
 
     const handleEdit = () => {
@@ -157,7 +155,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
 
                     {showDropdown && (
                         <View style={localStyles.dropdown}>
-                            <TouchableOpacity style={localStyles.dropdownItem} onPress={() => { Alert.alert("Report", "Thank you for your report. We will review it shortly."); setShowDropdown(false); }}>
+                            <TouchableOpacity style={localStyles.dropdownItem} onPress={() => { showAlert({ title: "Report", message: "Thank you for your report. We will review it shortly.", type: "success" }); setShowDropdown(false); }}>
                                 <Ionicons name="flag-outline" size={18} color={COLORS.textPrimary} />
                                 <Text style={localStyles.dropdownText}>Report</Text>
                             </TouchableOpacity>

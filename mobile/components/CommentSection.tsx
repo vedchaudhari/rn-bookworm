@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,7 @@ import COLORS from '../constants/colors';
 import { useSocialStore } from '../store/socialStore';
 import { useAuthStore } from '../store/authContext';
 import { API_URL } from '../constants/api';
+import { useUIStore } from '../store/uiStore';
 
 interface Comment {
     _id: string;
@@ -33,6 +34,7 @@ export default function CommentSection({ bookId }: CommentSectionProps) {
 
     const { addComment, deleteComment } = useSocialStore();
     const { token, user } = useAuthStore();
+    const { showAlert } = useUIStore();
 
     useEffect(() => {
         fetchComments();
@@ -73,34 +75,30 @@ export default function CommentSection({ bookId }: CommentSectionProps) {
             setComments(prev => [result.comment!, ...prev]);
             setCommentText('');
         } else {
-            Alert.alert('Error', result.error || 'Failed to add comment');
+            showAlert({ title: 'Error', message: result.error || 'Failed to add comment', type: 'error' });
         }
     };
 
     const handleDeleteComment = async (commentId: string) => {
-        Alert.alert(
-            'Delete Comment',
-            'Are you sure you want to delete this comment?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        if (!token) return;
-                        setDeletingId(commentId);
-                        const result = await deleteComment(commentId, token);
-                        setDeletingId(null);
+        showAlert({
+            title: 'Delete Comment',
+            message: 'Are you sure you want to delete this comment?',
+            showCancel: true,
+            confirmText: 'Delete',
+            type: 'warning',
+            onConfirm: async () => {
+                if (!token) return;
+                setDeletingId(commentId);
+                const result = await deleteComment(commentId, token);
+                setDeletingId(null);
 
-                        if (result.success) {
-                            setComments(prev => prev.filter(c => c._id !== commentId));
-                        } else {
-                            Alert.alert('Error', result.error || 'Failed to delete comment');
-                        }
-                    },
-                },
-            ]
-        );
+                if (result.success) {
+                    setComments(prev => prev.filter(c => c._id !== commentId));
+                } else {
+                    showAlert({ title: 'Error', message: result.error || 'Failed to delete comment', type: 'error' });
+                }
+            },
+        });
     };
 
     const renderComment = ({ item }: { item: Comment }) => (

@@ -1,21 +1,23 @@
-import { TouchableOpacity, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import React from 'react';
 import { useAuthStore } from '../store/authContext';
+import { useUIStore } from '../store/uiStore';
 import { Ionicons } from "@expo/vector-icons";
 import COLORS from '../constants/colors';
 
 export default function LogoutButton() {
     const { logout, isLoading } = useAuthStore();
+    const { showAlert } = useUIStore();
 
     const confirmLogout = () => {
-        Alert.alert(
-            "Logout",
-            "Are you sure you want to log out?",
-            [
-                { text: "Cancel", style: "cancel" },
-                { text: "Log Out", onPress: () => logout(), style: "destructive" },
-            ]
-        );
+        showAlert({
+            title: "Logout",
+            message: "Are you sure you want to log out?",
+            showCancel: true,
+            confirmText: "Log Out",
+            type: "warning",
+            onConfirm: () => logout(),
+        });
     };
 
     return (

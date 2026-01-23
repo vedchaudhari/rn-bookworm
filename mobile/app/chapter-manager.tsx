@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Modal, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../constants/colors';
 import { API_URL } from '../constants/api';
 import { useAuthStore } from '../store/authContext';
+import { useUIStore } from '../store/uiStore';
 import SafeScreen from '../components/SafeScreen';
 import GlassCard from '../components/GlassCard';
 
@@ -30,6 +31,7 @@ export default function ChapterManager() {
     const [mergeChapter2, setMergeChapter2] = useState('');
 
     const { token } = useAuthStore();
+    const { showAlert } = useUIStore();
     const router = useRouter();
 
     useEffect(() => {
@@ -45,7 +47,7 @@ export default function ChapterManager() {
             if (!response.ok) throw new Error(data.message);
             setChapters(data.chapters);
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to fetch chapters');
+            showAlert({ title: 'Error', message: error.message || 'Failed to fetch chapters', type: 'error' });
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -59,37 +61,33 @@ export default function ChapterManager() {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) throw new Error('Failed to publish');
-            Alert.alert('Success', 'Chapter published!');
+            showAlert({ title: 'Success', message: 'Chapter published!', type: 'success' });
             fetchChapters();
         } catch (error: any) {
-            Alert.alert('Error', error.message);
+            showAlert({ title: 'Error', message: error.message, type: 'error' });
         }
     };
 
     const handleDelete = (chapterNumber: number) => {
-        Alert.alert(
-            'Delete Chapter',
-            `Are you sure you want to delete Chapter ${chapterNumber}?`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            const response = await fetch(`${API_URL}/api/chapters/${bookId}/chapters/${chapterNumber}`, {
-                                method: 'DELETE',
-                                headers: { 'Authorization': `Bearer ${token}` }
-                            });
-                            if (!response.ok) throw new Error('Failed to delete');
-                            fetchChapters();
-                        } catch (error: any) {
-                            Alert.alert('Error', error.message);
-                        }
-                    }
+        showAlert({
+            title: 'Delete Chapter',
+            message: `Are you sure you want to delete Chapter ${chapterNumber}?`,
+            showCancel: true,
+            confirmText: 'Delete',
+            type: 'warning',
+            onConfirm: async () => {
+                try {
+                    const response = await fetch(`${API_URL}/api/chapters/${bookId}/chapters/${chapterNumber}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (!response.ok) throw new Error('Failed to delete');
+                    fetchChapters();
+                } catch (error: any) {
+                    showAlert({ title: 'Error', message: error.message, type: 'error' });
                 }
-            ]
-        );
+            },
+        });
     };
 
     const handleMerge = async () => {
@@ -109,13 +107,13 @@ export default function ChapterManager() {
             const data = await response.json();
             if (!response.ok) throw new Error(data.message);
 
-            Alert.alert('Success', 'Chapters merged successfully');
+            showAlert({ title: 'Success', message: 'Chapters merged successfully', type: 'success' });
             setShowMergeModal(false);
             setMergeChapter1('');
             setMergeChapter2('');
             fetchChapters();
         } catch (error: any) {
-            Alert.alert('Merge Error', error.message);
+            showAlert({ title: 'Merge Error', message: error.message, type: 'error' });
         }
     };
 
@@ -203,43 +201,54 @@ export default function ChapterManager() {
             {/* Merge Modal */}
             <Modal visible={showMergeModal} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
-                    <GlassCard style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Merge Chapters</Text>
-                        <Text style={styles.modalSubtitle}>This will append the content of the second chapter to the first and delete the second one.</Text>
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={{ flex: 1, justifyContent: 'center' }}
+                    >
+                        <ScrollView
+                            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
+                            keyboardShouldPersistTaps="handled"
+                            bounces={false}
+                        >
+                            <GlassCard style={styles.modalContent}>
+                                <Text style={styles.modalTitle}>Merge Chapters</Text>
+                                <Text style={styles.modalSubtitle}>This will append the content of the second chapter to the first and delete the second one.</Text>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>First Chapter #</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="1"
-                                placeholderTextColor={COLORS.textMuted}
-                                keyboardType="numeric"
-                                value={mergeChapter1}
-                                onChangeText={setMergeChapter1}
-                            />
-                        </View>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>First Chapter #</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="1"
+                                        placeholderTextColor={COLORS.textMuted}
+                                        keyboardType="numeric"
+                                        value={mergeChapter1}
+                                        onChangeText={setMergeChapter1}
+                                    />
+                                </View>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Second Chapter #</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="2"
-                                placeholderTextColor={COLORS.textMuted}
-                                keyboardType="numeric"
-                                value={mergeChapter2}
-                                onChangeText={setMergeChapter2}
-                            />
-                        </View>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Second Chapter #</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="2"
+                                        placeholderTextColor={COLORS.textMuted}
+                                        keyboardType="numeric"
+                                        value={mergeChapter2}
+                                        onChangeText={setMergeChapter2}
+                                    />
+                                </View>
 
-                        <View style={styles.modalActions}>
-                            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowMergeModal(false)}>
-                                <Text style={styles.cancelBtnText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.submitBtn} onPress={handleMerge}>
-                                <Text style={styles.submitBtnText}>Confirm Merge</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </GlassCard>
+                                <View style={styles.modalActions}>
+                                    <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowMergeModal(false)}>
+                                        <Text style={styles.cancelBtnText}>Cancel</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.submitBtn} onPress={handleMerge}>
+                                        <Text style={styles.submitBtnText}>Confirm Merge</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </GlassCard>
+                        </ScrollView>
+                    </KeyboardAvoidingView>
                 </View>
             </Modal>
         </SafeScreen>

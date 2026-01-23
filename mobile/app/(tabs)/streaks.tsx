@@ -7,7 +7,6 @@ import {
     ScrollView,
     RefreshControl,
     TouchableOpacity,
-    Alert,
     AccessibilityInfo,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -27,6 +26,7 @@ import {
     COMPONENT_SIZES,
 } from '../../constants/styleConstants';
 import { useStreakStore } from '../../stores/streakStore';
+import { useUIStore } from '../../store/uiStore';
 import { analytics } from '../../lib/analytics';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -51,6 +51,7 @@ export default function StreakDashboardScreen() {
         checkIn,
         restoreStreak,
     } = useStreakStore();
+    const { showAlert } = useUIStore();
 
     // Load data on mount
     useEffect(() => {
@@ -83,22 +84,23 @@ export default function StreakDashboardScreen() {
 
             // Show celebration if milestone achieved
             if (result.milestoneAchieved) {
-                Alert.alert(
-                    '🎉 Milestone Achieved!',
-                    `${result.milestoneAchieved}\n+${result.inkDropsEarned} Ink Drops`,
-                    [{ text: 'Awesome!', onPress: () => setShowMilestones(true) }]
-                );
+                showAlert({
+                    title: '🎉 Milestone Achieved!',
+                    message: `${result.milestoneAchieved}\n+${result.inkDropsEarned} Ink Drops`,
+                    confirmText: 'Awesome!',
+                    onConfirm: () => setShowMilestones(true)
+                });
 
                 // Announce to screen readers
                 AccessibilityInfo.announceForAccessibility(
                     `Milestone achieved: ${result.milestoneAchieved}. Earned ${result.inkDropsEarned} Ink Drops.`
                 );
             } else if (result.inkDropsEarned > 0) {
-                Alert.alert(
-                    '✅ Check-in Complete!',
-                    `+${result.inkDropsEarned} Ink Drops earned`,
-                    [{ text: 'Great!', style: 'default' }]
-                );
+                showAlert({
+                    title: '✅ Check-in Complete!',
+                    message: `+${result.inkDropsEarned} Ink Drops earned`,
+                    type: 'success'
+                });
             }
 
             // Analytics
@@ -111,45 +113,41 @@ export default function StreakDashboardScreen() {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
             if (error.message.includes('already checked in')) {
-                Alert.alert('Already Checked In', 'You\'ve already checked in today! Come back tomorrow.');
+                showAlert({ title: 'Already Checked In', message: 'You\'ve already checked in today! Come back tomorrow.', type: 'info' });
             } else {
-                Alert.alert('Error', error.message || 'Failed to check in. Please try again.');
+                showAlert({ title: 'Error', message: error.message || 'Failed to check in. Please try again.', type: 'error' });
             }
         }
     };
 
     const handleRestoreStreak = () => {
-        Alert.alert(
-            'Restore Streak?',
-            `This will cost 200 Ink Drops to restore your ${streak?.longestStreak || 0}-day streak.`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Restore',
-                    style: 'default',
-                    onPress: async () => {
-                        try {
-                            await restoreStreak();
-                            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                            Alert.alert('Streak Restored!', 'Your streak is back on track.');
+        showAlert({
+            title: 'Restore Streak?',
+            message: `This will cost 200 Ink Drops to restore your ${streak?.longestStreak || 0}-day streak.`,
+            showCancel: true,
+            confirmText: 'Restore',
+            type: 'warning',
+            onConfirm: async () => {
+                try {
+                    await restoreStreak();
+                    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    showAlert({ title: 'Streak Restored!', message: 'Your streak is back on track.', type: 'success' });
 
-                            // Analytics
-                            console.log('Analytics: streak_restored', {
-                                restoredStreakLength: streak?.longestStreak || 0,
-                            });
-                        } catch (error: any) {
-                            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                    // Analytics
+                    console.log('Analytics: streak_restored', {
+                        restoredStreakLength: streak?.longestStreak || 0,
+                    });
+                } catch (error: any) {
+                    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
-                            if (error.message.includes('INSUFFICIENT_INK_DROPS')) {
-                                Alert.alert('Not Enough Ink Drops', 'You need 200 Ink Drops to restore your streak.');
-                            } else {
-                                Alert.alert('Error', error.message || 'Failed to restore streak.');
-                            }
-                        }
-                    },
-                },
-            ]
-        );
+                    if (error.message.includes('INSUFFICIENT_INK_DROPS')) {
+                        showAlert({ title: 'Not Enough Ink Drops', message: 'You need 200 Ink Drops to restore your streak.', type: 'error' });
+                    } else {
+                        showAlert({ title: 'Error', message: error.message || 'Failed to restore streak.', type: 'error' });
+                    }
+                }
+            },
+        });
     };
 
     const hasCheckedInToday = () => {

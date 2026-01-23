@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../constants/colors';
 import { API_URL } from '../constants/api';
 import { useAuthStore } from '../store/authContext';
+import { useUIStore } from '../store/uiStore';
 import SafeScreen from '../components/SafeScreen';
 import GlassCard from '../components/GlassCard';
 
@@ -24,6 +25,7 @@ export default function AuthorDashboard() {
     const [refreshing, setRefreshing] = useState(false);
 
     const { token } = useAuthStore();
+    const { showAlert } = useUIStore();
     const router = useRouter();
 
     useEffect(() => {
@@ -39,7 +41,7 @@ export default function AuthorDashboard() {
             if (!response.ok) throw new Error(data.message);
             setBooks(data);
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to fetch books');
+            showAlert({ title: 'Error', message: error.message || 'Failed to fetch books', type: 'error' });
         } finally {
             setLoading(false);
             setRefreshing(false);

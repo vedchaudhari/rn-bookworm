@@ -1,10 +1,12 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet as RNStyleSheet, Platform } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../constants/colors';
 import { API_URL } from '../constants/api';
 import { useAuthStore } from '../store/authContext';
+import { useUIStore } from '../store/uiStore';
+import KeyboardScreen from '../components/KeyboardScreen';
 import SafeScreen from '../components/SafeScreen';
 
 export default function ChapterEditor() {
@@ -19,6 +21,7 @@ export default function ChapterEditor() {
 
     const { token } = useAuthStore();
     const router = useRouter();
+    const { showAlert } = useUIStore();
 
     useEffect(() => {
         if (!isNew && chapterNumber) {
@@ -39,7 +42,7 @@ export default function ChapterEditor() {
             setContent(data.chapter.content);
             setChNum(data.chapter.chapterNumber.toString());
         } catch (error: any) {
-            Alert.alert('Error', 'Failed to load chapter content');
+            showAlert({ title: 'Error', message: 'Failed to load chapter content', type: 'error' });
         } finally {
             setFetching(false);
         }
@@ -47,7 +50,7 @@ export default function ChapterEditor() {
 
     const handleSave = async () => {
         if (!title.trim() || !content.trim() || !chNum) {
-            Alert.alert('Error', 'Chapter number, title, and content are required');
+            showAlert({ title: 'Error', message: 'Chapter number, title, and content are required', type: 'error' });
             return;
         }
 
@@ -76,10 +79,14 @@ export default function ChapterEditor() {
             const data = await response.json();
             if (!response.ok) throw new Error(data.message);
 
-            Alert.alert('Success', isNew ? 'Chapter created!' : 'Chapter updated!');
-            router.back();
+            showAlert({
+                title: 'Success',
+                message: isNew ? 'Chapter created!' : 'Chapter updated!',
+                type: 'success',
+                onConfirm: () => router.back()
+            });
         } catch (error: any) {
-            Alert.alert('Error', error.message);
+            showAlert({ title: 'Error', message: error.message, type: 'error' });
         } finally {
             setLoading(false);
         }
@@ -107,59 +114,56 @@ export default function ChapterEditor() {
                 )
             }} />
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            <KeyboardScreen
                 style={{ flex: 1 }}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+                contentContainerStyle={styles.container}
             >
-                <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-                    <View style={styles.settingsRow}>
-                        <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
-                            <Text style={styles.label}>Chapter Number</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={chNum}
-                                onChangeText={setChNum}
-                                keyboardType="numeric"
-                                placeholder="1"
-                                placeholderTextColor={COLORS.textMuted}
-                                editable={!!isNew}
-                            />
-                        </View>
-                        <TouchableOpacity
-                            style={[styles.premiumBtn, isPremium && styles.premiumBtnActive]}
-                            onPress={() => setIsPremium(!isPremium)}
-                        >
-                            <Ionicons name={isPremium ? "star" : "star-outline"} size={16} color={isPremium ? COLORS.white : COLORS.gold} />
-                            <Text style={[styles.premiumText, isPremium && { color: COLORS.white }]}>Premium</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Chapter Title</Text>
+                <View style={styles.settingsRow}>
+                    <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
+                        <Text style={styles.label}>Chapter Number</Text>
                         <TextInput
                             style={styles.input}
-                            value={title}
-                            onChangeText={setTitle}
-                            placeholder="A New Beginning"
+                            value={chNum}
+                            onChangeText={setChNum}
+                            keyboardType="numeric"
+                            placeholder="1"
                             placeholderTextColor={COLORS.textMuted}
+                            editable={!!isNew}
                         />
                     </View>
+                    <TouchableOpacity
+                        style={[styles.premiumBtn, isPremium && styles.premiumBtnActive]}
+                        onPress={() => setIsPremium(!isPremium)}
+                    >
+                        <Ionicons name={isPremium ? "star" : "star-outline"} size={16} color={isPremium ? COLORS.white : COLORS.gold} />
+                        <Text style={[styles.premiumText, isPremium && { color: COLORS.white }]}>Premium</Text>
+                    </TouchableOpacity>
+                </View>
 
-                    <View style={[styles.inputGroup, { flex: 1 }]}>
-                        <Text style={styles.label}>Content</Text>
-                        <TextInput
-                            style={styles.contentInput}
-                            value={content}
-                            onChangeText={setContent}
-                            placeholder="Once upon a time..."
-                            placeholderTextColor={COLORS.textMuted}
-                            multiline
-                            textAlignVertical="top"
-                        />
-                    </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Chapter Title</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={title}
+                        onChangeText={setTitle}
+                        placeholder="A New Beginning"
+                        placeholderTextColor={COLORS.textMuted}
+                    />
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.label}>Content</Text>
+                    <TextInput
+                        style={styles.contentInput}
+                        value={content}
+                        onChangeText={setContent}
+                        placeholder="Once upon a time..."
+                        placeholderTextColor={COLORS.textMuted}
+                        multiline
+                        textAlignVertical="top"
+                    />
+                </View>
+            </KeyboardScreen>
         </SafeScreen>
     );
 }

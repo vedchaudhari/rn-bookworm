@@ -1,12 +1,14 @@
 // mobile/app/book-edit.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import COLORS from '../constants/colors';
 import { apiClient } from '../lib/apiClient';
+import { useUIStore } from '../store/uiStore';
+import KeyboardScreen from '../components/KeyboardScreen';
 import SafeScreen from '../components/SafeScreen';
 import GlassCard from '../components/GlassCard';
 
@@ -14,6 +16,7 @@ export default function BookEditScreen() {
     const { bookId } = useLocalSearchParams<{ bookId: string }>();
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { showAlert } = useUIStore();
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -43,11 +46,15 @@ export default function BookEditScreen() {
                 setAuthor(book.author || '');
                 setImage(book.image);
             } else {
-                Alert.alert('Error', 'Book not found');
-                router.back();
+                showAlert({
+                    title: 'Error',
+                    message: 'Book not found',
+                    type: 'error',
+                    onConfirm: () => router.back()
+                });
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to fetch book');
+            showAlert({ title: 'Error', message: error.message || 'Failed to fetch book', type: 'error' });
         } finally {
             setLoading(false);
         }
@@ -55,7 +62,7 @@ export default function BookEditScreen() {
 
     const handleSave = async () => {
         if (!title.trim() || !caption.trim()) {
-            Alert.alert('Error', 'Title and caption are required');
+            showAlert({ title: 'Error', message: 'Title and caption are required', type: 'error' });
             return;
         }
 
@@ -68,11 +75,14 @@ export default function BookEditScreen() {
                 genre,
                 author,
             });
-            Alert.alert('Success', 'Book updated successfully', [
-                { text: 'OK', onPress: () => router.back() }
-            ]);
+            showAlert({
+                title: 'Success',
+                message: 'Book updated successfully',
+                type: 'success',
+                onConfirm: () => router.back()
+            });
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to update book');
+            showAlert({ title: 'Error', message: error.message || 'Failed to update book', type: 'error' });
         } finally {
             setSaving(false);
         }
@@ -123,7 +133,10 @@ export default function BookEditScreen() {
                 )
             }} />
 
-            <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+            <KeyboardScreen
+                style={styles.container}
+                contentContainerStyle={styles.scrollContent}
+            >
                 <View style={styles.imageContainer}>
                     <Image source={{ uri: image }} style={styles.bookImage} contentFit="cover" />
                     <View style={styles.imageOverlay}>
@@ -186,7 +199,7 @@ export default function BookEditScreen() {
                         <Text style={styles.buttonText}>Save Changes</Text>
                     )}
                 </TouchableOpacity>
-            </ScrollView>
+            </KeyboardScreen>
         </SafeScreen>
     );
 }

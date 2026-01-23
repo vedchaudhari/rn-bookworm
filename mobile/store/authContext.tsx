@@ -4,8 +4,8 @@ import { apiClient } from "../lib/apiClient";
 import { API_URL } from "../constants/api";
 
 interface User {
-    _id: string;
-    id?: string;
+    id: string;
+    _id?: string; // Kept for compatibility if needed
     email: string;
     username: string;
     profileImage?: string;
@@ -22,6 +22,7 @@ interface AuthState {
     token: string | null;
     isLoading: boolean;
     isCheckingAuth: boolean;
+    isAuthLoading: boolean;
     register: (email: string, username: string, password: string) => Promise<{ success: boolean; error?: string }>;
     checkAuth: () => Promise<void>;
     login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -37,17 +38,30 @@ const decodeJwt = (token: string) => {
         if (!base64Url) return null;
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
 
-        // Use global atob if available
-        const decoded = decodeURIComponent(
+        // Robust decoding that works in most environments
+        const jsonPayload = decodeURIComponent(
             atob(base64)
                 .split('')
                 .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
                 .join('')
         );
-        return JSON.parse(decoded);
+        return JSON.parse(jsonPayload);
     } catch (e) {
+        console.error("JWT Decode error:", e);
         return null;
     }
+};
+
+/**
+ * Normalizes user object to ensure it has both 'id' and '_id' for consistency
+ */
+const normalizeUser = (user: any): User => {
+    const id = user.id || user._id;
+    return {
+        ...user,
+        id,
+        _id: id // Ensure both are present
+    };
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -55,23 +69,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     token: null,
     isLoading: false,
     isCheckingAuth: true,
+    isAuthLoading: true,
 
     register: async (email: string, username: string, password: string) => {
         set({ isLoading: true });
         try {
-            const data = await apiClient.post<{ token: string; user: User }>(
+            const data = await apiClient.post<{ token: string; user: any }>(
                 `/api/auth/register`,
                 { email, username, password }
             );
 
-            await AsyncStorage.setItem("user", JSON.stringify(data.user));
+            const normalizedUser = normalizeUser(data.user);
+
+            await AsyncStorage.setItem("user", JSON.stringify(normalizedUser));
             await AsyncStorage.setItem("token", data.token);
 
             set({
                 token: data.token,
-                user: data.user,
+                user: normalizedUser,
                 isLoading: false,
-            })
+            });
+
+            // Sync with apiClient
+            apiClient.setAuthToken(data.token);
 
             return { success: true };
         } catch (error: any) {
@@ -81,15 +101,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
 
     checkAuth: async () => {
-        // Set checking state at the start
         set({ isCheckingAuth: true });
 
         try {
-            // 1. Immediately hydrate from storage to avoid race conditions
             const cachedToken = await AsyncStorage.getItem("token");
             const cachedUserStr = await AsyncStorage.getItem("user");
 
             if (cachedToken) {
+                // Cold-start safety: immediately push token to apiClient
+                apiClient.setAuthToken(cachedToken);
+
                 let cachedUser = null;
                 try {
                     cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : null;
@@ -97,15 +118,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     console.log("Failed to parse cached user");
                 }
 
-                // If user object is missing, try to decode token for at least the ID
                 if (!cachedUser) {
                     const decoded = decodeJwt(cachedToken);
                     if (decoded) {
-                        cachedUser = { _id: decoded.id || decoded.userId || decoded._id };
+                        const userId = decoded.userId || decoded.id || decoded._id;
+                        if (userId) {
+                            cachedUser = normalizeUser({ id: userId });
+                        }
                     }
                 }
 
                 if (cachedUser) {
+                    // Ensure cached user is also normalized
+                    cachedUser = normalizeUser(cachedUser);
                     set({
                         token: cachedToken,
                         user: cachedUser
@@ -118,42 +143,44 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 return;
             }
 
-            // 2. Verify token with backend
-            const data = await apiClient.get<{ user: User }>(`/api/auth/me`);
+            const data = await apiClient.get<{ user: any }>(`/api/auth/me`);
+            const normalizedUser = normalizeUser(data.user);
 
-            // 3. Update with fresh data
-            await AsyncStorage.setItem("user", JSON.stringify(data.user));
+            await AsyncStorage.setItem("user", JSON.stringify(normalizedUser));
             set({
                 token: cachedToken,
-                user: data.user,
+                user: normalizedUser,
             });
 
         } catch (error: any) {
             console.log("Auth check error:", error);
-            // If it's a 401, apiClient already handles logout via interceptor
-            // On other errors (e.g. network), we keep the cached state if it exists
+            // On 401, apiClient handles it. On other errors, we keep cached state
         } finally {
-            // CRITICAL: Always set isCheckingAuth to false
-            set({ isCheckingAuth: false });
+            set({ isCheckingAuth: false, isAuthLoading: false });
         }
     },
 
     login: async (email: string, password: string) => {
         set({ isLoading: true })
         try {
-            const data = await apiClient.post<{ token: string; user: User }>(
+            const data = await apiClient.post<{ token: string; user: any }>(
                 `/api/auth/login`,
                 { email, password }
             );
 
-            await AsyncStorage.setItem("user", JSON.stringify(data.user));
+            const normalizedUser = normalizeUser(data.user);
+
+            await AsyncStorage.setItem("user", JSON.stringify(normalizedUser));
             await AsyncStorage.setItem("token", data.token);
 
             set({
                 token: data.token,
-                user: data.user,
+                user: normalizedUser,
                 isLoading: false
-            })
+            });
+
+            // Sync with apiClient
+            apiClient.setAuthToken(data.token);
 
             return { success: true };
 
@@ -168,7 +195,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
             const userJson = await AsyncStorage.getItem("user");
             if (userJson) {
-                const user = JSON.parse(userJson);
+                const user = normalizeUser(JSON.parse(userJson));
                 set({ user });
                 return { success: true, user };
             }
@@ -183,7 +210,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     updateUser: async (userData: Partial<User>) => {
         try {
             const currentUser = get().user;
-            const updatedUser = { ...currentUser, ...userData } as User;
+            const updatedUser = normalizeUser({ ...currentUser, ...userData });
 
             await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
             set({ user: updatedUser });
@@ -202,16 +229,54 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // 1. Clear storage
             await AsyncStorage.multiRemove(["token", "user"]);
 
-            // 2. Reset all global stores to prevent cross-account stale data
-            const { useSocialStore } = await import('./socialStore');
-            const { useBookshelfStore } = await import('./bookshelfStore');
-            const { useMessageStore } = await import('./messageStore');
+            // 2. Reset all global stores to prevent cross-account data leakage
+            // Using dynamic imports to avoid circular dependencies
+            try {
+                const { useSocialStore } = await import('./socialStore');
+                useSocialStore.getState().reset();
+            } catch (e) { console.log('Store reset failed: Social'); }
 
-            useSocialStore.getState().reset();
-            useBookshelfStore.getState().reset();
-            useMessageStore.getState().reset();
+            try {
+                const { useBookshelfStore } = await import('./bookshelfStore');
+                useBookshelfStore.getState().reset();
+            } catch (e) { console.log('Store reset failed: Bookshelf'); }
+
+            try {
+                const { useMessageStore } = await import('./messageStore');
+                useMessageStore.getState().reset();
+            } catch (e) { console.log('Store reset failed: Message'); }
+
+            try {
+                const { useNotificationStore } = await import('./notificationStore');
+                useNotificationStore.getState().reset();
+            } catch (e) { console.log('Store reset failed: Notification'); }
+
+            try {
+                const { useReadingSessionStore } = await import('./readingSessionStore');
+                useReadingSessionStore.getState().reset();
+            } catch (e) { console.log('Store reset failed: ReadingSession'); }
+
+            try {
+                const { useGamificationStore } = await import('./gamificationStore');
+                useGamificationStore.getState().reset();
+            } catch (e) { console.log('Store reset failed: Gamification'); }
+
+            try {
+                const { useBookNoteStore } = await import('./bookNoteStore');
+                useBookNoteStore.getState().reset();
+            } catch (e) { console.log('Store reset failed: BookNote'); }
+
+            try {
+                const { useCurrencyStore } = await import('./currencyStore');
+                if (typeof useCurrencyStore.getState().reset === 'function') {
+                    useCurrencyStore.getState().reset();
+                }
+            } catch (e) { console.log('Store reset failed: Currency'); }
 
             set({ token: null, user: null, isLoading: false });
+
+            // Sync with apiClient
+            apiClient.setAuthToken(null);
 
             return { success: true };
         } catch (error) {
@@ -220,3 +285,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
     }
 }))
+
+// Register global unauthorized handler to trigger logout when a 401 is received
+apiClient.registerUnauthorizedCallback(() => {
+    useAuthStore.getState().logout();
+});

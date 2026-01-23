@@ -1,9 +1,11 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import React, { useState } from 'react';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../constants/colors';
 import { useBookNoteStore } from '../store/bookNoteStore';
+import { useUIStore } from '../store/uiStore';
+import KeyboardScreen from '../components/KeyboardScreen';
 import SafeScreen from '../components/SafeScreen';
 import { SPACING, BORDER_RADIUS, FONT_SIZE, SHADOWS } from '../constants/styleConstants';
 
@@ -15,6 +17,7 @@ export default function CreateNoteScreen() {
     }>();
     const router = useRouter();
     const { createNote, isCreating } = useBookNoteStore();
+    const { showAlert } = useUIStore();
 
     const [note, setNote] = useState('');
     const [pageNumber, setPageNumber] = useState('');
@@ -24,18 +27,18 @@ export default function CreateNoteScreen() {
 
     const handleSave = async () => {
         if (!note.trim() && !highlight.trim()) {
-            Alert.alert('Error', 'Please enter a note or highlight');
+            showAlert({ title: 'Error', message: 'Please enter a note or highlight', type: 'error' });
             return;
         }
 
         const page = parseInt(pageNumber);
         if (isNaN(page)) {
-            Alert.alert('Error', 'Please enter a valid page number');
+            showAlert({ title: 'Error', message: 'Please enter a valid page number', type: 'error' });
             return;
         }
 
         if (!bookId || !bookshelfItemId) {
-            Alert.alert('Error', 'Missing book information');
+            showAlert({ title: 'Error', message: 'Missing book information', type: 'error' });
             return;
         }
 
@@ -53,7 +56,7 @@ export default function CreateNoteScreen() {
         if (success) {
             router.back();
         } else {
-            Alert.alert('Error', 'Failed to create note. Please try again.');
+            showAlert({ title: 'Error', message: 'Failed to create note. Please try again.', type: 'error' });
         }
     };
 
@@ -70,7 +73,10 @@ export default function CreateNoteScreen() {
                     headerShown: true
                 }}
             />
-            <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+            <KeyboardScreen
+                style={styles.container}
+                contentContainerStyle={styles.content}
+            >
                 <Text style={styles.bookTitle}>{bookTitle}</Text>
 
                 <View style={styles.typeSelector}>
@@ -150,7 +156,7 @@ export default function CreateNoteScreen() {
                         <Text style={styles.saveBtnText}>Save Note</Text>
                     )}
                 </TouchableOpacity>
-            </ScrollView>
+            </KeyboardScreen>
         </SafeScreen>
     );
 }

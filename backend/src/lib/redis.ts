@@ -24,6 +24,8 @@ export const CACHE_KEYS = {
     ONLINE_USERS: 'online_users',
     USER_SOCKETS: (userId: string) => `user:sockets:${userId}`,
     SOCKET_TO_USER: (socketId: string) => `socket:user:${socketId}`,
+    FEED_GLOBAL: (page: number, limit: number) => `feed:global:${page}:${limit}`,
+    FEED_FOLLOWING: (userId: string, page: number, limit: number) => `feed:following:${userId}:${page}:${limit}`,
 };
 
 // Default TTLs (Time To Live)
@@ -31,6 +33,7 @@ export const TTL = {
     PROFILE: 3600, // 1 hour
     CONVERSATIONS: 1800, // 30 minutes
     MESSAGES: 600, // 10 minutes
+    FEED: 300, // 5 minutes (shorter for real-time feel)
 };
 
 /**
@@ -46,3 +49,19 @@ export const checkRedis = async () => {
         return false;
     }
 }
+
+/**
+ * Invalidate critical user caches (profile, conversations)
+ * Use this after profile updates or significant state changes
+ */
+export const invalidateUserCaches = async (userId: string) => {
+    try {
+        await Promise.all([
+            redis.del(CACHE_KEYS.USER_PROFILE(userId)),
+            redis.del(CACHE_KEYS.CONVERSATIONS(userId)),
+        ]);
+        console.log(`[Redis] Invalidated caches for user ${userId}`);
+    } catch (error) {
+        console.error(`[Redis] Failed to invalidate caches for user ${userId}:`, error);
+    }
+};

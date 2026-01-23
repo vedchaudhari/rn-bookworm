@@ -8,7 +8,6 @@ import {
     RefreshControl,
     TouchableOpacity,
     TextInput,
-    Alert,
     AccessibilityInfo,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -29,6 +28,7 @@ import {
     COMPONENT_SIZES,
 } from '../../constants/styleConstants';
 import { useBookshelfStore } from '../../store/bookshelfStore';
+import { useUIStore } from '../../store/uiStore';
 import { Ionicons } from '@expo/vector-icons';
 import BookShelfCard from '../../components/BookShelfCard';
 import type { ReadingStatus } from '../../lib/api/bookshelfApi';
@@ -59,6 +59,7 @@ const TABS: Tab[] = [
  */
 export default function BookshelfScreen() {
     const router = useRouter();
+    const { showAlert } = useUIStore();
     const [activeTab, setActiveTab] = useState<TabType>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [showFilters, setShowFilters] = useState(false);
@@ -139,7 +140,7 @@ export default function BookshelfScreen() {
         });
 
         if (!item?.bookId) {
-            Alert.alert('Error', 'Cannot add note: Book data is missing.');
+            showAlert({ title: 'Error', message: 'Cannot add note: Book data is missing.', type: 'error' });
             return;
         }
 

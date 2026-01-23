@@ -7,7 +7,6 @@ import {
     ScrollView,
     TouchableOpacity,
     TextInput,
-    Alert,
     ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
@@ -28,6 +27,7 @@ import {
 } from '../../constants/styleConstants';
 import { useBookshelfStore } from '../../store/bookshelfStore';
 import { useReadingSessionStore } from '../../store/readingSessionStore';
+import { useUIStore } from '../../store/uiStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
@@ -50,6 +50,7 @@ export default function BookProgressScreen() {
         endSession,
         recordPause,
     } = useReadingSessionStore();
+    const { showAlert } = useUIStore();
 
     const bookshelfItem = items.find((item) => item._id === id);
 
@@ -82,7 +83,7 @@ export default function BookProgressScreen() {
         const newPage = parseInt(currentPageInput);
 
         if (isNaN(newPage) || newPage < 0 || newPage > bookshelfItem.totalPages) {
-            Alert.alert('Invalid Page', `Please enter a page between 0 and ${bookshelfItem.totalPages}`);
+            showAlert({ title: 'Invalid Page', message: `Please enter a page between 0 and ${bookshelfItem.totalPages}`, type: 'error' });
             return;
         }
 
@@ -93,7 +94,7 @@ export default function BookProgressScreen() {
 
         if (success) {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert('Progress Updated', `You're now on page ${newPage}!`);
+            showAlert({ title: 'Progress Updated', message: `You're now on page ${newPage}!`, type: 'success' });
         } else {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         }
@@ -116,7 +117,7 @@ export default function BookProgressScreen() {
         );
 
         if (success) {
-            Alert.alert('Session Started', 'Happy reading! 📚');
+            showAlert({ title: 'Session Started', message: 'Happy reading! 📚', type: 'success' });
             // Auto-update status to currently_reading if not already
             if (bookshelfItem.status !== 'currently_reading') {
                 updateStatus(id, 'currently_reading');
@@ -136,26 +137,23 @@ export default function BookProgressScreen() {
                 ? `\n\n+${result.inkDropsEarned} Ink Drops earned! 💧`
                 : '';
 
-            Alert.alert('Session Complete', `Great reading session!${inkDropsMessage}`);
+            showAlert({ title: 'Session Complete', message: `Great reading session!${inkDropsMessage}`, type: 'success' });
         }
     };
 
     const handleMarkCompleted = () => {
-        Alert.alert(
-            'Mark as Completed?',
-            `Congratulations on finishing "${bookshelfItem.bookId.title}"!`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Complete',
-                    onPress: async () => {
-                        await updateStatus(id, 'completed');
-                        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        router.back();
-                    },
-                },
-            ]
-        );
+        showAlert({
+            title: 'Mark as Completed?',
+            message: `Congratulations on finishing "${bookshelfItem.bookId.title}"!`,
+            showCancel: true,
+            confirmText: 'Complete',
+            type: 'success',
+            onConfirm: async () => {
+                await updateStatus(id, 'completed');
+                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                router.back();
+            },
+        });
     };
 
     const handlePauseSession = () => {
