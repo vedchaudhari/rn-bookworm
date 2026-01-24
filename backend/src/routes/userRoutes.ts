@@ -4,8 +4,20 @@ import Follow from "../models/Follow";
 import Book from "../models/Book";
 import protectRoute from "../middleware/auth.middleware";
 import { redis, CACHE_KEYS, TTL } from "../lib/redis";
+import { z } from 'zod';
+import { deleteFileFromS3, getPresignedPutUrl } from '../lib/s3';
 
 const router = express.Router();
+
+// Profile Image Validation Schema
+const profileImageSchema = z.object({
+    profileImage: z.string()
+        .url('Invalid URL format')
+        .regex(
+            /^https:\/\/.*\.s3\..*\.amazonaws\.com\/profiles\/.*\.(jpg|jpeg|png|webp)$/i,
+            'Profile image must be from S3 profiles folder with valid image extension'
+        )
+});
 
 // Get suggested users to follow
 router.get("/suggested", protectRoute, async (req: Request, res: Response) => {
@@ -66,6 +78,41 @@ router.get("/search", protectRoute, async (req: Request, res: Response) => {
         res.json({ users: usersWithFollowStatus });
     } catch (error) {
         console.error("Error searching users:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+// Get presigned URL for profile image upload
+router.get("/presigned-url/profile-image", protectRoute, async (req: Request, res: Response) => {
+    try {
+        const { fileName, contentType } = req.query;
+
+        if (!fileName || !contentType) {
+            return res.status(400).json({
+                message: "fileName and contentType are required"
+            });
+        }
+
+        // Validate content type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(contentType as string)) {
+            return res.status(400).json({
+                message: "Invalid content type. Must be JPEG, PNG, or WebP"
+            });
+        }
+
+        // Import at top if not already
+        const { getPresignedPutUrl } = await import('../lib/s3');
+
+        const data = await getPresignedPutUrl(
+            fileName as string,
+            contentType as string,
+            'profiles' // Use 'profiles' folder
+        );
+
+        res.json(data);
+    } catch (error) {
+        console.error("Error generating presigned URL for profile:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -320,23 +367,49 @@ router.put("/profile", protectRoute, async (req: Request, res: Response) => {
     }
 });
 
-// Update Profile Image
+// Update Profile Image with S3 cleanup
 router.put("/update-profile-image", protectRoute, async (req: Request, res: Response) => {
     try {
-        const { profileImage } = req.body;
-        const userId = req.user!._id;
-
-        if (!profileImage) {
-            return res.status(400).json({ message: "Profile image URL is required" });
+        // Validate input
+        const parsed = profileImageSchema.safeParse(req.body);
+        if (!parsed.success) {
+            return res.status(400).json({
+                message: parsed.error.errors[0].message
+            });
         }
 
+        const { profileImage } = parsed.data;
+        const userId = req.user!._id;
+
+        // Get current user with existing profile image
+        const user = await User.findById(userId).select('profileImage');
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Delete old profile image from S3 (if exists and is S3 URL)
+        if (user.profileImage &&
+            user.profileImage.includes('amazonaws.com') &&
+            user.profileImage !== profileImage) {
+            try {
+                await deleteFileFromS3(user.profileImage);
+                console.log(`[S3] Deleted old profile image for user ${userId}`);
+            } catch (deleteError) {
+                // Log but don't fail the update
+                console.error('[S3] Failed to delete old profile image:', deleteError);
+            }
+        }
+
+        // Update with new image
         const updatedUser = await User.findByIdAndUpdate(
             userId,
             { $set: { profileImage } },
             { new: true }
         ).select("-password");
 
-        if (!updatedUser) return res.status(404).json({ message: "User not found" });
+        if (!updatedUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
 
         // Invalidate Redis cache
         await redis.del(CACHE_KEYS.USER_PROFILE(userId.toString()));
@@ -344,7 +417,10 @@ router.put("/update-profile-image", protectRoute, async (req: Request, res: Resp
         res.json({ success: true, user: updatedUser });
     } catch (error: any) {
         console.error("Error updating profile image:", error);
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
     }
 });
 

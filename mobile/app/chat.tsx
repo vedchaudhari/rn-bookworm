@@ -1,4 +1,4 @@
-import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform, Image as RNImage } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +23,77 @@ interface Message {
     pending?: boolean;
     sender: { _id: string } | string;
 }
+
+// ChatImage Component for dynamic sizing
+interface ChatImageProps {
+    uri: string;
+    messageId: string;
+}
+
+const ChatImage: React.FC<ChatImageProps> = React.memo(({ uri, messageId }) => {
+    const [dimensions, setDimensions] = useState({ width: 240, height: 180 });
+
+    useEffect(() => {
+        RNImage.getSize(
+            uri,
+            (width, height) => {
+                const aspectRatio = width / height;
+                const maxWidth = 240;
+                const maxHeight = 320;
+                const minWidth = 160;
+                const minHeight = 120;
+
+                let finalWidth = width;
+                let finalHeight = height;
+
+                // Landscape
+                if (aspectRatio > 1.5) {
+                    finalWidth = maxWidth;
+                    finalHeight = maxWidth / aspectRatio;
+                }
+                // Portrait
+                else if (aspectRatio < 0.75) {
+                    finalHeight = Math.min(maxHeight, height);
+                    finalWidth = finalHeight * aspectRatio;
+                }
+                // Square-ish
+                else {
+                    finalWidth = Math.min(maxWidth, width);
+                    finalHeight = finalWidth / aspectRatio;
+                }
+
+                // Ensure minimum dimensions
+                if (finalWidth < minWidth) {
+                    finalWidth = minWidth;
+                    finalHeight = finalWidth / aspectRatio;
+                }
+                if (finalHeight < minHeight) {
+                    finalHeight = minHeight;
+                    finalWidth = finalHeight * aspectRatio;
+                }
+
+                setDimensions({
+                    width: Math.round(finalWidth),
+                    height: Math.round(finalHeight)
+                });
+            },
+            (error) => {
+                console.error('Failed to get image size:', error);
+                // Keep default dimensions
+            }
+        );
+    }, [uri]);
+
+    return (
+        <Image
+            source={{ uri }}
+            style={[styles.sentImage, dimensions]}
+            contentFit="cover"
+            cachePolicy="disk"
+            transition={200}
+        />
+    );
+});
 
 export default function ChatScreen() {
     const { userId, username, profileImage } = useLocalSearchParams<{ userId: string; username: string; profileImage: string }>();
@@ -269,12 +340,9 @@ export default function ChatScreen() {
                     ) : (
                         <>
                             {item.image && (
-                                <Image
-                                    source={{ uri: item.image }}
-                                    style={styles.sentImage}
-                                    contentFit="cover"
-                                    cachePolicy="disk"
-                                    transition={200}
+                                <ChatImage
+                                    uri={item.image}
+                                    messageId={item._id}
                                 />
                             )}
                             {item.text && <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText]}>{item.text}</Text>}

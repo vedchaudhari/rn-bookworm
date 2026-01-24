@@ -126,10 +126,9 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
     },
     sentImage: {
-        width: 240,
-        height: 180,
         borderRadius: BORDER_RADIUS.xl + 2,
         backgroundColor: COLORS.surfaceHighlight, // Stable placeholder color
+        // Dynamic width/height will be applied inline by ChatImage component
     },
     pendingIndicator: {
         marginLeft: SPACING.xs,

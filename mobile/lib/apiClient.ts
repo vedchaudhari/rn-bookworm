@@ -16,7 +16,6 @@ class ApiClient {
      */
     setAuthToken(token: string | null) {
         this.authToken = token;
-        console.log('[ApiClient] Auth token updated');
     }
 
     /**
@@ -24,7 +23,6 @@ class ApiClient {
      */
     registerUnauthorizedCallback(callback: UnauthorizedCallback) {
         this.unauthorizedCallback = callback;
-        console.log('[ApiClient] Unauthorized callback registered');
     }
 
     private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
@@ -62,7 +60,6 @@ class ApiClient {
 
             // 4. Handle common status codes
             if (response.status === 401) {
-                console.warn('[ApiClient] 401 Unauthorized detected.');
                 if (this.unauthorizedCallback) {
                     this.unauthorizedCallback();
                 }
@@ -78,7 +75,10 @@ class ApiClient {
 
             return data as T;
         } catch (error: any) {
-            console.error(`[ApiClient Error] ${options.method || 'GET'} ${endpoint}:`, error.message);
+            // Only log errors in development mode
+            if (__DEV__) {
+                console.warn(`API: ${options.method || 'GET'} ${endpoint} failed - ${error.message}`);
+            }
             throw error;
         }
     }

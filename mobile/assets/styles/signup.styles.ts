@@ -15,32 +15,62 @@ import {
     OPACITY,
 } from "../../constants/styleConstants";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
+    gradientBackground: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+    },
+    floatingIcon1: {
+        position: 'absolute',
+        top: height * 0.15,
+        right: 30,
+        transform: [{ rotate: '-15deg' }],
+    },
+    floatingIcon2: {
+        position: 'absolute',
+        top: height * 0.25,
+        left: 20,
+        transform: [{ rotate: '12deg' }],
+    },
+    floatingIcon3: {
+        position: 'absolute',
+        bottom: height * 0.2,
+        right: 40,
+        transform: [{ rotate: '20deg' }],
+    },
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
-        padding: PADDING.screen.horizontal,
         justifyContent: "center",
-    },
-    card: {
-        backgroundColor: COLORS.cardBg,
-        borderRadius: RADIUS.card.massive,
-        padding: PADDING.card.vertical,
-        borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
-        ...SHADOWS.extraStrong,
+        paddingHorizontal: PADDING.screen.horizontal + 4,
+        paddingVertical: SPACING.massive,
     },
     header: {
         alignItems: "center",
-        marginBottom: MARGIN.section.medium,
+        marginBottom: MARGIN.section.large,
+    },
+    logoContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: SPACING.xl,
+        borderWidth: 2,
+        borderColor: 'rgba(245, 158, 11, 0.3)',
     },
     title: {
-        ...TYPOGRAPHY.h2,
+        fontSize: FONT_SIZE.huge + 4,
+        fontWeight: '800',
         color: COLORS.textPrimary,
-        letterSpacing: -1,
-        marginBottom: SPACING.md,
+        letterSpacing: -1.5,
+        marginBottom: SPACING.sm,
+        textAlign: 'center',
     },
     subtitle: {
         fontSize: FONT_SIZE.base,
@@ -48,17 +78,29 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         textAlign: 'center',
         lineHeight: 22,
+        opacity: 0.9,
+    },
+    card: {
+        backgroundColor: `${COLORS.cardBg}F5`,
+        borderRadius: RADIUS.card.massive,
+        padding: PADDING.card.vertical + 4,
+        borderWidth: BORDER_WIDTH.thin,
+        borderColor: COLORS.border,
+        ...SHADOWS.extraStrong,
+        backdropFilter: 'blur(10px)',
     },
     formContainer: {
-        marginBottom: SPACING.lg,
+        marginBottom: SPACING.md,
     },
     inputGroup: {
-        marginBottom: SPACING.xl + 2,
+        marginBottom: SPACING.xl,
     },
     label: {
-        ...TYPOGRAPHY.label,
+        fontSize: FONT_SIZE.sm,
+        fontWeight: '600',
         marginBottom: SPACING.md,
         color: COLORS.textSecondary,
+        letterSpacing: 0.3,
     },
     inputContainer: {
         flexDirection: "row",
@@ -70,59 +112,37 @@ const styles = StyleSheet.create({
         borderWidth: BORDER_WIDTH.thin,
         borderColor: COLORS.border,
     },
-    inputContainerFocused: {
-        borderColor: COLORS.primary,
-        backgroundColor: COLORS.surfaceLight,
-        shadowColor: COLORS.primary,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.2,
-        shadowRadius: 10,
-        elevation: 4,
-    },
-    inputContainerError: {
-        borderColor: COLORS.error,
-    },
     inputIcon: {
         marginRight: SPACING.lg,
-        opacity: OPACITY.muted,
+        opacity: 0.7,
     },
     input: {
         flex: 1,
         color: COLORS.textPrimary,
         fontSize: FONT_SIZE.base,
-        fontWeight: '600',
-    },
-    eyeIcon: {
-        padding: SPACING.md + 2,
-    },
-    errorText: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.error,
-        marginTop: SPACING.sm,
-        marginLeft: SPACING.xs,
-        fontWeight: '600',
+        fontWeight: '500',
     },
     button: {
-        backgroundColor: COLORS.primary,
         borderRadius: RADIUS.button.primary,
         height: COMPONENT_SIZES.button.large,
+        marginTop: MARGIN.item.large,
+        overflow: 'hidden',
+        ...SHADOWS.strong,
+    },
+    buttonGradient: {
+        flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        marginTop: MARGIN.item.large,
-        ...SHADOWS.strong,
-        shadowColor: COLORS.primary,
-    },
-    buttonPressed: {
-        opacity: OPACITY.almostOpaque,
-        transform: [{ scale: 0.98 }],
+        paddingHorizontal: SPACING.xxl,
     },
     buttonDisabled: {
         opacity: OPACITY.disabled,
     },
     buttonText: {
-        ...TYPOGRAPHY.button,
+        fontSize: FONT_SIZE.md,
+        fontWeight: '700',
         color: COLORS.white,
-        letterSpacing: 0.5,
+        letterSpacing: 0.8,
     },
     footer: {
         flexDirection: "row",
@@ -142,6 +162,31 @@ const styles = StyleSheet.create({
         color: COLORS.primary,
         fontWeight: "700",
         fontSize: FONT_SIZE.md,
+    },
+    trustIndicators: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: MARGIN.section.medium,
+        paddingVertical: SPACING.lg,
+        gap: SPACING.md,
+    },
+    trustItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.sm - 2,
+    },
+    trustText: {
+        fontSize: FONT_SIZE.xs,
+        color: COLORS.textSecondary,
+        fontWeight: '600',
+    },
+    trustDot: {
+        width: 3,
+        height: 3,
+        borderRadius: 1.5,
+        backgroundColor: COLORS.textMuted,
+        opacity: 0.5,
     },
 });
 
