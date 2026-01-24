@@ -5,4 +5,4 @@
 // export const API_URL = `http://192.168.1.41`;
 
 //For production
-// export const API_URL = `https://api-bookworm.backend-portfolio-api.online`;
+export const API_URL = `https://api-bookworm.backend-portfolio-api.online`;

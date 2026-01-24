@@ -3,6 +3,7 @@ import User from "../models/User";
 import jwt from "jsonwebtoken";
 import protectRoute from "../middleware/auth.middleware";
 import { asyncHandler } from "../middleware/asyncHandler";
+import { getSignedUrlForFile } from "../lib/s3";
 
 const router = express.Router();
 
@@ -78,7 +79,7 @@ router.post("/register", asyncHandler(async (req: Request<{}, {}, RegisterBody>,
             id: user._id,
             username: user.username,
             email: user.email,
-            profileImage: user.profileImage,
+            profileImage: await getSignedUrlForFile(user.profileImage),
             bio: user.bio,
             level: user.level,
             points: user.points,
@@ -126,7 +127,7 @@ router.post("/login", asyncHandler(async (req: Request<{}, {}, LoginBody>, res: 
             id: user._id,
             username: user.username,
             email: user.email,
-            profileImage: user.profileImage,
+            profileImage: await getSignedUrlForFile(user.profileImage),
             bio: user.bio,
             level: user.level,
             points: user.points,
@@ -147,7 +148,7 @@ router.get("/me", protectRoute, asyncHandler(async (req: Request, res: Response)
             id: user._id,
             username: user.username,
             email: user.email,
-            profileImage: user.profileImage,
+            profileImage: await getSignedUrlForFile(user.profileImage),
             bio: user.bio,
             level: user.level,
             points: user.points,

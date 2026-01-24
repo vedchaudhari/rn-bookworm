@@ -5,7 +5,7 @@ import Book from "../models/Book";
 import protectRoute from "../middleware/auth.middleware";
 import { redis, CACHE_KEYS, TTL } from "../lib/redis";
 import { z } from 'zod';
-import { deleteFileFromS3, getPresignedPutUrl } from '../lib/s3';
+import { deleteFileFromS3, getPresignedPutUrl, getSignedUrlForFile } from '../lib/s3';
 
 const router = express.Router();
 
@@ -37,7 +37,15 @@ router.get("/suggested", protectRoute, async (req: Request, res: Response) => {
             .limit(10)
             .select("username profileImage level bio");
 
-        res.json({ users: suggestedUsers });
+        const usersWithSignedImages = await Promise.all(
+            suggestedUsers.map(async (user) => {
+                const userObj = user.toObject();
+                userObj.profileImage = await getSignedUrlForFile(userObj.profileImage);
+                return userObj;
+            })
+        );
+
+        res.json({ users: usersWithSignedImages });
     } catch (error) {
         console.error("Error fetching suggested users:", error);
         res.status(500).json({ message: "Internal server error" });
@@ -75,7 +83,16 @@ router.get("/search", protectRoute, async (req: Request, res: Response) => {
             })
         );
 
-        res.json({ users: usersWithFollowStatus });
+        const usersWithSignedImages = await Promise.all(
+            usersWithFollowStatus.map(async (user) => {
+                return {
+                    ...user,
+                    profileImage: await getSignedUrlForFile(user.profileImage)
+                };
+            })
+        );
+
+        res.json({ users: usersWithSignedImages });
     } catch (error) {
         console.error("Error searching users:", error);
         res.status(500).json({ message: "Internal server error" });
@@ -160,6 +177,9 @@ router.get("/:userId", protectRoute, async (req: Request, res: Response) => {
 
         // 2. Cache result
         await redis.set(CACHE_KEYS.USER_PROFILE(userId), responseData, { ex: TTL.PROFILE });
+
+        // Sign profile image URL
+        responseData.user.profileImage = await getSignedUrlForFile(responseData.user.profileImage);
 
         res.json(responseData);
     } catch (error: any) {
@@ -360,7 +380,11 @@ router.put("/profile", protectRoute, async (req: Request, res: Response) => {
         // Invalidate Redis cache
         await redis.del(CACHE_KEYS.USER_PROFILE(userId.toString()));
 
-        res.json({ success: true, user: updatedUser });
+        // Sign profile image URL for response
+        const userObj = updatedUser.toObject();
+        userObj.profileImage = await getSignedUrlForFile(userObj.profileImage);
+
+        res.json({ success: true, user: userObj });
     } catch (error: any) {
         console.error("Error updating profile:", error);
         res.status(500).json({ message: "Internal server error" });
@@ -414,7 +438,11 @@ router.put("/update-profile-image", protectRoute, async (req: Request, res: Resp
         // Invalidate Redis cache
         await redis.del(CACHE_KEYS.USER_PROFILE(userId.toString()));
 
-        res.json({ success: true, user: updatedUser });
+        // Sign profile image URL for response
+        const userObj = updatedUser.toObject();
+        userObj.profileImage = await getSignedUrlForFile(userObj.profileImage);
+
+        res.json({ success: true, user: userObj });
     } catch (error: any) {
         console.error("Error updating profile image:", error);
         res.status(500).json({
