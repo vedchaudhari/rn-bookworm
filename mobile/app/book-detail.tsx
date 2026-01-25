@@ -160,7 +160,10 @@ export default function BookDetailScreen() {
                             <GlassCard style={styles.userSectionCentered}>
                                 <TouchableOpacity style={styles.profileRow} onPress={() => router.push({ pathname: '/user-profile', params: { userId: book.user._id } })}>
                                     <Image source={{ uri: book.user.profileImage }} style={styles.avatarSmall} />
-                                    <View><Text style={styles.usernameSmall}>{book.user.username}</Text><Text style={styles.userLevelSmall}>Lvl {book.user.level || 1}</Text></View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.usernameSmall} numberOfLines={1}>{book.user.username}</Text>
+                                        <Text style={styles.userLevelSmall}>Lvl {book.user.level || 1}</Text>
+                                    </View>
                                 </TouchableOpacity>
                                 {book.user._id !== user?._id && (
                                     <View style={styles.userActionsRow}>
@@ -283,12 +286,12 @@ const styles = StyleSheet.create({
     genreText: { fontSize: 12, fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
     captionCentered: { fontSize: 16, color: COLORS.textSecondary, lineHeight: 26, textAlign: 'center', paddingHorizontal: 10 },
     detailDivider: { height: 1, backgroundColor: COLORS.surfaceLight, marginVertical: 32, opacity: 0.5 },
-    userSectionCentered: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, marginBottom: 32 },
-    profileRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    userSectionCentered: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, marginBottom: 32, gap: 12 },
+    profileRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
     avatarSmall: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: COLORS.surfaceLight },
     usernameSmall: { fontSize: 16, fontWeight: '800', color: COLORS.textPrimary },
     userLevelSmall: { fontSize: 12, color: COLORS.textMuted, fontWeight: '700' },
-    userActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, justifyContent: 'flex-end' },
+    userActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'flex-end' },
     glassIconButton: { width: 44, height: 44, borderRadius: 12, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: COLORS.surfaceLight },
     statsRowLarge: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingVertical: 20 },
     statLarge: { flexDirection: 'row', alignItems: 'center', gap: 12 },

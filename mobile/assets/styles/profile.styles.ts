@@ -1,22 +1,19 @@
 // styles/profile.styles.ts
-import { StyleSheet, Dimensions } from "react-native";
+import { StyleSheet, Dimensions, Platform } from "react-native";
 import COLORS from "../../constants/colors";
 import {
     SPACING,
     PADDING,
     MARGIN,
-    GAP,
     FONT_SIZE,
-    TYPOGRAPHY,
     BORDER_RADIUS,
     RADIUS,
     SHADOWS,
     COMPONENT_SIZES,
-    BORDER_WIDTH,
 } from "../../constants/styleConstants";
 
 const { width } = Dimensions.get('window');
-const COLUMN_WIDTH = width / 3;
+const COLUMN_WIDTH = (width - (SPACING.md * 2) - (SPACING.sm * 2)) / 3;
 
 const styles = StyleSheet.create({
     container: {
@@ -29,210 +26,200 @@ const styles = StyleSheet.create({
         alignItems: "center",
         backgroundColor: COLORS.background,
     },
-    profileHeaderCentered: {
+    // Header Section
+    headerContainer: {
         alignItems: 'center',
-        paddingVertical: PADDING.section.vertical,
-        paddingHorizontal: PADDING.section.horizontal,
+        paddingTop: 60, // Safe Area approx
+        paddingBottom: SPACING.xl,
         position: 'relative',
     },
-    avatarWrapper: {
+    // Avatar with Glow
+    avatarContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: SPACING.lg,
         position: 'relative',
-        marginBottom: MARGIN.item.large,
-        padding: 3,
-        borderRadius: BORDER_RADIUS.circular,
-        borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.primary,
+    },
+    avatarGlowRing: {
+        width: COMPONENT_SIZES.avatar.profile + 8,
+        height: COMPONENT_SIZES.avatar.profile + 8,
+        borderRadius: (COMPONENT_SIZES.avatar.profile + 8) / 2,
+        borderWidth: 2,
+        borderColor: COLORS.primary, // The "Cyber" ring
+        alignItems: 'center',
+        justifyContent: 'center',
         shadowColor: COLORS.primary,
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 10,
-        elevation: 8,
+        shadowOpacity: 0.6,
+        shadowRadius: 15,
+        elevation: 10,
+        backgroundColor: COLORS.primaryGlow, // Subtle backing
     },
-    avatarLarge: {
+    avatarImage: {
         width: COMPONENT_SIZES.avatar.profile,
         height: COMPONENT_SIZES.avatar.profile,
-        borderRadius: RADIUS.avatar.large,
-        borderWidth: BORDER_WIDTH.massive,
-        borderColor: COLORS.background,
+        borderRadius: COMPONENT_SIZES.avatar.profile / 2,
+        backgroundColor: COLORS.surfaceLight,
     },
-    avatarOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        borderRadius: RADIUS.avatar.large,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    avatarEditBadge: {
+    cameraButton: {
         position: 'absolute',
-        bottom: 4,
-        right: 4,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        bottom: 0,
+        right: 0,
         backgroundColor: COLORS.primary,
-        justifyContent: 'center',
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         alignItems: 'center',
+        justifyContent: 'center',
         borderWidth: 3,
         borderColor: COLORS.background,
-        ...SHADOWS.medium,
     },
-    usernameCentered: {
-        fontSize: FONT_SIZE.massive,
+
+    // User Info
+    userInfoContainer: {
+        alignItems: 'center',
+        marginBottom: SPACING.xl,
+    },
+    usernameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.xs,
+        marginBottom: 4,
+    },
+    usernameText: {
+        fontSize: FONT_SIZE.xxl,
         fontWeight: '800',
         color: COLORS.textPrimary,
-        marginBottom: SPACING.xs,
-    },
-    emailCentered: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        fontWeight: '500',
-    },
-    bioCentered: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        textAlign: 'center',
-        marginTop: SPACING.xxl,
-        paddingHorizontal: SPACING.massive,
-        lineHeight: 22,
-        fontWeight: '400',
-        opacity: 0.9,
-    },
-    statsRow: {
-        flexDirection: 'row',
-        backgroundColor: COLORS.cardBg,
-        marginHorizontal: MARGIN.item.large,
-        borderRadius: RADIUS.card.medium,
-        paddingVertical: SPACING.xxl,
-        borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
-        marginBottom: MARGIN.section.medium,
-        marginTop: SPACING.md,
-    },
-    statBox: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    statDivider: {
-        width: 1,
-        backgroundColor: COLORS.border,
-        height: '50%',
-        alignSelf: 'center',
-    },
-    statNumber: {
-        fontSize: FONT_SIZE.xxl,
-        fontWeight: '700',
-        color: COLORS.textPrimary,
-        marginBottom: SPACING.xs,
-    },
-    statLabel: {
-        ...TYPOGRAPHY.caption,
-        color: COLORS.textMuted,
-        textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
-    tabSwitcher: {
+    emailText: {
+        fontSize: FONT_SIZE.sm,
+        color: COLORS.textTertiary,
+        fontWeight: '500',
+    },
+
+    // Dashboard Button (Prominent)
+    dashboardButtonContainer: {
+        width: '60%',
+        marginBottom: SPACING.xl,
+    },
+
+    // Stats Grid (Side by side glass cards)
+    statsGrid: {
         flexDirection: 'row',
-        backgroundColor: COLORS.surface,
-        marginHorizontal: MARGIN.item.large,
-        padding: SPACING.xs,
-        borderRadius: BORDER_RADIUS.xl,
-        marginBottom: MARGIN.item.large,
-        borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
+        paddingHorizontal: SPACING.lg,
+        gap: SPACING.md,
+        marginTop: SPACING.xl,
     },
-    tab: {
+    statCard: {
         flex: 1,
-        paddingVertical: SPACING.md + 2,
-        alignItems: 'center',
-        borderRadius: BORDER_RADIUS.md,
+        // height: 80, // Handled by component
     },
-    tabActive: {
-        backgroundColor: COLORS.surfaceHighlight,
+
+    // Segmented Tabs
+    tabContainer: {
+        flexDirection: 'row',
+        marginHorizontal: SPACING.lg,
+        marginTop: SPACING.xxl,
+        backgroundColor: COLORS.surface,
+        borderRadius: 100,
+        padding: 4,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        height: 48,
+    },
+    tabItem: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 100,
+    },
+    activeTabItem: {
+        backgroundColor: COLORS.surfaceHighlight, // Or gradient if possible, but solid is cleaner for tabs
     },
     tabText: {
         fontSize: FONT_SIZE.sm,
         fontWeight: '600',
         color: COLORS.textSecondary,
     },
-    tabTextActive: {
+    activeTabText: {
         color: COLORS.textPrimary,
+        fontWeight: '700',
     },
-    gridContent: {
+
+    // Grid Content
+    gridContainer: {
         paddingHorizontal: SPACING.md,
+        paddingTop: SPACING.lg,
         paddingBottom: 100,
     },
     bookItem: {
-        width: COLUMN_WIDTH - 10,
-        height: (COLUMN_WIDTH - 10) * 1.5,
-        margin: 5,
-        backgroundColor: COLORS.surface,
+        width: COLUMN_WIDTH,
+        height: COLUMN_WIDTH * 1.5,
+        marginBottom: SPACING.md,
         borderRadius: BORDER_RADIUS.md,
+        marginHorizontal: SPACING.xs / 2,
+        backgroundColor: COLORS.surfaceLight,
         overflow: 'hidden',
-        ...SHADOWS.light,
     },
     bookImage: {
         width: '100%',
         height: '100%',
     },
-    stripContainer: {
-        marginTop: SPACING.md + 2,
-        paddingBottom: 100,
+
+    // User Strip
+    userListContainer: {
+        paddingHorizontal: SPACING.lg,
+        paddingTop: SPACING.lg,
     },
-    userStripItem: {
+    userListItem: {
+        flexDirection: 'row',
         alignItems: 'center',
-        width: 90,
-        marginHorizontal: SPACING.md,
-    },
-    userStripAvatar: {
-        width: COMPONENT_SIZES.avatar.xlarge,
-        height: COMPONENT_SIZES.avatar.xlarge,
-        borderRadius: COMPONENT_SIZES.avatar.xlarge / 2,
-        marginBottom: SPACING.md,
-        borderWidth: BORDER_WIDTH.thick,
-        borderColor: COLORS.surface,
-    },
-    userStripName: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: '600',
-        color: COLORS.textPrimary,
-        textAlign: 'center',
-    },
-    logoutButton: {
-        position: 'absolute',
-        top: MARGIN.item.large,
-        right: MARGIN.item.large,
-        zIndex: 10,
+        padding: SPACING.md,
+        marginBottom: SPACING.sm,
         backgroundColor: COLORS.surface,
-        padding: SPACING.md + 2,
-        borderRadius: SPACING.massive,
-        borderWidth: BORDER_WIDTH.thin,
+        borderRadius: 100,
+        borderWidth: 1,
         borderColor: COLORS.border,
     },
-    emptyContainer: {
+    userListAvatar: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        marginRight: SPACING.md,
+    },
+    userListName: {
+        fontSize: FONT_SIZE.md,
+        fontWeight: '700',
+        color: COLORS.textPrimary,
+    },
+
+    // Empty State
+    emptyState: {
         alignItems: 'center',
-        paddingVertical: SPACING.giant,
-        paddingHorizontal: SPACING.massive,
-        opacity: 0.8,
+        justifyContent: 'center',
+        paddingTop: 60,
+        opacity: 0.7,
     },
     emptyText: {
+        marginTop: SPACING.md,
         color: COLORS.textSecondary,
-        marginTop: SPACING.xl,
-        fontWeight: '500',
-        textAlign: 'center',
-        fontSize: FONT_SIZE.base,
-    },
-    addButton: {
-        marginTop: MARGIN.item.large,
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: PADDING.card.horizontal,
-        paddingVertical: SPACING.lg,
-        borderRadius: BORDER_RADIUS.lg,
-    },
-    addButtonText: {
-        color: COLORS.white,
-        fontWeight: '700',
         fontSize: FONT_SIZE.md,
+        textAlign: 'center',
     },
+
+    // Logout
+    logoutButton: {
+        position: 'absolute',
+        top: 60, // Match header padding
+        right: SPACING.lg,
+        zIndex: 10,
+        padding: SPACING.sm,
+        backgroundColor: COLORS.glass.bg,
+        borderRadius: BORDER_RADIUS.circular,
+        borderWidth: 1,
+        borderColor: COLORS.glass.border,
+    }
 });
 
 export default styles;

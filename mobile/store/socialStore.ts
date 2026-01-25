@@ -12,12 +12,20 @@ const deserializeSet = (str: string): Set<string> => {
     }
 };
 
+interface BookMetrics {
+    liked: boolean;
+    likeCount: number;
+    commentCount: number;
+}
+
 interface SocialState {
     likedBooks: Set<string>;
     followedUsers: Set<string>;
+    bookMetrics: Record<string, BookMetrics>;
     isHydrated: boolean;
     hydrate: () => Promise<void>;
     persist: () => Promise<void>;
+    syncBookMetrics: (bookId: string, initialLiked: boolean, initialLikeCount: number, initialCommentCount: number) => void;
     toggleLike: (bookId: string, token: string) => Promise<{ success: boolean; liked?: boolean; error?: string }>;
     checkLikeStatus: (bookId: string, token: string) => Promise<boolean>;
     toggleFollow: (userId: string, token: string) => Promise<{ success: boolean; following?: boolean; status?: string; error?: string }>;
@@ -31,6 +39,7 @@ interface SocialState {
 export const useSocialStore = create<SocialState>((set, get) => ({
     likedBooks: new Set(),
     followedUsers: new Set(),
+    bookMetrics: {},
     isHydrated: false,
 
     hydrate: async () => {
@@ -63,23 +72,75 @@ export const useSocialStore = create<SocialState>((set, get) => ({
         }
     },
 
+    syncBookMetrics: (bookId: string, initialLiked: boolean, initialLikeCount: number, initialCommentCount: number) => {
+        const { bookMetrics, likedBooks } = get();
+
+        // The most important thing is the "liked" status from the Set which is persisted.
+        const currentlyLiked = likedBooks.has(bookId);
+
+        if (!bookMetrics[bookId]) {
+            set(state => ({
+                bookMetrics: {
+                    ...state.bookMetrics,
+                    [bookId]: {
+                        liked: currentlyLiked, // Trust the persisted set first
+                        likeCount: initialLikeCount + (currentlyLiked && !initialLiked ? 1 : (!currentlyLiked && initialLiked ? -1 : 0)),
+                        commentCount: initialCommentCount
+                    }
+                }
+            }));
+        }
+    },
+
     toggleLike: async (bookId: string, token: string) => {
-        const { likedBooks } = get();
+        const { likedBooks, bookMetrics } = get();
         const wasLiked = likedBooks.has(bookId);
 
+        // Update Liked Set
         const newLikedBooks = new Set(likedBooks);
         if (wasLiked) newLikedBooks.delete(bookId);
         else newLikedBooks.add(bookId);
 
-        set({ likedBooks: newLikedBooks });
+        // Update Metrics Record for global sync
+        const currentMetrics = bookMetrics[bookId];
+        const newMetrics = currentMetrics ? {
+            ...currentMetrics,
+            liked: !wasLiked,
+            likeCount: wasLiked ? Math.max(0, currentMetrics.likeCount - 1) : currentMetrics.likeCount + 1
+        } : null;
+
+        set(state => ({
+            likedBooks: newLikedBooks,
+            bookMetrics: newMetrics ? {
+                ...state.bookMetrics,
+                [bookId]: newMetrics
+            } : state.bookMetrics
+        }));
+
         get().persist();
 
         try {
             const data = await apiClient.post<any>(`/api/social/like/${bookId}`);
+
+            // Sync again with server response if needed (e.g. true count)
+            if (data.likeCount !== undefined) {
+                set(state => ({
+                    bookMetrics: {
+                        ...state.bookMetrics,
+                        [bookId]: {
+                            liked: data.liked,
+                            likeCount: data.likeCount,
+                            commentCount: data.commentCount ?? (state.bookMetrics[bookId]?.commentCount || 0)
+                        }
+                    }
+                }));
+            }
+
             return { success: true, liked: data.liked };
         } catch (error: any) {
             console.error('Error toggling like:', error);
-            set({ likedBooks });
+            // Revert
+            set({ likedBooks, bookMetrics });
             get().persist();
             return { success: false, error: error.message };
         }

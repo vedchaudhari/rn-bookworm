@@ -1,5 +1,5 @@
-import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform, Image as RNImage } from 'react-native';
-import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
@@ -7,7 +7,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import COLORS from '../constants/colors';
-import { useMessageStore } from '../store/messageStore';
+import { useMessageStore, Message } from '../store/messageStore';
 import { useAuthStore } from '../store/authContext';
 import { useNotificationStore } from '../store/notificationStore';
 import { apiClient } from '../lib/apiClient';
@@ -15,74 +15,71 @@ import SafeScreen from '../components/SafeScreen';
 import { useUIStore } from '../store/uiStore';
 import styles from '../assets/styles/chat.styles';
 
-interface Message {
-    _id: string;
-    text?: string;
-    image?: string;
-    createdAt: string;
-    pending?: boolean;
-    sender: { _id: string } | string;
-}
+
 
 // ChatImage Component for dynamic sizing
 interface ChatImageProps {
     uri: string;
     messageId: string;
+    initialWidth?: number;
+    initialHeight?: number;
 }
 
-const ChatImage: React.FC<ChatImageProps> = React.memo(({ uri, messageId }) => {
-    const [dimensions, setDimensions] = useState({ width: 240, height: 180 });
+const ChatImage: React.FC<ChatImageProps> = React.memo(({ uri, messageId, initialWidth, initialHeight }) => {
+    // Calculate initial dimensions if available
+    const getInitialDims = () => {
+        if (initialWidth && initialHeight) {
+            const aspectRatio = initialWidth / initialHeight;
+            const maxWidth = 240;
+            const maxHeight = 320;
+            const minWidth = 160;
+            const minHeight = 120;
 
-    useEffect(() => {
-        RNImage.getSize(
-            uri,
-            (width, height) => {
-                const aspectRatio = width / height;
-                const maxWidth = 240;
-                const maxHeight = 320;
-                const minWidth = 160;
-                const minHeight = 120;
+            let finalWidth = initialWidth;
+            let finalHeight = initialHeight;
 
-                let finalWidth = width;
-                let finalHeight = height;
+            if (aspectRatio > 1.5) { finalWidth = maxWidth; finalHeight = maxWidth / aspectRatio; }
+            else if (aspectRatio < 0.75) { finalHeight = Math.min(maxHeight, initialHeight); finalWidth = finalHeight * aspectRatio; }
+            else { finalWidth = Math.min(maxWidth, initialWidth); finalHeight = finalWidth / aspectRatio; }
 
-                // Landscape
-                if (aspectRatio > 1.5) {
-                    finalWidth = maxWidth;
-                    finalHeight = maxWidth / aspectRatio;
-                }
-                // Portrait
-                else if (aspectRatio < 0.75) {
-                    finalHeight = Math.min(maxHeight, height);
-                    finalWidth = finalHeight * aspectRatio;
-                }
-                // Square-ish
-                else {
-                    finalWidth = Math.min(maxWidth, width);
-                    finalHeight = finalWidth / aspectRatio;
-                }
+            if (finalWidth < minWidth) { finalWidth = minWidth; finalHeight = finalWidth / aspectRatio; }
+            if (finalHeight < minHeight) { finalHeight = minHeight; finalWidth = finalHeight * aspectRatio; }
 
-                // Ensure minimum dimensions
-                if (finalWidth < minWidth) {
-                    finalWidth = minWidth;
-                    finalHeight = finalWidth / aspectRatio;
-                }
-                if (finalHeight < minHeight) {
-                    finalHeight = minHeight;
-                    finalWidth = finalHeight * aspectRatio;
-                }
+            return { width: Math.round(finalWidth), height: Math.round(finalHeight) };
+        }
+        return { width: 240, height: 180 };
+    };
 
-                setDimensions({
-                    width: Math.round(finalWidth),
-                    height: Math.round(finalHeight)
-                });
-            },
-            (error) => {
-                console.error('Failed to get image size:', error);
-                // Keep default dimensions
-            }
-        );
-    }, [uri]);
+    const [dimensions, setDimensions] = useState(getInitialDims());
+
+    const handleLoad = (event: any) => {
+        // If we already have dimensions from props, trust them to avoid layout shift
+        if (initialWidth && initialHeight) return;
+
+        const { width, height } = event.source;
+        if (!width || !height) return;
+
+        const aspectRatio = width / height;
+        const maxWidth = 240;
+        const maxHeight = 320;
+        const minWidth = 160;
+        const minHeight = 120;
+
+        let finalWidth = width;
+        let finalHeight = height;
+
+        if (aspectRatio > 1.5) { finalWidth = maxWidth; finalHeight = maxWidth / aspectRatio; }
+        else if (aspectRatio < 0.75) { finalHeight = Math.min(maxHeight, height); finalWidth = finalHeight * aspectRatio; }
+        else { finalWidth = Math.min(maxWidth, width); finalHeight = finalWidth / aspectRatio; }
+
+        if (finalWidth < minWidth) { finalWidth = minWidth; finalHeight = finalWidth / aspectRatio; }
+        if (finalHeight < minHeight) { finalHeight = minHeight; finalWidth = finalHeight * aspectRatio; }
+
+        setDimensions({
+            width: Math.round(finalWidth),
+            height: Math.round(finalHeight)
+        });
+    };
 
     return (
         <Image
@@ -91,7 +88,106 @@ const ChatImage: React.FC<ChatImageProps> = React.memo(({ uri, messageId }) => {
             contentFit="cover"
             cachePolicy="disk"
             transition={200}
+            onLoad={handleLoad}
         />
+    );
+});
+
+// MessageItem Component for performance
+interface MessageItemProps {
+    item: Message;
+    index: number;
+    currentUserId: string;
+    displayAvatar: string;
+    onLongPress: (item: Message) => void;
+    showAvatar: boolean;
+}
+
+const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onLongPress, showAvatar }: MessageItemProps) => {
+    const senderId = typeof item.sender === 'object' ? item.sender._id : item.sender;
+    const isMe = senderId === currentUserId || senderId === 'me';
+
+    return (
+        <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage, { width: '100%' }]}>
+            {!isMe && (
+                <View style={{ width: 32 }}>
+                    {showAvatar ? (
+                        <Image
+                            source={{ uri: displayAvatar }}
+                            style={styles.messageAvatar}
+                            cachePolicy="disk"
+                        />
+                    ) : null}
+                </View>
+            )}
+            <TouchableOpacity
+                onLongPress={() => onLongPress(item)}
+                activeOpacity={0.8}
+                style={[
+                    styles.messageBubble,
+                    isMe ? styles.myBubble : styles.theirBubble,
+                    item.image && styles.imageBubble,
+                    item.isDeleted && styles.deletedBubble
+                ]}
+            >
+                {item.isDeleted ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Ionicons name="ban" size={14} color={isMe ? 'rgba(255,255,255,0.6)' : COLORS.textMuted} />
+                        <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText, styles.deletedText]}>
+                            This message was deleted
+                        </Text>
+                    </View>
+                ) : (
+                    <>
+                        {item.image && (
+                            <ChatImage
+                                uri={item.image}
+                                messageId={item._id}
+                                initialWidth={item.width}
+                                initialHeight={item.height}
+                            />
+                        )}
+                        {item.text && <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText]}>{item.text}</Text>}
+                    </>
+                )}
+
+                <View style={{ flexDirection: 'row', alignSelf: 'flex-end', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                    {item.isEdited && !item.isDeleted && (
+                        <Text style={[styles.editedLabel, isMe ? styles.myTime : styles.theirTime]}>Edited</Text>
+                    )}
+                    <Text style={[styles.messageTime, isMe ? styles.myTime : styles.theirTime]}>
+                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    {isMe && !item.isDeleted && (
+                        <View style={styles.pendingIndicator}>
+                            {item.pending ? (
+                                <ActivityIndicator
+                                    size="small"
+                                    color="rgba(255,255,255,0.7)"
+                                    style={{ transform: [{ scale: 0.6 }] }}
+                                />
+                            ) : (
+                                <Ionicons
+                                    name="checkmark-done"
+                                    size={12}
+                                    color={item.read ? COLORS.secondary : "rgba(255,255,255,0.7)"}
+                                />
+                            )}
+                        </View>
+                    )}
+                </View>
+            </TouchableOpacity>
+        </View>
+    );
+}, (prevProps, nextProps) => {
+    return (
+        prevProps.item._id === nextProps.item._id &&
+        prevProps.item.pending === nextProps.item.pending &&
+        prevProps.item.isDeleted === nextProps.item.isDeleted &&
+        prevProps.item.isEdited === nextProps.item.isEdited &&
+        prevProps.item.read === nextProps.item.read &&
+        prevProps.index === nextProps.index &&
+        prevProps.showAvatar === nextProps.showAvatar
     );
 });
 
@@ -105,10 +201,11 @@ export default function ChatScreen() {
     const [sending, setSending] = useState(false);
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [selectedImageDims, setSelectedImageDims] = useState<{ width: number, height: number } | null>(null);
     const [showPreview, setShowPreview] = useState(false);
     const flatListRef = useRef<FlatList>(null);
 
-    const { messages, fetchMessages, sendMessage, markAsRead, addReceivedMessage, setActiveConversation, editMessage, deleteMessageForMe, deleteMessageForEveryone, updateLocalEditedMessage, updateLocalDeletedMessage, clearChatHistory } = useMessageStore();
+    const { messages, fetchMessages, sendMessage, markAsRead, addReceivedMessage, setActiveConversation, editMessage, deleteMessageForMe, deleteMessageForEveryone, updateLocalEditedMessage, updateLocalDeletedMessage, updateLocalMessagesRead, clearChatHistory } = useMessageStore();
     const { token, user } = useAuthStore();
     const { showAlert } = useUIStore();
     const { socket, userStatuses, typingStatus, sendTypingStart, sendTypingStop, isConnected } = useNotificationStore();
@@ -148,6 +245,7 @@ export default function ChatScreen() {
             socket.on('new_message', handleNewMessage);
             socket.on('message_edited', handleMessageEdited);
             socket.on('message_deleted', handleMessageDeleted);
+            socket.on('messages_read', handleMessagesRead);
         }
         return () => {
             setActiveConversation(null);
@@ -155,6 +253,7 @@ export default function ChatScreen() {
                 socket.off('new_message', handleNewMessage);
                 socket.off('message_edited', handleMessageEdited);
                 socket.off('message_deleted', handleMessageDeleted);
+                socket.off('messages_read', handleMessagesRead);
             }
             // Clean up typing timeout to prevent memory leaks
             if (typingTimeoutRef.current) {
@@ -178,8 +277,8 @@ export default function ChatScreen() {
         return () => subscription.remove();
     }, [userId, token]);
 
-    const handleNewMessage = (message: any) => {
-        const senderId = message.sender._id || message.sender;
+    const handleNewMessage = (message: Message) => {
+        const senderId = typeof message.sender === 'object' ? message.sender._id : message.sender;
         if (senderId === userId) {
             addReceivedMessage(message);
             markAsRead(userId!, token!);
@@ -192,6 +291,17 @@ export default function ChatScreen() {
 
     const handleMessageDeleted = (data: any) => {
         updateLocalDeletedMessage(data);
+    };
+
+    const getConversationId = (id1: string, id2: string) => {
+        const ids = [id1.toString(), id2.toString()].sort();
+        return `${ids[0]}_${ids[1]}`;
+    };
+
+    const handleMessagesRead = (data: any) => {
+        if (data.conversationId === getConversationId(user?._id || user?.id || '', userId!)) {
+            updateLocalMessagesRead(data);
+        }
     };
 
     const animatedStatusStyle = useAnimatedStyle(() => ({ opacity: pulseOpacity.value }));
@@ -209,6 +319,7 @@ export default function ChatScreen() {
 
             if (!result.canceled && result.assets[0].uri) {
                 setSelectedImage(result.assets[0].uri);
+                setSelectedImageDims({ width: result.assets[0].width, height: result.assets[0].height });
                 setShowPreview(true);
             }
         } catch (error) { showAlert({ title: 'Error', message: 'Failed to pick image', type: 'error' }); }
@@ -245,8 +356,11 @@ export default function ChatScreen() {
 
             // 3. Send Message with final URL
             setShowPreview(false);
+            const localUri = selectedImage;
+            const dims = selectedImageDims;
             setSelectedImage(null);
-            await createAndSendMessage(undefined, finalUrl);
+            setSelectedImageDims(null);
+            await createAndSendMessage(undefined, finalUrl, localUri, dims?.width, dims?.height);
         } catch (error: any) {
             console.error('Upload error:', error);
             showAlert({ title: 'Error', message: 'Failed to upload image. Please try again.', type: 'error' });
@@ -273,7 +387,7 @@ export default function ChatScreen() {
         await createAndSendMessage(messageText.trim(), undefined);
     };
 
-    const handleLongPress = (item: any) => {
+    const handleLongPress = useCallback((item: Message) => {
         const currentUserId = user?._id || user?.id;
         const senderId = typeof item.sender === 'object' ? item.sender._id : item.sender;
         const isMe = senderId === currentUserId || senderId === 'me';
@@ -290,7 +404,7 @@ export default function ChatScreen() {
                 else deleteMessageForMe(item._id, token!);
             }
         });
-    };
+    }, [user, token, showAlert]);
 
     const handleTextChange = (text: string) => {
         setMessageText(text);
@@ -307,73 +421,66 @@ export default function ChatScreen() {
         typingTimeoutRef.current = setTimeout(() => { sendTypingStop(userId!); typingTimeoutRef.current = null; }, 2000);
     };
 
-    const createAndSendMessage = async (text: string | undefined, image: string | undefined) => {
+    const createAndSendMessage = async (text: string | undefined, image: string | undefined, localImage?: string, width?: number, height?: number) => {
         setSending(true);
         if (text) setMessageText('');
-        const result = await sendMessage(userId!, text || '', image, token!);
+
+        // Immediate scroll to bottom for improved UX
+        setTimeout(() => { flatListRef.current?.scrollToOffset({ offset: 0, animated: true }); }, 0);
+
+        const result = await sendMessage(userId!, text || '', image, token!, localImage, width, height);
         setSending(false);
-        if (result.success) setTimeout(() => { flatListRef.current?.scrollToOffset({ offset: 0, animated: true }); }, 100);
-        else showAlert({ title: 'Error', message: 'Failed to send message', type: 'error' });
+        if (!result.success) showAlert({ title: 'Error', message: 'Failed to send message', type: 'error' });
     };
 
-    const renderMessage = ({ item, index }: ListRenderItemInfo<any>) => {
+    const renderMessage = useCallback(({ item, index }: ListRenderItemInfo<Message>) => {
+        const currentUserId = user?._id || user?.id || '';
         const senderId = typeof item.sender === 'object' ? item.sender._id : item.sender;
-        const currentUserId = user?._id || user?.id;
         const isMe = senderId === currentUserId || senderId === 'me';
-        const showAvatar = !isMe && (index === 0 || ((messages[userId!] as Message[])[index - 1]?.sender as any)?._id !== userId);
+
+        // Correct avatar logic for inverted list - only show avatar if DIFFERENT sender from the NEXT message (which is visually 'below' in inverted)
+        // Inverted: Next item in array = Visually ABOVE. Previous item in array = Visually BELOW.
+        // We want avatar at the BOTTOM of the group.
+        // In inverted list, index 0 is bottom-most.
+        // So we show avatar if index is 0 OR if the previous item in array (visually below) has different sender.
+        // Wait, inverted logic:
+        // Array: [Newest(0), Older(1), Oldest(2)]
+        // Visual:
+        // [Newest(0)]
+        // [Older(1)]
+        // [Oldest(2)]
+        //
+        // Typically avatars are shown on the LAST message of a group (the bottom one).
+        // Since list is inverted, index 0 is at the bottom of the screen.
+        // We show avatar if:
+        // 1. It's the very first item (index 0)
+        // 2. OR the item BEFORE it in the array (which is visually below it? No. Inverted list renders 0 at bottom.)
+        // Actually, for inverted list:
+        // 0 (Bottom) -> Show avatar if the message *after* it in array (visually above) is different? No.
+        // We want avatar on bottom message of group.
+        // That means we show avatar if the message *before* it in the array (visually below) is different sender.
+        // Wait, flatlist renders 0 at bottom.
+        // 0: Me (Bottom) -> Avatar
+        // 1: Me (Middle) -> No Avatar
+        // 2: Them (Top) -> Avatar
+        //
+        // Correct logic: Show avatar if the msg with index-1 (visually below) has different sender.
+
+        const prevMessage = conversationMessages[index - 1]; // Visually below
+        const prevSenderId = prevMessage ? (typeof prevMessage.sender === 'object' ? prevMessage.sender._id : prevMessage.sender) : null;
+        const showAvatar = !isMe && (!prevMessage || prevSenderId !== senderId);
 
         return (
-            <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage, { width: '100%' }]}>
-                {!isMe && (<View style={{ width: 32 }}>{showAvatar ? <Image source={{ uri: displayAvatar }} style={styles.messageAvatar} cachePolicy="disk" /> : null}</View>)}
-                <TouchableOpacity
-                    onLongPress={() => handleLongPress(item)}
-                    activeOpacity={0.8}
-                    style={[styles.messageBubble, isMe ? styles.myBubble : styles.theirBubble, item.image && styles.imageBubble, item.isDeleted && styles.deletedBubble]}
-                >
-                    {item.isDeleted ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Ionicons name="ban" size={14} color={isMe ? 'rgba(255,255,255,0.6)' : COLORS.textMuted} />
-                            <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText, styles.deletedText]}>
-                                This message was deleted
-                            </Text>
-                        </View>
-                    ) : (
-                        <>
-                            {item.image && (
-                                <ChatImage
-                                    uri={item.image}
-                                    messageId={item._id}
-                                />
-                            )}
-                            {item.text && <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText]}>{item.text}</Text>}
-                        </>
-                    )}
-
-                    <View style={{ flexDirection: 'row', alignSelf: 'flex-end', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                        {item.isEdited && !item.isDeleted && (
-                            <Text style={[styles.editedLabel, isMe ? styles.myTime : styles.theirTime]}>Edited</Text>
-                        )}
-                        <Text style={[styles.messageTime, isMe ? styles.myTime : styles.theirTime]}>
-                            {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Text>
-                        {isMe && !item.isDeleted && (
-                            <View style={styles.pendingIndicator}>
-                                {item.pending ? (
-                                    <ActivityIndicator
-                                        size="small"
-                                        color="rgba(255,255,255,0.7)"
-                                        style={{ transform: [{ scale: 0.6 }] }}
-                                    />
-                                ) : (
-                                    <Ionicons name="checkmark-done" size={12} color="rgba(255,255,255,0.7)" />
-                                )}
-                            </View>
-                        )}
-                    </View>
-                </TouchableOpacity>
-            </View>
+            <MessageItem
+                item={item}
+                index={index}
+                currentUserId={currentUserId}
+                displayAvatar={displayAvatar}
+                onLongPress={handleLongPress}
+                showAvatar={showAvatar}
+            />
         );
-    };
+    }, [user, displayAvatar, handleLongPress, conversationMessages]);
 
     const insets = useSafeAreaInsets();
 
@@ -384,7 +491,7 @@ export default function ChatScreen() {
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
                 <View style={styles.container}>
                     {/* Custom Header */}
@@ -428,11 +535,18 @@ export default function ChatScreen() {
                         ref={flatListRef}
                         data={conversationMessages}
                         renderItem={renderMessage}
-                        keyExtractor={(item, index) => `${item._id || 'msg'}-${index}`}
-                        contentContainerStyle={[styles.messagesList, { paddingBottom: 20 }]}
+                        keyExtractor={(item) => item._id}
+                        contentContainerStyle={[styles.messagesList, { paddingBottom: 16, paddingTop: 16 }]}
                         inverted
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
+                        removeClippedSubviews={Platform.OS === 'android'}
+                        initialNumToRender={20}
+                        maxToRenderPerBatch={10}
+                        windowSize={15}
+                        updateCellsBatchingPeriod={50}
+                        onEndReachedThreshold={0.5}
+                        scrollEventThrottle={16}
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
                                 <View style={styles.emptyIconCircle}>

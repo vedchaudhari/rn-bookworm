@@ -41,6 +41,7 @@ const styles = StyleSheet.create({
         letterSpacing: -1,
     },
     searchContainer: {
+        marginTop: SPACING.xl,
         marginHorizontal: SPACING.xxl,
         marginBottom: MARGIN.item.large,
         backgroundColor: COLORS.surface,
@@ -296,6 +297,10 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         color: COLORS.primary,
         textTransform: 'uppercase',
+    },
+    emptyWrap: {
+        flex: 1,
+        paddingTop: SPACING.colossal,
     },
     emptyContainer: {
         flex: 1,

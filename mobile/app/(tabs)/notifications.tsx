@@ -7,6 +7,7 @@ import COLORS from '../../constants/colors';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useAuthStore } from '../../store/authContext';
 import SafeScreen from '../../components/SafeScreen';
+import AppHeader from '../../components/AppHeader';
 
 interface NotificationData {
     likedByUsername?: string;
@@ -19,7 +20,7 @@ interface NotificationData {
     targetBooks?: number;
 }
 
-interface Notification {
+interface UINotification {
     _id: string;
     type: 'LIKE' | 'COMMENT' | 'FOLLOW' | 'ACHIEVEMENT' | 'GOAL_COMPLETED';
     read: boolean;
@@ -39,6 +40,10 @@ export default function Notifications() {
         React.useCallback(() => {
             loadNotifications();
             if (user?._id) connect(user._id);
+
+            // Auto-mark all as read when tab is opened
+            markAllAsRead(token!);
+
             return () => disconnect();
         }, [])
     );
@@ -59,7 +64,7 @@ export default function Notifications() {
         await markAllAsRead(token!);
     };
 
-    const handleNotificationPress = async (notification: Notification) => {
+    const handleNotificationPress = async (notification: UINotification) => {
         if (!notification.read) await markAsRead(notification._id, token!);
     };
 
@@ -74,7 +79,7 @@ export default function Notifications() {
         }
     };
 
-    const getNotificationText = (notification: Notification): string => {
+    const getNotificationText = (notification: UINotification): string => {
         const { type, data } = notification;
         switch (type) {
             case 'LIKE': return `${data.likedByUsername} liked your book "${data.bookTitle}"`;
@@ -86,7 +91,7 @@ export default function Notifications() {
         }
     };
 
-    const renderNotification = ({ item }: ListRenderItemInfo<Notification>) => {
+    const renderNotification = ({ item }: ListRenderItemInfo<UINotification>) => {
         const icon = getNotificationIcon(item.type);
         const text = getNotificationText(item);
 
@@ -114,7 +119,8 @@ export default function Notifications() {
     }
 
     return (
-        <SafeScreen top={true} bottom={false}>
+        <SafeScreen top={false} bottom={false}>
+            <AppHeader showBack />
             <View style={styles.container}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Notifications</Text>
@@ -130,7 +136,7 @@ export default function Notifications() {
                     </View>
                 )}
                 <FlatList
-                    data={notifications as Notification[]}
+                    data={(notifications as unknown) as UINotification[]}
                     renderItem={renderNotification}
                     keyExtractor={(item) => item._id}
                     contentContainerStyle={[styles.listContent, { paddingBottom: TAB_BAR_SPACE }]}

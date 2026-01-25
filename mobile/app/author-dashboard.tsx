@@ -1,13 +1,17 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import React, { useState, useEffect } from 'react';
-import { useRouter, Stack } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import COLORS from '../constants/colors';
 import { API_URL } from '../constants/api';
 import { useAuthStore } from '../store/authContext';
 import { useUIStore } from '../store/uiStore';
 import SafeScreen from '../components/SafeScreen';
 import GlassCard from '../components/GlassCard';
+import PremiumButton from '../components/PremiumButton';
+import AppHeader from '../components/AppHeader';
+import { BORDER_RADIUS, FONT_SIZE, SPACING, SHADOWS, PADDING } from '../constants/styleConstants';
 
 interface Book {
     _id: string;
@@ -56,12 +60,22 @@ export default function AuthorDashboard() {
     const renderBookItem = ({ item }: { item: Book }) => (
         <GlassCard style={styles.bookCard}>
             <View style={styles.bookInfo}>
-                <Image source={{ uri: item.image }} style={styles.bookCover} />
+                <Image source={{ uri: item.image }} style={styles.bookCover} contentFit="cover" transition={200} />
                 <View style={styles.bookText}>
                     <Text style={styles.bookTitle} numberOfLines={1}>{item.title}</Text>
-                    <Text style={styles.bookMeta}>
-                        {item.totalChapters} Chapters • {item.publishStatus.toUpperCase()}
-                    </Text>
+                    <View style={styles.metaRow}>
+                        <Ionicons name="document-text-outline" size={12} color={COLORS.textSecondary} />
+                        <Text style={styles.bookMeta}>
+                            {item.totalChapters} Chapters
+                        </Text>
+                        <View style={styles.dotSeparator} />
+                        <Text style={[
+                            styles.statusBadge,
+                            { color: item.publishStatus === 'published' ? COLORS.success : COLORS.warning }
+                        ]}>
+                            {item.publishStatus.toUpperCase()}
+                        </Text>
+                    </View>
                     {!item.hasContent && (
                         <View style={styles.noContentBadge}>
                             <Ionicons name="alert-circle" size={12} color={COLORS.error} />
@@ -77,7 +91,7 @@ export default function AuthorDashboard() {
                     onPress={() => router.push({ pathname: '/chapter-manager', params: { bookId: item._id, bookTitle: item.title } })}
                 >
                     <Ionicons name="layers-outline" size={18} color={COLORS.primary} />
-                    <Text style={styles.actionText}>Chapters</Text>
+                    <Text style={[styles.actionText, { color: COLORS.primary }]}>Chapters</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -85,7 +99,7 @@ export default function AuthorDashboard() {
                     onPress={() => item.hasContent && router.push({ pathname: '/author-stats', params: { bookId: item._id, bookTitle: item.title } })}
                     disabled={!item.hasContent}
                 >
-                    <Ionicons name="stats-chart-outline" size={18} color={item.hasContent ? COLORS.secondary : COLORS.textMuted} />
+                    <Ionicons name="stats-chart-outline" size={18} color={item.hasContent ? COLORS.textSecondary : COLORS.textMuted} />
                     <Text style={[styles.actionText, !item.hasContent && { color: COLORS.textMuted }]}>Stats</Text>
                 </TouchableOpacity>
 
@@ -93,7 +107,7 @@ export default function AuthorDashboard() {
                     style={styles.actionButton}
                     onPress={() => router.push({ pathname: '/book-detail', params: { bookId: item._id } })}
                 >
-                    <Ionicons name="eye-outline" size={18} color={COLORS.textTertiary} />
+                    <Ionicons name="eye-outline" size={18} color={COLORS.textSecondary} />
                     <Text style={styles.actionText}>View</Text>
                 </TouchableOpacity>
             </View>
@@ -101,8 +115,9 @@ export default function AuthorDashboard() {
     );
 
     return (
-        <SafeScreen top={true}>
-            <Stack.Screen options={{ title: 'Author Dashboard', headerTintColor: COLORS.textPrimary }} />
+        <SafeScreen top={false}>
+            {/* Using the new AppHeader for the premium look */}
+            <AppHeader showSearch={true} showBack={false} />
 
             <View style={styles.container}>
                 <View style={styles.header}>
@@ -120,20 +135,27 @@ export default function AuthorDashboard() {
                         keyExtractor={(item) => item._id}
                         renderItem={renderBookItem}
                         contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
                         refreshControl={
                             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
                         }
                         ListEmptyComponent={
-                            <View style={styles.emptyContainer}>
-                                <Ionicons name="book-outline" size={60} color={COLORS.textMuted} />
+                            <GlassCard style={styles.emptyCard}>
+                                <View style={styles.iconContainer}>
+                                    <View style={styles.iconGlow} />
+                                    <Ionicons name="book-outline" size={64} color={COLORS.textTertiary} style={styles.emptyIcon} />
+                                </View>
+
                                 <Text style={styles.emptyText}>You haven't recommended any books yet.</Text>
-                                <TouchableOpacity
-                                    style={styles.createButton}
-                                    onPress={() => router.push('/(tabs)/create')}
-                                >
-                                    <Text style={styles.createButtonText}>Create New Book</Text>
-                                </TouchableOpacity>
-                            </View>
+
+                                <View style={styles.buttonContainer}>
+                                    <PremiumButton
+                                        title="Create New Book"
+                                        onPress={() => router.push('/(tabs)/create')}
+                                        style={{ width: '100%' }}
+                                    />
+                                </View>
+                            </GlassCard>
                         }
                     />
                 )}
@@ -145,116 +167,170 @@ export default function AuthorDashboard() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 16,
+        paddingHorizontal: SPACING.lg,
     },
     header: {
-        marginBottom: 20,
+        marginVertical: SPACING.xl,
+        alignItems: 'center',
     },
     title: {
-        fontSize: 28,
+        fontSize: FONT_SIZE.giant,
         fontWeight: '800',
         color: COLORS.textPrimary,
+        marginBottom: SPACING.xs,
+        letterSpacing: 0.5,
     },
     subtitle: {
-        fontSize: 14,
+        fontSize: FONT_SIZE.sm,
         color: COLORS.textSecondary,
-        marginTop: 4,
+        textAlign: 'center',
+        opacity: 0.8,
     },
     listContent: {
-        paddingBottom: 20,
+        paddingBottom: 100,
     },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 100,
+    },
+
+    // Book Card
     bookCard: {
-        marginBottom: 16,
-        padding: 12,
-        borderRadius: 16,
+        marginBottom: SPACING.lg,
+        padding: PADDING.card.vertical,
     },
     bookInfo: {
         flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: SPACING.lg,
     },
     bookCover: {
-        width: 60,
-        height: 80,
-        borderRadius: 8,
-        backgroundColor: COLORS.surface,
+        width: 70,
+        height: 100,
+        borderRadius: BORDER_RADIUS.md,
+        backgroundColor: COLORS.surfaceHighlight,
     },
     bookText: {
         flex: 1,
-        marginLeft: 12,
+        marginLeft: SPACING.md,
+        justifyContent: 'center',
     },
     bookTitle: {
-        fontSize: 18,
+        fontSize: FONT_SIZE.lg,
         fontWeight: '700',
         color: COLORS.textPrimary,
-        marginBottom: 4,
+        marginBottom: SPACING.xs,
+    },
+    metaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 4,
+    },
+    dotSeparator: {
+        width: 3,
+        height: 3,
+        borderRadius: 1.5,
+        backgroundColor: COLORS.textTertiary,
+        marginHorizontal: 6,
     },
     bookMeta: {
-        fontSize: 13,
+        fontSize: FONT_SIZE.xs,
         color: COLORS.textSecondary,
+        marginLeft: 4,
+        fontWeight: '500',
+    },
+    statusBadge: {
+        fontSize: FONT_SIZE.xs - 2,
+        fontWeight: 'bold',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        overflow: 'hidden',
     },
     noContentBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 6,
+        marginTop: SPACING.sm,
         gap: 4,
+        backgroundColor: 'rgba(255, 51, 102, 0.1)', // Error red alpha
+        alignSelf: 'flex-start',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: BORDER_RADIUS.sm,
     },
     noContentText: {
-        fontSize: 11,
+        fontSize: FONT_SIZE.xs,
         color: COLORS.error,
         fontWeight: '600',
     },
+
+    // Action Buttons
     actionRow: {
         flexDirection: 'row',
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.1)',
-        paddingTop: 12,
-        gap: 12,
+        borderTopColor: COLORS.border,
+        paddingTop: SPACING.md,
+        gap: SPACING.md,
     },
     actionButton: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        paddingVertical: 8,
-        borderRadius: 8,
+        backgroundColor: COLORS.surfaceLight,
+        paddingVertical: SPACING.sm + 2,
+        borderRadius: BORDER_RADIUS.md,
         gap: 6,
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
     actionText: {
-        fontSize: 12,
+        fontSize: FONT_SIZE.xs,
         fontWeight: '600',
-        color: COLORS.textPrimary,
+        color: COLORS.textSecondary,
     },
     disabledButton: {
-        opacity: 0.5,
+        opacity: 0.4,
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
+
+    // Empty State (The requested large glass card)
+    emptyCard: {
+        marginTop: SPACING.xl * 2,
+        padding: SPACING.xxl,
         alignItems: 'center',
+        minHeight: 300,
+        justifyContent: 'center',
+        borderColor: COLORS.primary + '40', // Subtle cyan border glow
+        borderWidth: 1,
     },
-    emptyContainer: {
+    iconContainer: {
+        position: 'relative',
+        marginBottom: SPACING.xl,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 80,
+    },
+    iconGlow: {
+        position: 'absolute',
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: COLORS.primaryGlow,
+        opacity: 0.2,
+        transform: [{ scale: 1.5 }],
+    },
+    emptyIcon: {
+        opacity: 0.8,
     },
     emptyText: {
-        color: COLORS.textMuted,
+        color: COLORS.textSecondary,
         textAlign: 'center',
-        marginTop: 16,
-        fontSize: 16,
+        fontSize: FONT_SIZE.md,
+        fontWeight: '500',
+        marginBottom: SPACING.xxl,
     },
-    createButton: {
-        marginTop: 24,
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 24,
-    },
-    createButtonText: {
-        color: COLORS.white,
-        fontWeight: '700',
-        fontSize: 16,
+    buttonContainer: {
+        width: '80%',
     }
 });

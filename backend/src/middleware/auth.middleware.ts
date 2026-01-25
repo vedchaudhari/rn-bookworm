@@ -53,9 +53,14 @@ const protectRoute = async (req: Request, res: Response, next: NextFunction) => 
                 try {
                     const userObj = cachedUser as any;
 
-                    // Ensure _id is a real ObjectId
-                    if (userObj._id && typeof userObj._id === 'string') {
-                        userObj._id = new mongoose.Types.ObjectId(userObj._id);
+                    // Ensure _id is present and is a real ObjectId
+                    const idValue = userObj._id || userObj.id;
+                    if (idValue) {
+                        userObj._id = new mongoose.Types.ObjectId(idValue.toString());
+                    } else {
+                        console.warn(`[Auth] User object in cache missing both _id and id: ${userId}`);
+                        // Fallback to DB
+                        throw new Error("Invalid cached user");
                     }
 
                     // Hydrate to ensure it has Mongoose methods if needed

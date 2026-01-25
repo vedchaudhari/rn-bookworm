@@ -1,65 +1,65 @@
 const COLORS = {
-    // Primary Brand - Electric Readsphere (Cyan & Blue)
-    primary: "#00E5FF", // Electric Cyan
-    primaryDark: "#00B2CC", // Deep Cyan
-    primaryLight: "#84FFFF", // Bright Cyan
+    // Primary Brand - Electric Cyan (The "Glow")
+    primary: "#4FD1C5", // Electric Cyan / Teal
+    primaryDark: "#38B2AC", // Deep Teal
+    primaryLight: "#81E6D9", // Bright Cyan (for highlights)
+    primaryGlow: "rgba(79, 209, 197, 0.5)", // For soft shadows/glows
 
-    // Secondary / Accent - Luxurious Gold
-    secondary: "#FFD700", // Pure Gold
-    secondaryLight: "#FFE57F", // Soft Gold
+    // Secondary - Muted Blue-Gray & Soft White
+    secondary: "#A0AEC0", // Cool Gray
+    secondaryLight: "#CBD5E0", // Lighter Cool Gray
+    secondaryDark: "#718096", // Darker Cool Gray
 
-    // Tertiary - Modern Neon
-    accent: "#D100D1", // Neon Purple (Complimentary)
-    accentLight: "#E040FB", // Bright Purple
-    accentDark: "#A500A5", // Deep Purple
+    // Tertiary / Legacy Accents (Mapped to new theme)
+    accent: "#9F7AEA", // Soft Purple (matches Ink Drops)
+    accentLight: "#B794F4",
+    cardBg: "#121212", // Alias for surface
 
-    // Gold - For Ratings (Metallic feel)
-    gold: "#FFD700",
+    // Backgrounds - deep, rich, not flat black
+    background: "#050505", // Almost pure black, deep void
+    surface: "#121212", // Standard surface
+    surfaceLight: "#1E1E1E", // Elevated surface
+    surfaceHighlight: "#2D2D2D", // Pressed state / active
 
-    // Backgrounds & Surfaces - Deep Premium Dark Mode
-    background: "#0A0908", // Deepest Black/Blue (Matches Icon Background)
-    surface: "#111111", // Slightly lighter black
-    surfaceLight: "#1C1C1E", // Elevated Surface
-    surfaceHighlight: "#2C2C2E", // Highlight Surface
+    // Text
+    textPrimary: "#F7FAFC", // Soft White (High Legibility)
+    textSecondary: "#A0AEC0", // Muted Blue-Gray
+    textTertiary: "#718096", // Deeper Muted
+    textMuted: "#4A5568",
 
-    // Text & Content - High Readability
-    textPrimary: "#FFFFFF", // Pure White
-    textSecondary: "#A1A1AA", // Zinc 400
-    textMuted: "#71717A", // Zinc 500
-    textTertiary: "#52525B", // Zinc 600
+    // Status
+    success: "#68D391", // Soft Green
+    error: "#FC8181", // Soft Red
+    warning: "#F6E05E", // Soft Gold
+    info: "#63B3ED", // Soft Blue
 
-    // Status Colors - Vibrant & Clear
-    success: "#00F5D4", // Mint
-    error: "#FF3366", // Neon Red
-    warning: "#FFD700", // Gold
-    info: "#00E5FF", // Cyan
+    // Borders - Extremely subtle
+    border: "#2D3748", // Dark Navy-Gray
+    borderLight: "rgba(255, 255, 255, 0.1)", // Glass border
 
-    // Borders & Dividers - Subtle
-    border: "#27272A", // Zinc 800
-    borderLight: "#3F3F46", // Zinc 700
+    // Glassmorphism System
+    glass: {
+        bg: "rgba(30, 30, 30, 0.6)", // Base glass background
+        border: "rgba(255, 255, 255, 0.08)", // Subtle white rim
+        highlight: "rgba(255, 255, 255, 0.05)",
+        blur: 20, // Recommended blur intensity
+    },
+    glassBorder: "rgba(255, 255, 255, 0.08)", // Alias for direct access
 
-    // Specific UI
-    cardBg: "#121212",
-    tabBarBg: "#0A0908", // Matches background
+    // Special
+    gold: "#FFD700", // Keep for legacy / ratings
+    overlay: "rgba(0, 0, 0, 0.7)",
+
+    // Gradients (Linear definition helpers)
+    gradients: {
+        primary: ["#4FD1C5", "#38B2AC"],
+        darkSurface: ["#1A1A1A", "#0A0A0A"],
+        glow: ["rgba(79,209,197,0.2)", "transparent"],
+    },
 
     white: "#FFFFFF",
     black: "#000000",
     transparent: "transparent",
-
-    // Modern Glass Effects
-    glass: "rgba(18, 18, 18, 0.7)",
-    glassBorder: "rgba(255, 255, 255, 0.1)",
-    glassHighlight: "rgba(255, 255, 255, 0.05)",
-
-    // Premium & Monetization Colors
-    premium: "#FFD700",              // Gold for Pro badge
-    premiumGradientStart: "#FFD700", // Gold gradient start
-    premiumGradientEnd: "#FFA500",   // Orange gradient end
-    diamond: "#B9F2FF",              // Diamond tier
-    inkDrop: "#9333EA",              // Purple for virtual currency (Ink Drops)
-    tipSuccess: "#00F5D4",           // Tipping confirmation (Mint)
-    adBackground: "rgba(0, 0, 0, 0.85)", // Ad overlay background
-    adBorder: "rgba(255, 215, 0, 0.3)",  // Subtle gold border for premium callouts
 } as const;
 
 export default COLORS;

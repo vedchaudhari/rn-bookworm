@@ -13,8 +13,11 @@ import { useMessageStore } from "../store/messageStore";
 import { useEffect, useRef } from "react";
 import COLORS from "../constants/colors";
 import { Socket } from "socket.io-client";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import GlobalAlert from "../components/GlobalAlert";
+import Toast from "../components/Toast";
+import { useUIStore } from "../store/uiStore";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -40,6 +43,7 @@ export default function RootLayout() {
     // Connect socket when user is logged in
     const { connect, disconnect, socket, fetchUnreadCount: fetchNotifUnread } = useNotificationStore();
     const { addReceivedMessage, fetchUnreadCount: fetchMsgUnread, reset: resetMessages } = useMessageStore();
+    const { showToast } = useUIStore();
 
     useEffect(() => {
         const userId = user?._id || user?.id;
@@ -62,14 +66,33 @@ export default function RootLayout() {
 
         const handleNewMessage = (message: any) => {
             addReceivedMessage(message);
+            // Only show toast if it's not from self
+            if (message.sender?._id !== (user?._id || user?.id)) {
+                showToast({
+                    title: `New Message from ${message.sender?.username || 'User'}`,
+                    message: message.text || "📷 Image",
+                    type: 'message'
+                });
+            }
+        };
+
+        const handleNewNotification = (notification: any) => {
+            fetchNotifUnread(token!).catch(console.error);
+            showToast({
+                title: "Notification",
+                message: notification.message || "You have a new notification",
+                type: 'info'
+            });
         };
 
         socket.on('new_message', handleNewMessage);
+        socket.on('notification', handleNewNotification);
 
         return () => {
             socket.off('new_message', handleNewMessage);
+            socket.off('notification', handleNewNotification);
         };
-    }, [socket, addReceivedMessage]);
+    }, [socket, addReceivedMessage, showToast, user?._id, user?.id, token]);
 
     // Handle App State (Online/Offline status)
     const appState = useRef<AppStateStatus>(AppState.currentState);
@@ -116,13 +139,17 @@ export default function RootLayout() {
     // Force redirect based on auth state
     useEffect(() => {
         if (!isAuthLoading && !isCheckingAuth) {
-            if (isAuthenticated) {
-                // If on auth screens while authenticated, move to home
-                router.replace('/(tabs)');
-            } else {
-                // If on app screens while unauthenticated, move to login
-                router.replace('/(auth)');
-            }
+            const checkOnboarding = async () => {
+                const completed = await AsyncStorage.getItem('onboarding_completed');
+                if (!completed) {
+                    router.replace('/onboarding');
+                } else if (isAuthenticated) {
+                    router.replace('/(tabs)');
+                } else {
+                    router.replace('/(auth)');
+                }
+            };
+            checkOnboarding();
         }
     }, [isAuthenticated, isAuthLoading, isCheckingAuth]);
 
@@ -149,20 +176,16 @@ export default function RootLayout() {
                         animation: 'slide_from_right',
                     }}
                 >
-                    {/* Conditional rendering: only render routes user has access to */}
-                    {isAuthenticated ? (
-                        <>
-                            <Stack.Screen name="(tabs)" />
-                            <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
-                            <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
-                            <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
-                        </>
-                    ) : (
-                        <Stack.Screen name="(auth)" />
-                    )}
+                    <Stack.Screen name="onboarding" />
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
+                    <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
+                    <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
                 </Stack>
                 <StatusBar style="light" />
                 <GlobalAlert />
+                <Toast />
             </SafeAreaProvider>
         </ErrorBoundary>
     );

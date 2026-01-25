@@ -2,22 +2,25 @@ import { create } from 'zustand';
 import { API_URL } from '../constants/api';
 import { Socket } from 'socket.io-client';
 
-interface Message {
+export interface Message {
     _id: string;
     sender: { _id: string; username: string } | string;
     receiver: string;
     text?: string;
     image?: string;
+    width?: number;
+    height?: number;
     createdAt: string;
     pending?: boolean;
     isEdited?: boolean;
     editedAt?: string;
     isDeleted?: boolean;
+    read?: boolean;
     deletedFor?: string[];
     [key: string]: any;
 }
 
-interface Conversation {
+export interface Conversation {
     _id: string;
     otherUser: { _id: string; username: string; profileImage?: string } | string;
     lastMessage?: {
@@ -36,7 +39,7 @@ interface MessageState {
     activeConversation: string | null;
     fetchConversations: (token: string) => Promise<{ success: boolean; error?: string }>;
     fetchMessages: (userId: string, token: string, page?: number) => Promise<{ success: boolean; hasMore?: boolean; error?: string }>;
-    sendMessage: (receiverId: string, text: string, image: string | undefined, token: string) => Promise<{ success: boolean; message?: Message; error?: string }>;
+    sendMessage: (receiverId: string, text: string, image: string | undefined, token: string, localImage?: string, width?: number, height?: number) => Promise<{ success: boolean; message?: Message; error?: string }>;
     addReceivedMessage: (message: Message) => void;
     fetchUnreadCount: (token: string) => Promise<{ success: boolean; error?: string }>;
     markAsRead: (userId: string, token: string) => Promise<{ success: boolean; error?: string }>;
@@ -47,6 +50,7 @@ interface MessageState {
     clearChatHistory: (otherUserId: string, token: string) => Promise<{ success: boolean; error?: string }>;
     updateLocalEditedMessage: (data: { messageId: string, text: string, editedAt: string }) => void;
     updateLocalDeletedMessage: (data: { messageId: string, conversationId: string }) => void;
+    updateLocalMessagesRead: (data: { conversationId: string, readerId: string }) => void;
     reset: () => void;
 }
 
@@ -144,7 +148,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     },
 
     // Send message with Optimistic Update
-    sendMessage: async (receiverId: string, text: string, image: string | undefined, token: string) => {
+    sendMessage: async (receiverId: string, text: string, image: string | undefined, token: string, localImage?: string, width?: number, height?: number) => {
         const { messages } = get();
         const tempId = Date.now().toString();
 
@@ -153,7 +157,9 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             sender: { _id: 'me', username: 'Me' },
             receiver: receiverId,
             text: text || "",
-            image,
+            image: localImage || image,
+            width,
+            height,
             createdAt: new Date().toISOString(),
             pending: true,
         };
@@ -288,6 +294,19 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             updatedConversations.unshift(updatedConv);
 
             set({ conversations: updatedConversations });
+        } else {
+            // New conversation!
+            const newConv: Conversation = {
+                _id: message.conversationId || `conv_${Date.now()}`,
+                otherUser: message.sender,
+                lastMessage: {
+                    text: message.text || '',
+                    createdAt: message.createdAt,
+                    senderId: senderId
+                },
+                unreadCount: activeConversation === senderId ? 0 : 1
+            };
+            set({ conversations: [newConv, ...updatedConversations] });
         }
     },
 
@@ -462,6 +481,24 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                 set({ messages: { ...messages, [userId]: updated } });
                 break;
             }
+        }
+    },
+
+    // Socket: Update messages when read by recipient
+    updateLocalMessagesRead: (data: { conversationId: string, readerId: string }) => {
+        const { messages } = get();
+        const otherUserId = data.readerId;
+
+        if (messages[otherUserId]) {
+            const updated = messages[otherUserId].map(m => {
+                const senderId = typeof m.sender === 'object' ? m.sender._id : m.sender;
+                // If the other user (readerId) read them, it means any message they received (where WE are sender) is now read
+                if (senderId === 'me') {
+                    return { ...m, read: true };
+                }
+                return m;
+            });
+            set({ messages: { ...messages, [otherUserId]: updated } });
         }
     },
 

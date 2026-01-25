@@ -14,6 +14,7 @@ import SafeScreen from '../../components/SafeScreen';
 import GlazedButton from '../../components/GlazedButton';
 import GlassCard from '../../components/GlassCard';
 import Loader from '../../components/Loader';
+import AppHeader from '../../components/AppHeader';
 import COLORS from '../../constants/colors';
 import {
     SPACING,
@@ -175,6 +176,17 @@ export default function StreakDashboardScreen() {
 
     return (
         <SafeScreen>
+            <AppHeader
+                showBack
+                rightElement={
+                    <TouchableOpacity
+                        onPress={() => router.push('/streaks/leaderboard' as any)}
+                        style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
+                    >
+                        <Ionicons name="trophy" size={24} color={COLORS.secondary} />
+                    </TouchableOpacity>
+                }
+            />
             <ScrollView
                 style={styles.container}
                 contentContainerStyle={styles.contentContainer}
@@ -182,17 +194,7 @@ export default function StreakDashboardScreen() {
                     <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} />
                 }
             >
-                {/* Header */}
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Reading Streak</Text>
-                    <TouchableOpacity
-                        onPress={() => router.push('/streaks/leaderboard' as any)}
-                        accessibilityLabel="View leaderboard"
-                        accessibilityHint="Opens the streak leaderboard"
-                    >
-                        <Ionicons name="trophy" size={COMPONENT_SIZES.icon.large} color={COLORS.secondary} />
-                    </TouchableOpacity>
-                </View>
+                {/* Header Section Removed - Handled by AppHeader */}
 
                 {/* Current Streak Card */}
                 <GlassCard style={styles.streakCard}>

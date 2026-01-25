@@ -22,6 +22,8 @@ export interface BookshelfItem {
         genre?: string;
         totalPages?: number;
         caption?: string;
+        likeCount?: number;
+        commentCount?: number;
     };
     status: ReadingStatus;
     progress: number;

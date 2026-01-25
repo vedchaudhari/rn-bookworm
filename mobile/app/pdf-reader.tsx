@@ -22,7 +22,9 @@ export default function PdfReaderScreen() {
     // Ensure URL is absolute
     const fullUrl = useMemo(() => {
         if (!pdfUrl) return null;
-        return pdfUrl.startsWith('http') ? pdfUrl : `${API_URL}${pdfUrl}`;
+        const url = pdfUrl.startsWith('http') ? pdfUrl : `${API_URL}${pdfUrl}`;
+        // Encode URL to handle special characters (spaces, parentheses, etc.)
+        return encodeURI(url);
     }, [pdfUrl]);
 
     // Handle Download and Base64 Conversion on Android

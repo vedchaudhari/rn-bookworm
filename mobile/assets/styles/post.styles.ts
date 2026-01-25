@@ -20,7 +20,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.cardBg,
         marginBottom: SPACING.xxl,
         borderRadius: RADIUS.card.medium,
-        overflow: 'hidden',
+        // Removed overflow: 'hidden' to allow menu dropdowns to be visible
         borderWidth: BORDER_WIDTH.thin,
         borderColor: COLORS.border,
         ...SHADOWS.strong,
@@ -28,10 +28,12 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: SPACING.lg,
+        paddingVertical: SPACING.md,
         paddingHorizontal: SPACING.xl,
         justifyContent: 'space-between',
         backgroundColor: COLORS.cardBg,
+        borderTopLeftRadius: RADIUS.card.medium,
+        borderTopRightRadius: RADIUS.card.medium,
     },
     headerLeft: {
         flexDirection: 'row',
@@ -52,7 +54,7 @@ const styles = StyleSheet.create({
     },
     mediaContainer: {
         width: CARD_WIDTH,
-        aspectRatio: 1, // Compact 1:1 Square
+        aspectRatio: 1.3, // Wider for reduced vertical height
         backgroundColor: COLORS.surface,
         overflow: 'hidden',
     },
@@ -78,11 +80,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     likesText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: '700',
+        fontSize: 14,
+        fontWeight: '800',
         color: COLORS.textPrimary,
         paddingHorizontal: SPACING.xl,
-        marginTop: SPACING.lg, // Increased from sm
+        marginTop: SPACING.md,
     },
     contentSection: {
         paddingHorizontal: SPACING.xl,
@@ -102,19 +104,20 @@ const styles = StyleSheet.create({
         marginTop: SPACING.lg, // Increased from sm
     },
     viewComments: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textMuted,
-        paddingHorizontal: SPACING.xl,
-        marginTop: SPACING.md,
+        fontSize: 13,
+        color: COLORS.textSecondary,
+        fontWeight: '500',
+        paddingHorizontal: 0,
+        marginTop: 0,
     },
     timeAgo: {
-        fontSize: FONT_SIZE.xxxs,
+        fontSize: 10,
         color: COLORS.textMuted,
         paddingHorizontal: SPACING.xl,
-        marginTop: SPACING.lg, // Increased from sm
-        marginBottom: SPACING.xxl, // Balanced bottom gap
+        marginTop: SPACING.sm,
+        marginBottom: SPACING.xl,
         textTransform: 'uppercase',
-        letterSpacing: 1, // Slight increase for air
+        letterSpacing: 0.5,
     }
 });
 

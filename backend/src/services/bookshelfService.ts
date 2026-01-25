@@ -102,7 +102,7 @@ export class BookshelfService {
         });
 
         return await bookshelfItem.populate([
-            { path: 'bookId', select: 'title author coverImage genre totalPages' },
+            { path: 'bookId', select: 'title author image genre totalPages' },
             { path: 'recommendedByUserId', select: 'username profileImage' }
         ]);
     }
@@ -431,7 +431,10 @@ export class BookshelfService {
             throw new Error('UNAUTHORIZED');
         }
 
-        return bookshelfItem;
+        return await bookshelfItem.populate([
+            { path: 'bookId', select: 'title author image genre totalPages' },
+            { path: 'recommendedByUserId', select: 'username profileImage' }
+        ]);
     }
 
     /**

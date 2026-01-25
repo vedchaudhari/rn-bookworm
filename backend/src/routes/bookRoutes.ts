@@ -24,7 +24,7 @@ interface CreateBookBody {
 }
 
 // Helper to sign S3 URLs for books
-const signBookUrls = async (books: any[]) => {
+export const signBookUrls = async (books: any[]) => {
     return Promise.all(books.map(async book => {
         const bookObj = typeof book.toObject === 'function' ? book.toObject() : book;
 
@@ -32,9 +32,14 @@ const signBookUrls = async (books: any[]) => {
             bookObj.image = await getSignedUrlForFile(bookObj.image);
         }
 
-        // Only sign if it's an S3 URL. If it's a local path (starts with /uploads), leave it.
+        // Sign PDF URL if it exists
         if (bookObj.pdfUrl && bookObj.pdfUrl.includes('amazonaws.com')) {
             bookObj.pdfUrl = await getSignedUrlForFile(bookObj.pdfUrl);
+        }
+
+        // Sign user profile image if populated
+        if (bookObj.user && typeof bookObj.user === 'object' && bookObj.user.profileImage) {
+            bookObj.user.profileImage = await getSignedUrlForFile(bookObj.user.profileImage);
         }
 
         return bookObj;
@@ -80,29 +85,36 @@ router.post("/", protectRoute, asyncHandler(async (req: Request, res: Response) 
         if (keys.length > 0) await redis.del(...keys);
     } catch (e) { console.error('Redis invalidation error:', e); }
 
-    res.status(201).json(newBook);
+    const [signedBook] = await signBookUrls([newBook]);
+    res.status(201).json(signedBook);
 }));
 
 // pagination => infinite loading
 router.get("/", protectRoute, asyncHandler(async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const genre = (req.query.genre as string) || 'All';
     const skip = (page - 1) * limit;
 
-    const cacheKey = CACHE_KEYS.FEED_GLOBAL(page, limit);
+    const cacheKey = CACHE_KEYS.FEED_GLOBAL(page, limit, genre);
 
     try {
         const cached = await redis.get(cacheKey);
         if (cached) return res.json(cached);
     } catch (e) { console.error('Redis error:', e); }
 
+    const query: any = {};
+    if (genre !== 'All') {
+        query.genre = genre;
+    }
+
     const [books, totalBooks] = await Promise.all([
-        Book.find()
+        Book.find(query)
             .sort({ createdAt: -1 }) // desc
             .skip(skip)
             .limit(limit)
             .populate("user", "username profileImage level"),
-        Book.countDocuments()
+        Book.countDocuments(query)
     ]);
 
     const booksWithCounts = await enrichBooksWithInteractions(books, req.user!._id);
@@ -125,10 +137,11 @@ router.get("/", protectRoute, asyncHandler(async (req: Request, res: Response) =
 router.get("/following", protectRoute, asyncHandler(async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const genre = (req.query.genre as string) || 'All';
     const skip = (page - 1) * limit;
     const userId = req.user!._id;
 
-    const cacheKey = CACHE_KEYS.FEED_FOLLOWING(userId.toString(), page, limit);
+    const cacheKey = CACHE_KEYS.FEED_FOLLOWING(userId.toString(), page, limit, genre);
 
     try {
         const cached = await redis.get(cacheKey);
@@ -149,14 +162,19 @@ router.get("/following", protectRoute, asyncHandler(async (req: Request, res: Re
         return res.send(emptyResponse);
     }
 
+    const query: any = { user: { $in: followingIds } };
+    if (genre !== 'All') {
+        query.genre = genre;
+    }
+
     // 2. Find books created by those users
     const [books, totalBooks] = await Promise.all([
-        Book.find({ user: { $in: followingIds } })
+        Book.find(query)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
             .populate("user", "username profileImage level"),
-        Book.countDocuments({ user: { $in: followingIds } })
+        Book.countDocuments(query)
     ]);
 
     // 3. Add like and comment counts

@@ -7,19 +7,17 @@ import * as ImagePicker from 'expo-image-picker';
 import COLORS from '../../constants/colors';
 import { API_URL } from '../../constants/api';
 import { useAuthStore } from '../../store/authContext';
-import LogoutButton from '../../components/LogoutButton';
+import styles from '../../assets/styles/profile.styles';
 import SafeScreen from '../../components/SafeScreen';
 import PremiumBadge from '../../components/PremiumBadge';
-import BannerAdComponent from '../../components/ads/BannerAd';
 import { useSubscriptionStore } from '../../store/subscriptionStore';
 import { useCurrencyStore } from '../../store/currencyStore';
 import GlassCard from '../../components/GlassCard';
+import StatCard from '../../components/StatCard';
+import PremiumButton from '../../components/PremiumButton';
 import { useUIStore } from '../../store/uiStore';
 import { apiClient } from '../../lib/apiClient';
 
-import styles from '../../assets/styles/profile.styles';
-
-// Define explicit types for data structures
 interface User {
     _id: string;
     id?: string;
@@ -27,6 +25,7 @@ interface User {
     email: string;
     bio?: string;
     profileImage?: string;
+    streakDays?: number;
 }
 
 interface Book {
@@ -39,8 +38,6 @@ interface Stats {
     following: number;
 }
 
-// Define the shape of the Auth Store based on usage
-// In a full migration, this would be imported from the store's type definition
 interface AuthStore {
     user: User | null;
     token: string | null;
@@ -73,13 +70,11 @@ export default function Profile() {
     const { showAlert } = useUIStore();
 
     useEffect(() => {
-        // console.log("Current user:", currentUser?._id);
+        // User effect
     }, [currentUser]);
 
     const fetchData = async () => {
-        // Standardize on _id
         const userId = currentUser?._id || currentUser?.id;
-
         if (!userId || !token) {
             setLoading(false);
             return;
@@ -156,18 +151,12 @@ export default function Profile() {
 
     const handleChangeProfileImage = async () => {
         try {
-            // Request permissions
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
-                showAlert({
-                    title: 'Permission Required',
-                    message: 'Please grant photo library access to change your profile picture.',
-                    type: 'error'
-                });
+                showAlert({ title: 'Permission Required', message: 'Please grant photo library access.', type: 'error' });
                 return;
             }
 
-            // Launch image picker
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: 'images',
                 allowsEditing: true,
@@ -178,58 +167,42 @@ export default function Profile() {
             if (result.canceled || !result.assets[0]) return;
 
             setUploadingImage(true);
-
             const imageUri = result.assets[0].uri;
             const fileName = imageUri.split('/').pop() || 'profile.jpg';
             const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
             const contentType = `image/${fileExtension === 'png' ? 'png' : 'jpeg'}`;
 
-            // 1. Get presigned URL from backend
             const { uploadUrl, finalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
-                '/api/users/presigned-url/profile-image',
-                { fileName, contentType }
+                '/api/users/presigned-url/profile-image', { fileName, contentType }
             );
 
-            // 2. Convert file to blob and upload to S3
-            const blobResponse = await fetch(imageUri);
-            const blob = await blobResponse.blob();
-
-            const uploadResponse = await fetch(uploadUrl, {
-                method: 'PUT',
-                body: blob,
+            console.log('[Upload] 2. Uploading to S3 (Legacy API)...', uploadUrl);
+            const { uploadAsync, FileSystemUploadType } = await import('expo-file-system/legacy');
+            const uploadResponse = await uploadAsync(uploadUrl, imageUri, {
+                httpMethod: 'PUT',
                 headers: { 'Content-Type': contentType },
+                uploadType: FileSystemUploadType.BINARY_CONTENT,
             });
 
-            if (!uploadResponse.ok) {
-                throw new Error('Failed to upload image to S3');
+            if (uploadResponse.status !== 200) {
+                console.error('[Upload] S3 Error:', uploadResponse);
+                throw new Error(`Cloud upload failed: Status ${uploadResponse.status}`);
             }
 
-            // 3. Update backend with new profile image URL
+            console.log('[Upload] 3. Syncing with backend...');
             const updateResponse = await apiClient.put<{ success: boolean; user: any }>('/api/users/update-profile-image', {
                 profileImage: finalUrl,
             });
 
             if (updateResponse.success) {
-                // 4. Update auth store (optimistic UI)
                 const updatedUser = updateResponse.user;
                 useAuthStore.setState({ user: updatedUser });
-
-                showAlert({
-                    title: 'Success',
-                    message: 'Profile picture updated successfully!',
-                    type: 'success'
-                });
-
-                // Refresh profile data
+                showAlert({ title: 'Success', message: 'Profile updated!', type: 'success' });
                 fetchData();
             }
-        } catch (error: any) {
-            console.error('Profile image upload error:', error);
-            showAlert({
-                title: 'Upload Failed',
-                message: error.message || 'Failed to update profile picture. Please try again.',
-                type: 'error'
-            });
+        } catch (err: any) {
+            console.error("Upload error:", err);
+            showAlert({ title: 'Error', message: err.message || 'Upload failed', type: 'error' });
         } finally {
             setUploadingImage(false);
         }
@@ -261,21 +234,20 @@ export default function Profile() {
     const renderBookItem: ListRenderItem<Book> = ({ item }) => (
         <TouchableOpacity
             style={styles.bookItem}
+            activeOpacity={0.8}
             onPress={() => router.push({ pathname: '/book-detail', params: { bookId: item._id } })}
         >
-            <Image source={{ uri: item.image }} style={styles.bookImage} />
+            <Image source={{ uri: item.image }} style={styles.bookImage} contentFit="cover" transition={200} />
         </TouchableOpacity>
     );
 
     const renderUserStrip: ListRenderItem<User> = ({ item }) => (
         <TouchableOpacity
-            style={styles.userStripItem}
+            style={styles.userListItem}
             onPress={() => router.push({ pathname: '/user-profile', params: { userId: item.id || item._id } })}
         >
-            <Image source={{ uri: item.profileImage }} style={styles.userStripAvatar} />
-            <View style={{ flex: 1 }}>
-                <Text style={styles.userStripName} numberOfLines={1}>{item.username}</Text>
-            </View>
+            <Image source={{ uri: item.profileImage }} style={styles.userListAvatar} />
+            <Text style={styles.userListName} numberOfLines={1}>{item.username}</Text>
         </TouchableOpacity>
     );
 
@@ -290,109 +262,105 @@ export default function Profile() {
     }
 
     return (
-        <SafeScreen isTabScreen={true}>
+        <SafeScreen isTabScreen={true} style={{ backgroundColor: COLORS.background }}>
             <ScrollView
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} />}
                 showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 20 }}
             >
+                {/* Header Actions */}
+                <TouchableOpacity style={styles.logoutButton} onPress={() => router.push('/settings')}>
+                    <Ionicons name="settings-outline" size={24} color={COLORS.textPrimary} />
+                </TouchableOpacity>
 
-                <View style={styles.profileHeaderCentered}>
-                    <LogoutButton />
-
+                <View style={styles.headerContainer}>
+                    {/* Glowing Avatar */}
                     <TouchableOpacity
-                        style={styles.avatarWrapper}
+                        style={styles.avatarContainer}
                         onPress={handleChangeProfileImage}
                         disabled={uploadingImage}
-                        activeOpacity={0.7}
                     >
-                        <Image source={{ uri: currentUser?.profileImage }} style={styles.avatarLarge} />
-                        {uploadingImage && (
-                            <View style={styles.avatarOverlay}>
-                                <ActivityIndicator size="large" color={COLORS.primary} />
-                            </View>
-                        )}
-                        <View style={styles.avatarEditBadge}>
-                            <Ionicons name="camera" size={16} color={COLORS.white} />
+                        <View style={styles.avatarGlowRing}>
+                            <Image source={{ uri: currentUser?.profileImage }} style={styles.avatarImage} />
+                            {uploadingImage && (
+                                <View style={[styles.avatarImage, { position: 'absolute', backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }]}>
+                                    <ActivityIndicator color={COLORS.white} />
+                                </View>
+                            )}
+                        </View>
+                        <View style={styles.cameraButton}>
+                            <Ionicons name="camera" size={18} color={COLORS.white} />
                         </View>
                     </TouchableOpacity>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, marginBottom: 4 }}>
-                        <Text style={[styles.usernameCentered, { marginTop: 0, marginBottom: 0 }]}>{currentUser?.username}</Text>
-                        {isPro && <PremiumBadge size="small" />}
+
+                    {/* User Info */}
+                    <View style={styles.userInfoContainer}>
+                        <View style={styles.usernameRow}>
+                            <Text style={styles.usernameText}>{currentUser?.username}</Text>
+                            {isPro && <PremiumBadge size="small" />}
+                        </View>
+                        <Text style={styles.emailText}>{currentUser?.email}</Text>
                     </View>
-                    <Text style={styles.emailCentered}>{currentUser?.email}</Text>
-                    {currentUser?.bio && <Text style={styles.bioCentered}>{currentUser.bio}</Text>}
 
-                    <TouchableOpacity onPress={() => router.push('/author-dashboard')}>
-                        <GlassCard style={{
-                            marginTop: 16,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            backgroundColor: COLORS.secondary + '20',
-                            paddingHorizontal: 16,
-                            paddingVertical: 8,
-                            borderColor: COLORS.secondary + '40',
-                            gap: 6
-                        }}>
-                            <Ionicons name="stats-chart" size={16} color={COLORS.secondary} />
-                            <Text style={{ color: COLORS.secondary, fontWeight: '700', fontSize: 13 }}>Author Dashboard</Text>
-                        </GlassCard>
+                    {/* Main CTA */}
+                    <View style={styles.dashboardButtonContainer}>
+                        <PremiumButton
+                            title="Author Dashboard"
+                            icon="stats-chart"
+                            onPress={() => router.push('/author-dashboard')}
+                        />
+                    </View>
+
+                    {/* Stats Grid */}
+                    <View style={styles.statsGrid}>
+                        <TouchableOpacity
+                            style={{ flex: 1 }}
+                            onPress={() => router.push('/rewards')}
+                            activeOpacity={0.8}
+                        >
+                            <StatCard
+                                label="Ink Drops"
+                                value={balance}
+                                icon="water"
+                                color={COLORS.gold}
+                                style={styles.statCard}
+                            />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={{ flex: 1 }}
+                            onPress={() => router.push('/streaks')}
+                            activeOpacity={0.8}
+                        >
+                            <StatCard
+                                label="Streak Days"
+                                value={currentUser?.streakDays || 12}
+                                icon="flame"
+                                color={COLORS.accent}
+                                style={styles.statCard}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Segmented Tabs */}
+                <View style={styles.tabContainer}>
+                    <TouchableOpacity onPress={() => setActiveView('posts')} style={[styles.tabItem, activeView === 'posts' && styles.activeTabItem]}>
+                        <Text style={[styles.tabText, activeView === 'posts' && styles.activeTabText]}>Posts</Text>
                     </TouchableOpacity>
-
-                    <TouchableOpacity onPress={() => router.push('/rewards')}>
-                        <GlassCard style={{
-                            marginTop: 10,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            backgroundColor: COLORS.gold + '20',
-                            paddingHorizontal: 16,
-                            paddingVertical: 8,
-                            borderColor: COLORS.gold + '40',
-                            gap: 6
-                        }}>
-                            <Ionicons name="water" size={16} color={COLORS.gold} />
-                            <Text style={{ color: COLORS.gold, fontWeight: '700', fontSize: 13 }}>{balance} Ink Drops</Text>
-                        </GlassCard>
+                    <TouchableOpacity onPress={() => handleStatClick('followers')} style={[styles.tabItem, activeView === 'followers' && styles.activeTabItem]}>
+                        <Text style={[styles.tabText, activeView === 'followers' && styles.activeTabText]}>
+                            {stats.followers} Followers
+                        </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleStatClick('following')} style={[styles.tabItem, activeView === 'following' && styles.activeTabItem]}>
+                        <Text style={[styles.tabText, activeView === 'following' && styles.activeTabText]}>
+                            {stats.following} Following
+                        </Text>
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.statsRow}>
-                    <TouchableOpacity onPress={() => handleStatClick('posts')} style={styles.statBox}>
-                        <Text style={styles.statNumber}>{books.length}</Text>
-                        <Text style={styles.statLabel}>Posts</Text>
-                    </TouchableOpacity>
-                    <View style={styles.statDivider} />
-                    <TouchableOpacity onPress={() => handleStatClick('followers')} style={styles.statBox}>
-                        <Text style={styles.statNumber}>{stats.followers}</Text>
-                        <Text style={styles.statLabel}>Followers</Text>
-                    </TouchableOpacity>
-                    <View style={styles.statDivider} />
-                    <TouchableOpacity onPress={() => handleStatClick('following')} style={styles.statBox}>
-                        <Text style={styles.statNumber}>{stats.following}</Text>
-                        <Text style={styles.statLabel}>Following</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.tabSwitcher}>
-                    <TouchableOpacity
-                        onPress={() => setActiveView('posts')}
-                        style={[styles.tab, activeView === 'posts' && styles.tabActive]}
-                    >
-                        <Text style={[styles.tabText, activeView === 'posts' && styles.tabTextActive]}>Posts</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => handleStatClick('followers')}
-                        style={[styles.tab, activeView === 'followers' && styles.tabActive]}
-                    >
-                        <Text style={[styles.tabText, activeView === 'followers' && styles.tabTextActive]}>Followers</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => handleStatClick('following')}
-                        style={[styles.tab, activeView === 'following' && styles.tabActive]}
-                    >
-                        <Text style={[styles.tabText, activeView === 'following' && styles.tabTextActive]}>Following</Text>
-                    </TouchableOpacity>
-                </View>
-
+                {/* Content Area */}
                 {activeView === 'posts' && (
                     <FlatList
                         data={books}
@@ -400,34 +368,37 @@ export default function Profile() {
                         keyExtractor={(i) => i._id}
                         numColumns={3}
                         scrollEnabled={false}
-                        contentContainerStyle={styles.gridContent}
+                        contentContainerStyle={styles.gridContainer}
                         ListEmptyComponent={
-                            <View style={styles.emptyContainer}>
-                                <Ionicons name="book-outline" size={48} color={COLORS.textMuted} />
-                                <Text style={styles.emptyText}>You haven't recommended any books yet.</Text>
-                                <TouchableOpacity style={styles.addButton} onPress={() => router.push('/create')}>
-                                    <Text style={styles.addButtonText}>Share your first book</Text>
-                                </TouchableOpacity>
+                            <View style={styles.emptyState}>
+                                <Ionicons name="book-outline" size={48} color={COLORS.textTertiary} />
+                                <Text style={styles.emptyText}>No books shared yet.</Text>
+                                <View style={{ marginTop: 20 }}>
+                                    <PremiumButton
+                                        title="Share your first book"
+                                        onPress={() => router.push('/create')}
+                                        variant="secondary"
+                                    />
+                                </View>
                             </View>
                         }
                     />
                 )}
 
                 {(activeView === 'followers' || activeView === 'following') && (
-                    <View style={styles.stripContainer}>
+                    <View style={styles.userListContainer}>
                         {loadingUsers ? (
-                            <ActivityIndicator color={COLORS.primary} style={{ marginTop: 20 }} />
+                            <ActivityIndicator color={COLORS.primary} />
                         ) : (
                             <FlatList
-                                horizontal
                                 data={activeView === 'followers' ? followers : following}
                                 renderItem={renderUserStrip}
                                 keyExtractor={(item) => item.id || item._id}
-                                showsHorizontalScrollIndicator={false}
+                                scrollEnabled={false} // Since parent is ScrollView
                                 ListEmptyComponent={
-                                    <View style={[styles.emptyContainer, { width: width - 40 }]}>
+                                    <View style={styles.emptyState}>
                                         <Text style={styles.emptyText}>
-                                            {activeView === 'followers' ? "No followers yet." : "You're not following anyone yet."}
+                                            {activeView === 'followers' ? "No followers yet." : "Not following anyone yet."}
                                         </Text>
                                     </View>
                                 }
@@ -435,10 +406,6 @@ export default function Profile() {
                         )}
                     </View>
                 )}
-
-                <View style={{ marginVertical: 20 }}>
-                    <BannerAdComponent position="bottom" />
-                </View>
 
             </ScrollView>
         </SafeScreen>

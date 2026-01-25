@@ -1,118 +1,113 @@
-// mobile/lib/apiClient.ts
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig, AxiosError } from 'axios';
 import { API_URL } from '../constants/api';
 
-interface RequestOptions extends RequestInit {
-    params?: Record<string, string | number | boolean>;
+export interface RequestOptions extends AxiosRequestConfig {
+    params?: Record<string, any>;
 }
 
 export type UnauthorizedCallback = () => void;
 
 class ApiClient {
+    private instance: AxiosInstance;
     private authToken: string | null = null;
     private unauthorizedCallback: UnauthorizedCallback | null = null;
 
-    /**
-     * Set the authorization token to be used for all subsequent requests.
-     */
+    constructor() {
+        this.instance = axios.create({
+            baseURL: API_URL,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            timeout: 30000,
+        });
+
+        this.setupInterceptors();
+    }
+
+    private setupInterceptors() {
+        this.instance.interceptors.request.use(
+            (config: InternalAxiosRequestConfig) => {
+                if (this.authToken) {
+                    config.headers.set('Authorization', `Bearer ${this.authToken}`);
+                }
+                return config;
+            },
+            (error: AxiosError) => Promise.reject(error)
+        );
+
+        this.instance.interceptors.response.use(
+            (response: AxiosResponse) => {
+                return response.data;
+            },
+            (error: AxiosError | any) => {
+                if (error.response && error.response.status === 401) {
+                    if (this.unauthorizedCallback) {
+                        this.unauthorizedCallback();
+                    }
+                    return Promise.reject(new Error('Unauthorized. Please log in again.'));
+                }
+
+                if (error.response && error.response.data) {
+                    const message = (error.response.data as any).message || (error.response.data as any).error || 'Request failed';
+                    return Promise.reject(new Error(message));
+                }
+
+                if (error.request) {
+                    if (error.code === 'ECONNABORTED') {
+                        return Promise.reject(new Error('Request timed out. Please check your connection.'));
+                    }
+                    return Promise.reject(new Error('Network error. Please check your connection.'));
+                }
+
+                return Promise.reject(error);
+            }
+        );
+    }
+
     setAuthToken(token: string | null) {
         this.authToken = token;
     }
 
-    /**
-     * Register a callback to be executed when a 401 Unauthorized response is received.
-     */
     registerUnauthorizedCallback(callback: UnauthorizedCallback) {
         this.unauthorizedCallback = callback;
     }
 
-    private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-        const { params, headers: customHeaders, ...restOptions } = options;
-
-        // 1. Build URL with query params
-        let url = `${API_URL}${endpoint}`;
-        if (params) {
-            const searchParams = new URLSearchParams();
-            Object.entries(params).forEach(([key, value]) => {
-                if (value !== undefined && value !== null) {
-                    searchParams.append(key, String(value));
-                }
-            });
-            const query = searchParams.toString();
-            if (query) url += `?${query}`;
-        }
-
-        // 2. Prepare headers
-        const headers = new Headers(customHeaders);
-        if (!headers.has('Content-Type') && !(restOptions.body instanceof FormData)) {
-            headers.set('Content-Type', 'application/json');
-        }
-
-        // 3. Inject Auth Token
-        if (this.authToken && !headers.has('Authorization')) {
-            headers.set('Authorization', `Bearer ${this.authToken}`);
-        }
-
-        try {
-            const response = await fetch(url, {
-                ...restOptions,
-                headers,
-            });
-
-            // 4. Handle common status codes
-            if (response.status === 401) {
-                if (this.unauthorizedCallback) {
-                    this.unauthorizedCallback();
-                }
-                throw new Error('Unauthorized. Please log in again.');
-            }
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                const message = data.message || data.error || 'Request failed';
-                throw new Error(message);
-            }
-
-            return data as T;
-        } catch (error: any) {
-            // Only log errors in development mode
-            if (__DEV__) {
-                console.warn(`API: ${options.method || 'GET'} ${endpoint} failed - ${error.message}`);
-            }
-            throw error;
-        }
-    }
-
-    async get<T>(endpoint: string, params?: Record<string, string | number | boolean>, options: RequestOptions = {}): Promise<T> {
-        return this.request<T>(endpoint, { ...options, method: 'GET', params });
+    async get<T>(endpoint: string, params: Record<string, any> = {}, options: RequestOptions = {}): Promise<T> {
+        return this.instance.get<T, T>(endpoint, { ...options, params });
     }
 
     async post<T>(endpoint: string, body?: any, options: RequestOptions = {}): Promise<T> {
-        return this.request<T>(endpoint, {
-            ...options,
-            method: 'POST',
-            body: body instanceof FormData ? body : JSON.stringify(body),
-        });
+        const isFormData = body instanceof FormData;
+        const config = { ...options };
+        if (isFormData) {
+            config.headers = config.headers || {};
+            (config.headers as any)['Content-Type'] = 'multipart/form-data';
+        }
+        return this.instance.post<T, T>(endpoint, body, config);
     }
 
     async put<T>(endpoint: string, body?: any, options: RequestOptions = {}): Promise<T> {
-        return this.request<T>(endpoint, {
-            ...options,
-            method: 'PUT',
-            body: body instanceof FormData ? body : JSON.stringify(body),
-        });
+        const isFormData = body instanceof FormData;
+        const config = { ...options };
+        if (isFormData) {
+            config.headers = config.headers || {};
+            (config.headers as any)['Content-Type'] = 'multipart/form-data';
+        }
+        return this.instance.put<T, T>(endpoint, body, config);
     }
 
     async patch<T>(endpoint: string, body?: any, options: RequestOptions = {}): Promise<T> {
-        return this.request<T>(endpoint, {
-            ...options,
-            method: 'PATCH',
-            body: body instanceof FormData ? body : JSON.stringify(body),
-        });
+        const isFormData = body instanceof FormData;
+        const config = { ...options };
+        if (isFormData) {
+            config.headers = config.headers || {};
+            (config.headers as any)['Content-Type'] = 'multipart/form-data';
+        }
+        return this.instance.patch<T, T>(endpoint, body, config);
     }
 
     async delete<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-        return this.request<T>(endpoint, { ...options, method: 'DELETE' });
+        return this.instance.delete<T, T>(endpoint, options);
     }
 }
 

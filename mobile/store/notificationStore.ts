@@ -21,6 +21,7 @@ interface NotificationState {
     unreadCount: number;
     socket: Socket | null;
     isConnected: boolean;
+    lastAuthenticatedUserId?: string;
     userStatuses: { [userId: string]: UserStatus };
     typingStatus: { [userId: string]: boolean };
     connect: (userId: string) => void;
@@ -36,10 +37,12 @@ interface NotificationState {
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
-    notifications: [],
-    unreadCount: 0,
     socket: null,
     isConnected: false,
+    unreadCount: 0,
+    lastAuthenticatedUserId: undefined,
+    notifications: [],
+    isLoading: false,
     userStatuses: {},
     typingStatus: {},
 
@@ -57,8 +60,16 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                 console.log('🔄 Reconnecting existing socket...');
                 existingSocket.connect();
             }
+
+            // Prevent redundant authentication for existing socket
+            if ((get() as any).lastAuthenticatedUserId === userId) {
+                console.log('⚡ Socket already authenticated (existing) for user:', userId);
+                return;
+            }
+
             console.log('[Store] Re-authenticating with userId:', userId);
             existingSocket.emit('authenticate', userId);
+            set({ lastAuthenticatedUserId: userId } as any);
             return;
         }
 
@@ -83,8 +94,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                 clearTimeout(disconnectTimer);
                 disconnectTimer = null;
             }
+            // Prevent redundant authentication
+            if (get().socket?.connected && (get() as any).lastAuthenticatedUserId === userId) {
+                console.log('⚡ Socket already authenticated for user:', userId);
+                return;
+            }
+
             console.log('[Store] Authenticating socket with userId:', userId);
             socket.emit('authenticate', userId);
+            set({ lastAuthenticatedUserId: userId } as any); // Track verified user
             set({ isConnected: true });
         });
 
@@ -165,7 +183,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             socket.off('notification');
             socket.off('user_status');
             socket.disconnect();
-            set({ socket: null, isConnected: false, userStatuses: {} });
+            set({ socket: null, isConnected: false, userStatuses: {}, lastAuthenticatedUserId: undefined });
         }
     },
 

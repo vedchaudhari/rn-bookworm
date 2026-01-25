@@ -24,8 +24,8 @@ export const CACHE_KEYS = {
     ONLINE_USERS: 'online_users',
     USER_SOCKETS: (userId: string) => `user:sockets:${userId}`,
     SOCKET_TO_USER: (socketId: string) => `socket:user:${socketId}`,
-    FEED_GLOBAL: (page: number, limit: number) => `feed:global:${page}:${limit}`,
-    FEED_FOLLOWING: (userId: string, page: number, limit: number) => `feed:following:${userId}:${page}:${limit}`,
+    FEED_GLOBAL: (page: number, limit: number, genre: string = 'All') => `feed:global:${genre}:${page}:${limit}`,
+    FEED_FOLLOWING: (userId: string, page: number, limit: number, genre: string = 'All') => `feed:following:${userId}:${genre}:${page}:${limit}`,
 };
 
 // Default TTLs (Time To Live)

@@ -9,6 +9,9 @@ import Book, { IBookDocument } from "../models/Book";
 import { createNotification } from "../lib/notificationService";
 import { enrichBooksWithInteractions } from "../lib/bookInteractionService";
 import { redis, CACHE_KEYS } from "../lib/redis";
+import { getSignedUrlForFile } from "../lib/s3";
+import { signBookUrls } from "./bookRoutes";
+import { asyncHandler } from "../middleware/asyncHandler";
 
 const router = express.Router();
 
@@ -44,7 +47,7 @@ router.post("/like/:bookId", protectRoute, async (req: Request, res: Response) =
             await newLike.save();
 
             // Create notification for book owner (if not liking own book)
-            if (book.user.toString() !== userId.toString()) {
+            if (book.user && userId && book.user.toString() !== userId.toString()) {
                 await createNotification({
                     user: book.user,
                     type: "LIKE",
@@ -80,9 +83,17 @@ router.get("/likes/:bookId", protectRoute, async (req: Request, res: Response) =
             .limit(limit);
 
         // Filter out null users (in case user was deleted)
-        const validLikes = likes
-            .filter(like => like.user != null)
-            .map((like) => like.user);
+        const validLikes = await Promise.all(
+            likes
+                .filter(like => like.user != null)
+                .map(async (like) => {
+                    const userObj = (like.user as any).toObject ? (like.user as any).toObject() : like.user;
+                    if (userObj && typeof userObj === 'object') {
+                        (userObj as any).profileImage = await getSignedUrlForFile((userObj as any).profileImage);
+                    }
+                    return userObj;
+                })
+        );
 
         const totalLikes = await Like.countDocuments({ book: bookId });
 
@@ -161,7 +172,12 @@ router.post("/comment/:bookId", protectRoute, async (req: Request, res: Response
             });
         }
 
-        res.status(201).json(newComment);
+        const commentObj = newComment.toObject();
+        if (commentObj.user && typeof commentObj.user === 'object') {
+            (commentObj.user as any).profileImage = await getSignedUrlForFile((commentObj.user as any).profileImage);
+        }
+
+        res.status(201).json(commentObj);
     } catch (error) {
         console.error("Error creating comment:", error);
         res.status(500).json({ message: "Internal server error" });
@@ -184,8 +200,18 @@ router.get("/comments/:bookId", protectRoute, async (req: Request, res: Response
 
         const totalComments = await Comment.countDocuments({ book: bookId });
 
+        const commentsWithSignedImages = await Promise.all(
+            comments.map(async (comment) => {
+                const commentObj = comment.toObject();
+                if (commentObj.user && typeof commentObj.user === 'object') {
+                    (commentObj.user as any).profileImage = await getSignedUrlForFile((commentObj.user as any).profileImage);
+                }
+                return commentObj;
+            })
+        );
+
         res.json({
-            comments,
+            comments: commentsWithSignedImages,
             currentPage: page,
             totalComments,
             totalPages: Math.ceil(totalComments / limit),
@@ -314,8 +340,10 @@ router.get("/followers/:userId", protectRoute, async (req: Request, res: Respons
                         follower: currentUserId,
                         following: (f.follower as unknown as IUserDocument)._id
                     });
+                    const userObj = (f.follower as unknown as IUserDocument).toObject();
+                    userObj.profileImage = await getSignedUrlForFile(userObj.profileImage);
                     return {
-                        ...(f.follower as unknown as IUserDocument).toObject(),
+                        ...userObj,
                         isFollowing: !!isFollowing
                     };
                 })
@@ -366,8 +394,10 @@ router.get("/following/:userId", protectRoute, async (req: Request, res: Respons
                         follower: currentUserId,
                         following: (f.following as unknown as IUserDocument)._id
                     });
+                    const userObj = (f.following as unknown as IUserDocument).toObject();
+                    userObj.profileImage = await getSignedUrlForFile(userObj.profileImage);
                     return {
-                        ...(f.following as unknown as IUserDocument).toObject(),
+                        ...userObj,
                         isFollowing: !!isFollowing
                     };
                 })
@@ -426,55 +456,51 @@ router.get("/follow-counts/:userId", protectRoute, async (req: Request, res: Res
 // ============= FEED =============
 
 // Get personalized feed (books from followed users)
-router.get("/feed", protectRoute, async (req: Request, res: Response) => {
-    try {
-        const userId = req.user!._id;
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
-        const skip = (page - 1) * limit;
+router.get("/feed", protectRoute, asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!._id;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
 
-        // Get users that current user follows
-        const following = await Follow.find({ follower: userId }).select("following");
-        let followingIds = following.map((f) => f.following);
+    // Get users that current user follows
+    const following = await Follow.find({ follower: userId }).select("following");
+    let followingIds = following.map((f) => f.following);
 
-        // Filter out blocked users
-        const currentUser = await import("../models/User").then(m => m.default.findById(userId).select("blockedUsers"));
-        const blockedUsers = currentUser?.blockedUsers.map(id => id.toString()) || [];
+    // Filter out blocked users
+    const currentUser = await User.findById(userId).select("blockedUsers");
+    const blockedUsers = currentUser?.blockedUsers.map(id => id.toString()) || [];
 
-        followingIds = followingIds.filter(id => !blockedUsers.includes(id.toString()));
+    followingIds = followingIds.filter(id => !blockedUsers.includes(id.toString()));
 
-        if (followingIds.length === 0) {
-            return res.json({
-                books: [],
-                currentPage: page,
-                totalBooks: 0,
-                totalPages: 0,
-            });
-        }
-
-        // Get books from followed users
-        const books = await Book.find({ user: { $in: followingIds } })
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
-            .populate("user", "username profileImage level");
-
-        // Get like and comment counts for each book
-        const booksWithCounts = await enrichBooksWithInteractions(books, userId);
-
-        const totalBooks = await Book.countDocuments({ user: { $in: followingIds } });
-
-        res.json({
-            books: booksWithCounts,
+    if (followingIds.length === 0) {
+        return res.json({
+            books: [],
             currentPage: page,
-            totalBooks,
-            totalPages: Math.ceil(totalBooks / limit),
+            totalBooks: 0,
+            totalPages: 0,
         });
-    } catch (error) {
-        console.error("Error fetching feed:", error);
-        res.status(500).json({ message: "Internal server error" });
     }
-});
+
+    // Get books from followed users
+    const books = await Book.find({ user: { $in: followingIds } })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("user", "username profileImage level");
+
+    // Get like and comment counts for each book
+    const booksWithInteractions = await enrichBooksWithInteractions(books, userId);
+    const booksWithSignedUrls = await signBookUrls(booksWithInteractions);
+
+    const totalBooks = await Book.countDocuments({ user: { $in: followingIds } });
+
+    res.json({
+        books: booksWithSignedUrls,
+        currentPage: page,
+        totalBooks,
+        totalPages: Math.ceil(totalBooks / limit),
+    });
+}));
 
 // ============= FOLLOW REQUESTS =============
 
@@ -487,7 +513,17 @@ router.get("/requests", protectRoute, async (req: Request, res: Response) => {
             status: 'pending'
         }).populate("follower", "username profileImage level bio");
 
-        res.json(requests);
+        const requestsWithSignedImages = await Promise.all(
+            requests.map(async (reqObj) => {
+                const reqJson = reqObj.toObject();
+                if (reqJson.follower && typeof reqJson.follower === 'object') {
+                    (reqJson.follower as any).profileImage = await getSignedUrlForFile((reqJson.follower as any).profileImage);
+                }
+                return reqJson;
+            })
+        );
+
+        res.json(requestsWithSignedImages);
     } catch (error) {
         console.error("Error fetching follow requests:", error);
         res.status(500).json({ message: "Internal server error" });

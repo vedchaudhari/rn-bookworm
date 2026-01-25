@@ -13,6 +13,9 @@ import BookmarkButton from './BookmarkButton';
 import { useAuthStore } from '../store/authContext';
 import { apiClient } from '../lib/apiClient';
 import { useUIStore } from '../store/uiStore';
+import { useSocialStore } from '../store/socialStore';
+import { useEffect } from 'react';
+import ProgressiveImage from './ProgressiveImage';
 
 interface Book {
     _id: string;
@@ -42,18 +45,18 @@ interface SocialPostCardProps {
 const localStyles = StyleSheet.create({
     dropdown: {
         position: 'absolute',
-        top: 45,
+        top: 45, // Restore downwards opening
         right: 15,
         backgroundColor: COLORS.surface || '#2a2a2a',
         borderRadius: 12,
         padding: 8,
         minWidth: 150,
-        zIndex: 1000,
+        zIndex: 5000,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 4.65,
-        elevation: 8,
+        elevation: 10,
         borderWidth: 1,
         borderColor: COLORS.borderLight || '#3a3a3a',
     },
@@ -81,6 +84,20 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
     const router = useRouter();
     const { user, token } = useAuthStore();
     const { showAlert } = useUIStore();
+    const { syncBookMetrics, bookMetrics } = useSocialStore();
+
+    // Subscribe to global metrics
+    const metrics = bookMetrics[post._id];
+    const syncedLikeCount = metrics?.likeCount ?? post.likeCount ?? 0;
+    const syncedCommentCount = metrics?.commentCount ?? post.commentCount ?? 0;
+
+    // Initialize metrics on mount
+    useEffect(() => {
+        if (post._id) {
+            syncBookMetrics(post._id, post.isLiked || false, post.likeCount || 0, post.commentCount || 0);
+        }
+    }, [post._id]);
+
     const isOwner = (user?._id || user?.id)?.toString() === ((post.user as any)?._id || (post.user as any)?.id || (typeof post.user === 'string' ? post.user : null))?.toString();
     const [showDropdown, setShowDropdown] = React.useState(false);
 
@@ -138,13 +155,17 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
                 />
             )}
 
-            {/* Header: Avatar + Username */}
+            {/* 1. Header: User Info (NOW AT TOP) */}
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.headerLeft}
                     onPress={() => router.push({ pathname: '/user-profile', params: { userId: post.user._id } })}
                 >
-                    <Image source={{ uri: post.user.profileImage }} style={styles.avatar} contentFit="cover" />
+                    <ProgressiveImage
+                        source={{ uri: post.user.profileImage }}
+                        style={styles.avatar}
+                        contentFit="cover"
+                    />
                     <Text style={styles.username}>{post.user.username}</Text>
                 </TouchableOpacity>
 
@@ -179,21 +200,19 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
                 </View>
             </View>
 
-            {/* Media: Full-width square Image */}
+            {/* 2. Media: Book Image */}
             <TouchableOpacity
                 activeOpacity={0.95}
                 onPress={() => router.push({ pathname: '/book-detail', params: { bookId: post._id } })}
                 style={styles.mediaContainer}
             >
-                <Image
+                <ProgressiveImage
                     source={{ uri: post.image }}
                     style={styles.image}
-                    contentFit="cover"
-                    transition={300}
                     placeholder="L6PZfS9F00~q%M_3wd9F00_S%M%M"
                 />
 
-                {/* Readable Indicator / Quick Read */}
+                {/* Readable Indicator */}
                 {post.hasContent && (
                     <TouchableOpacity
                         style={{
@@ -219,8 +238,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
                 )}
             </TouchableOpacity>
 
-
-            {/* Actions: Interaction buttons */}
+            {/* 3. Actions Row */}
             <View style={styles.actionRow}>
                 <View style={styles.leftActions}>
                     <LikeButton
@@ -248,34 +266,35 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
                 />
             </View>
 
-            {/* Likes Count */}
-            {post.likeCount && post.likeCount > 0 ? (
-                <Text style={styles.likesText}>{post.likeCount.toLocaleString()} likes</Text>
+            {/* 4. Likes Count Label */}
+            {syncedLikeCount > 0 ? (
+                <Text style={styles.likesText}>{syncedLikeCount.toLocaleString()} likes</Text>
             ) : null}
 
-            {/* Rating Strip */}
+            {/* 5. Content Strip (Rating + Title/Caption) */}
             <View style={styles.ratingStrip}>
                 {renderStars(post.rating)}
             </View>
 
-            {/* Content: Title & Caption */}
             <View style={styles.contentSection}>
-                <Text style={styles.captionText} numberOfLines={2}>
-                    <Text style={styles.captionUsername}>{post.user.username} </Text>
-                    <Text style={{ fontWeight: '700', color: COLORS.textPrimary }}>{post.title}</Text>
+                <Text style={styles.captionText} numberOfLines={3}>
+                    <Text style={{ fontWeight: '800', color: COLORS.textPrimary }}>{post.title}</Text>
                     {": "}
                     {post.caption}
                 </Text>
+
+                {/* Comment Summary */}
+                {syncedCommentCount > 0 ? (
+                    <TouchableOpacity
+                        onPress={() => router.push({ pathname: '/book-detail', params: { bookId: post._id, tab: 'comments' } })}
+                        style={{ marginTop: 8 }}
+                    >
+                        <Text style={styles.viewComments}>View all {syncedCommentCount} comments</Text>
+                    </TouchableOpacity>
+                ) : null}
             </View>
 
-            {/* Comment Summary */}
-            {post.commentCount && post.commentCount > 0 ? (
-                <TouchableOpacity onPress={() => router.push({ pathname: '/book-detail', params: { bookId: post._id, tab: 'comments' } })}>
-                    <Text style={styles.viewComments}>View all {post.commentCount} comments</Text>
-                </TouchableOpacity>
-            ) : null}
-
-            {/* Footer: Date */}
+            {/* 6. Date */}
             <Text style={styles.timeAgo}>{formatPublishDate(post.createdAt)}</Text>
         </Animated.View>
     );

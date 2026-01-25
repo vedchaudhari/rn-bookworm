@@ -8,9 +8,10 @@ interface SafeScreenProps {
     top?: boolean;
     bottom?: boolean;
     isTabScreen?: boolean;
+    style?: ViewStyle;
 }
 
-export default function SafeScreen({ children, top = true, bottom = true, isTabScreen = false }: SafeScreenProps) {
+export default function SafeScreen({ children, top = true, bottom = true, isTabScreen = false, style }: SafeScreenProps) {
     const insets = useSafeAreaInsets();
 
     const TAB_BAR_HEIGHT = 64;
@@ -23,7 +24,9 @@ export default function SafeScreen({ children, top = true, bottom = true, isTabS
             {
                 paddingTop: top ? insets.top : 0,
                 paddingBottom: bottom ? TAB_BAR_SPACE : 0
-            }
+            },
+            styles.container,
+            style
         ]}>
             {children}
         </View>

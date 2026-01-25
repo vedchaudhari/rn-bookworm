@@ -23,6 +23,14 @@ interface ChapterContent extends ChapterMeta {
     content: string;
 }
 
+type ReaderTheme = 'dark' | 'sepia' | 'light';
+
+const THEMES = {
+    dark: { bg: COLORS.background, text: COLORS.textPrimary, card: COLORS.surface, border: COLORS.borderLight },
+    sepia: { bg: '#F4ECD8', text: '#5B4636', card: '#EADFCA', border: '#D3C4A9' },
+    light: { bg: '#FFFFFF', text: '#121212', card: '#F5F5F5', border: '#EEEEEE' },
+};
+
 export default function BookReaderScreen() {
     const insets = useSafeAreaInsets();
     const { bookId, bookTitle } = useLocalSearchParams<{ bookId: string; bookTitle: string }>();
@@ -34,6 +42,7 @@ export default function BookReaderScreen() {
     const [loadingChapter, setLoadingChapter] = useState(false); // Loading specific chapter
     const [fontSize, setFontSize] = useState(18);
     const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
+    const [theme, setTheme] = useState<ReaderTheme>('dark');
 
     const scrollViewRef = useRef<ScrollView>(null);
     const { token } = useAuthStore();
@@ -138,6 +147,13 @@ export default function BookReaderScreen() {
 
     const increaseFontSize = () => { setFontSize(prev => Math.min(prev + 2, 28)); };
     const decreaseFontSize = () => { setFontSize(prev => Math.max(prev - 2, 14)); };
+    const toggleTheme = () => {
+        const sequence: ReaderTheme[] = ['dark', 'sepia', 'light'];
+        const next = sequence[(sequence.indexOf(theme) + 1) % sequence.length];
+        setTheme(next);
+    };
+
+    const currentColors = THEMES[theme];
 
     const handleNextChapter = async () => {
         if (currentChapterIndex < chapters.length - 1) {
@@ -200,21 +216,28 @@ export default function BookReaderScreen() {
 
             <View style={styles.container}>
                 {/* Custom Header with Reader Controls */}
-                <View style={styles.headerRow}>
+                <View style={[styles.headerRow, { backgroundColor: currentColors.bg, borderBottomColor: currentColors.border }]}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
+                        <Ionicons name="arrow-back" size={24} color={currentColors.text} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle} numberOfLines={1}>
+                    <Text style={[styles.headerTitle, { color: currentColors.text }]} numberOfLines={1}>
                         {currentChapter ? `Ch ${currentChapter.chapterNumber}: ${currentChapter.title}` : bookTitle}
                     </Text>
                     <View style={styles.headerControls}>
+                        <TouchableOpacity onPress={toggleTheme} style={styles.fontButton}>
+                            <Ionicons
+                                name={theme === 'dark' ? "moon" : theme === 'sepia' ? "sunny" : "sunny-outline"}
+                                size={20}
+                                color={currentColors.text}
+                            />
+                        </TouchableOpacity>
                         <TouchableOpacity onPress={decreaseFontSize} style={styles.fontButton}>
-                            <Ionicons name="text" size={18} color={COLORS.textPrimary} />
-                            <Ionicons name="remove" size={12} color={COLORS.textPrimary} style={{ marginLeft: -6 }} />
+                            <Ionicons name="text" size={18} color={currentColors.text} />
+                            <Ionicons name="remove" size={12} color={currentColors.text} style={{ marginLeft: -6 }} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={increaseFontSize} style={styles.fontButton}>
-                            <Ionicons name="text" size={22} color={COLORS.textPrimary} />
-                            <Ionicons name="add" size={12} color={COLORS.textPrimary} style={{ marginLeft: -6, marginBottom: 8 }} />
+                            <Ionicons name="text" size={22} color={currentColors.text} />
+                            <Ionicons name="add" size={12} color={currentColors.text} style={{ marginLeft: -6, marginBottom: 8 }} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -226,19 +249,19 @@ export default function BookReaderScreen() {
                 ) : (
                     <ScrollView
                         ref={scrollViewRef}
-                        style={styles.container}
+                        style={[styles.container, { backgroundColor: currentColors.bg }]}
                         contentContainerStyle={styles.content}
                         showsVerticalScrollIndicator={false}
                     >
                         {currentChapter && (
                             <View style={styles.chapter}>
-                                <Text style={styles.chapterCount}>
+                                <Text style={[styles.chapterCount, { color: currentColors.text + '80' }]}>
                                     Chapter {currentChapterIndex + 1} of {chapters.length}
                                 </Text>
-                                <Text style={styles.chapterTitle}>{currentChapter.title}</Text>
+                                <Text style={[styles.chapterTitle, { color: currentColors.text }]}>{currentChapter.title}</Text>
 
                                 {/* Content Renderer - Handles newlines properly */}
-                                <Text style={[styles.chapterContent, { fontSize, lineHeight: fontSize * 1.6 }]}>
+                                <Text style={[styles.chapterContent, { fontSize, lineHeight: fontSize * 1.6, color: currentColors.text }]}>
                                     {currentChapter.content}
                                 </Text>
 
@@ -246,10 +269,10 @@ export default function BookReaderScreen() {
                                     <TouchableOpacity
                                         onPress={handlePrevChapter}
                                         disabled={currentChapterIndex === 0}
-                                        style={[styles.navButton, styles.navButtonPrev, currentChapterIndex === 0 && styles.navButtonDisabled]}
+                                        style={[styles.navButton, styles.navButtonPrev, { backgroundColor: currentColors.card, borderColor: currentColors.border }, currentChapterIndex === 0 && styles.navButtonDisabled]}
                                     >
-                                        <Ionicons name="chevron-back" size={20} color={COLORS.textPrimary} />
-                                        <Text style={styles.navButtonTextPrev}>Previous</Text>
+                                        <Ionicons name="chevron-back" size={20} color={currentColors.text} />
+                                        <Text style={[styles.navButtonTextPrev, { color: currentColors.text }]}>Previous</Text>
                                     </TouchableOpacity>
 
                                     <TouchableOpacity
@@ -265,8 +288,8 @@ export default function BookReaderScreen() {
                             </View>
                         )}
 
-                        <View style={styles.footer}>
-                            <Text style={styles.footerText}>
+                        <View style={[styles.footer, { borderTopColor: currentColors.border }]}>
+                            <Text style={[styles.footerText, { color: currentColors.text + '60' }]}>
                                 {currentChapter?.wordCount} words • ~{currentChapter?.readingTimeEstimate} min read
                             </Text>
                         </View>

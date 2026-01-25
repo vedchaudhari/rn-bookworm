@@ -22,19 +22,21 @@ export default function LikeButton({
     size = 24,
     showCount = true
 }: LikeButtonProps) {
-    const [liked, setLiked] = useState(initialLiked);
-    const [likeCount, setLikeCount] = useState(initialCount);
-    const [isLoading, setIsLoading] = useState(false);
-
-    const { toggleLike } = useSocialStore();
+    const { toggleLike, syncBookMetrics, bookMetrics } = useSocialStore();
     const { token } = useAuthStore();
 
+    // Subscribe to global metrics for this specific book
+    const metrics = bookMetrics[bookId];
+    const liked = metrics?.liked ?? initialLiked;
+    const likeCount = metrics?.count ?? initialCount;
+
+    const [isLoading, setIsLoading] = useState(false);
     const scale = useSharedValue(1);
 
+    // Register/Sync metrics on mount
     useEffect(() => {
-        setLiked(initialLiked);
-        setLikeCount(initialCount);
-    }, [initialLiked, initialCount]);
+        syncBookMetrics(bookId, initialLiked, initialCount);
+    }, [bookId]);
 
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value }],
@@ -52,20 +54,10 @@ export default function LikeButton({
             withSpring(1, { damping: 2, stiffness: 100 })
         );
 
-        // Optimistic update
-        const newLiked = !liked;
-        setLiked(newLiked);
-        setLikeCount(prev => newLiked ? prev + 1 : Math.max(0, prev - 1));
-
         setIsLoading(true);
-        const result = await toggleLike(bookId, token);
+        // The store now handles optimistic updates and global sync
+        await toggleLike(bookId, token);
         setIsLoading(false);
-
-        if (!result.success) {
-            // Revert on error
-            setLiked(!newLiked);
-            setLikeCount(prev => newLiked ? Math.max(0, prev - 1) : prev + 1);
-        }
     };
 
     return (

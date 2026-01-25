@@ -76,62 +76,19 @@ export default function TabLayout() {
             <Tabs.Screen
                 name="streaks"
                 options={{
-                    title: "Streaks",
-                    tabBarIcon: ({ color, size }) => (<Ionicons
-                        name="flame-outline"
-                        size={size}
-                        color={color}
-                    />)
+                    href: null,
                 }}
             />
             <Tabs.Screen
                 name="create"
                 options={{
-                    title: "Create",
-                    tabBarIcon: ({ color, size }) => (<Ionicons
-                        name="add-circle-outline"
-                        size={size}
-                        color={color}
-                    />)
+                    href: null,
                 }}
             />
             <Tabs.Screen
                 name="notifications"
                 options={{
-                    title: "Notifications",
-                    tabBarIcon: ({ color, size }) => (
-                        <View>
-                            <Ionicons
-                                name="notifications-outline"
-                                size={size}
-                                color={color}
-                            />
-                            {notifUnread > 0 && (
-                                <View style={{
-                                    position: 'absolute',
-                                    right: -6,
-                                    top: -4,
-                                    backgroundColor: '#FF3B30',
-                                    borderRadius: 8,
-                                    minWidth: 16,
-                                    height: 16,
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    borderWidth: 1.5,
-                                    borderColor: COLORS.surface,
-                                }}>
-                                    <Text style={{
-                                        color: '#FFF',
-                                        fontSize: 9,
-                                        fontWeight: 'bold',
-                                        paddingHorizontal: 2
-                                    }}>
-                                        {notifUnread > 99 ? '99+' : notifUnread}
-                                    </Text>
-                                </View>
-                            )}
-                        </View>
-                    )
+                    href: null,
                 }}
             />
             <Tabs.Screen

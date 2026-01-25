@@ -742,10 +742,14 @@ router.get('/:bookId/stats', protectRoute, async (req: Request, res: Response) =
                 completed,
                 avgProgress,
                 chapterStats, // {1: 50, 2: 45, 3: 30...}
-                recentReaders: recentReaders.map(r => ({
-                    user: r.userId,
-                    progress: r.progress,
-                    lastReadAt: r.lastReadAt
+                recentReaders: await Promise.all(recentReaders.map(async (r) => {
+                    const userObj = (r.userId as any).toObject ? (r.userId as any).toObject() : r.userId;
+                    userObj.profileImage = await getSignedUrlForFile(userObj.profileImage);
+                    return {
+                        user: userObj,
+                        progress: r.progress,
+                        lastReadAt: r.lastReadAt
+                    };
                 }))
             }
         });

@@ -15,6 +15,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import BannerAdComponent from '../../components/ads/BannerAd';
 import SafeScreen from "../../components/SafeScreen";
 import SkeletonLoader from '../../components/SkeletonLoader';
+import AppHeader from '../../components/AppHeader';
 
 import SocialPostCard from '../../components/SocialPostCard';
 import EmptyState from '../../components/EmptyState';
@@ -140,13 +141,14 @@ export default function Home() {
 
 
     return (
-        <SafeScreen top={true} bottom={false}>
+        <SafeScreen top={false} bottom={false}>
+            <AppHeader />
             <View style={styles.container}>
                 <FlatList
                     data={books}
                     renderItem={renderItem}
                     keyExtractor={(item) => item._id}
-                    contentContainerStyle={[styles.listContainer, { paddingBottom: TAB_BAR_SPACE }]}
+                    contentContainerStyle={[styles.listContainer, { paddingBottom: 160 }]}
                     showsVerticalScrollIndicator={false}
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={() => fetchBooks(1, true)} colors={[COLORS.primary]} tintColor={COLORS.primary} />
@@ -182,6 +184,14 @@ export default function Home() {
                         )
                     }
                 />
+
+                {/* Floating Add Button */}
+                <TouchableOpacity
+                    style={styles.fab}
+                    onPress={() => router.push('/create' as any)}
+                >
+                    <Ionicons name="add" size={30} color={COLORS.white} />
+                </TouchableOpacity>
             </View>
         </SafeScreen>
     );

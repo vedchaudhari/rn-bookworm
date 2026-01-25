@@ -10,6 +10,7 @@ import {
     updateStreak,
 } from "../lib/achievementService";
 import { createNotification } from "../lib/notificationService";
+import { getSignedUrlForFile } from "../lib/s3";
 
 const router = express.Router();
 
@@ -67,16 +68,16 @@ router.get("/leaderboard", protectRoute, async (req: Request, res: Response) => 
             .sort({ points: -1 })
             .limit(limit);
 
-        // Add rank
-        const leaderboard = users.map((user, index) => ({
+        // Add rank and sign profile image
+        const leaderboard = await Promise.all(users.map(async (user, index) => ({
             rank: index + 1,
             userId: user._id,
             username: user.username,
-            profileImage: user.profileImage,
+            profileImage: await getSignedUrlForFile(user.profileImage),
             level: user.level,
             points: user.points,
             currentStreak: user.currentStreak,
-        }));
+        })));
 
         // Find current user's rank
         const currentUserRank = leaderboard.findIndex(

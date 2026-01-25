@@ -26,10 +26,10 @@ const GlassCard = ({ children, style, variant = 'default' }: GlassCardProps) => 
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: COLORS.surface,
+        backgroundColor: COLORS.glass.bg,
         borderRadius: RADIUS.card.medium,
-        borderColor: COLORS.glassBorder,
-        borderWidth: BORDER_WIDTH.thin,
+        borderColor: COLORS.glass.border,
+        borderWidth: 1,
         overflow: 'hidden',
         position: 'relative',
         ...SHADOWS.medium,
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: COLORS.glass.highlight,
         zIndex: 10,
     }
 });

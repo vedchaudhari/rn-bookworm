@@ -31,6 +31,7 @@ import { useBookshelfStore } from '../../store/bookshelfStore';
 import { useUIStore } from '../../store/uiStore';
 import { Ionicons } from '@expo/vector-icons';
 import BookShelfCard from '../../components/BookShelfCard';
+import AppHeader from '../../components/AppHeader';
 import type { ReadingStatus } from '../../lib/api/bookshelfApi';
 
 
@@ -120,8 +121,8 @@ export default function BookshelfScreen() {
     };
 
     const handleAddBook = () => {
-        router.push('/explore' as any);
-        AccessibilityInfo.announceForAccessibility('Navigate to explore to add books');
+        router.push('/create' as any);
+        AccessibilityInfo.announceForAccessibility('Navigate to create to add books');
     };
 
     const handleStartReading = (item: any) => {
@@ -364,7 +365,8 @@ export default function BookshelfScreen() {
     }
 
     return (
-        <SafeScreen>
+        <SafeScreen top={false} bottom={false}>
+            <AppHeader />
             <View style={styles.container}>
                 {renderError()}
 
@@ -406,7 +408,7 @@ export default function BookshelfScreen() {
                     style={styles.fab}
                     onPress={handleAddBook}
                     accessibilityLabel="Add new book"
-                    accessibilityHint="Opens book explorer to add books to your shelf"
+                    accessibilityHint="Opens book creation to add books to your shelf"
                     accessibilityRole="button"
                 >
                     <Ionicons name="add" size={COMPONENT_SIZES.icon.large} color={COLORS.white} />
@@ -459,7 +461,8 @@ const styles = StyleSheet.create({
     },
     statCard: {
         flex: 1,
-        padding: PADDING.card.vertical,
+        paddingVertical: SPACING.lg,
+        paddingHorizontal: SPACING.xs,
         alignItems: 'center',
     },
     statValue: {
@@ -587,7 +590,7 @@ const styles = StyleSheet.create({
     // FAB
     fab: {
         position: 'absolute',
-        bottom: SPACING.xxl + 60,
+        bottom: 110,
         right: SPACING.xxl,
         width: 60,
         height: 60,

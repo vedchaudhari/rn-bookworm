@@ -13,6 +13,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import FollowButton from '../../components/FollowButton';
 import styles from '../../assets/styles/explore.styles';
 import EmptyState from '../../components/EmptyState';
+import AppHeader from '../../components/AppHeader';
 
 const { width } = Dimensions.get('window');
 
@@ -52,17 +53,17 @@ export default function Explore() {
     const { token } = useAuthStore();
     const genres = ['All', 'Fiction', 'Fantasy', 'Sci-Fi', 'Mystery', 'Romance', 'Non-Fiction', 'Horror'];
 
-    const fetchTrending = async () => {
+    const fetchTrending = async (genre = selectedGenre) => {
         try {
-            const data = await apiClient.get<any>('/api/books', { limit: 10 });
+            const data = await apiClient.get<any>('/api/books', { limit: 10, genre });
             const uniqueTrending = Array.from(new Map((data.books || []).map((b: any) => [b._id, b])).values());
             setTrending(uniqueTrending as Book[]);
         } catch (error) { console.error(error); }
     };
 
-    const fetchRecommended = async () => {
+    const fetchRecommended = async (genre = selectedGenre) => {
         try {
-            const data = await apiClient.get<any>('/api/books', { limit: 10, page: 2 });
+            const data = await apiClient.get<any>('/api/books', { limit: 10, page: 2, genre });
             const uniqueRecs = Array.from(new Map((data.books || []).map((b: any) => [b._id, b])).values());
             setRecommended(uniqueRecs as Book[]);
         } catch (error) { console.error(error); }
@@ -135,9 +136,16 @@ export default function Explore() {
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        await Promise.all([fetchTrending(), fetchRecommended()]);
+        await Promise.all([fetchTrending(selectedGenre), fetchRecommended(selectedGenre)]);
         setRefreshing(false);
     };
+
+    useEffect(() => {
+        if (!searchQuery) {
+            setLoading(true);
+            Promise.all([fetchTrending(selectedGenre), fetchRecommended(selectedGenre)]).finally(() => setLoading(false));
+        }
+    }, [selectedGenre]);
 
     const renderGenreChip = (genre: string) => (
         <TouchableOpacity key={genre} onPress={() => setSelectedGenre(genre)} style={[styles.genreChip, selectedGenre === genre && styles.genreChipActive]}>
@@ -192,14 +200,22 @@ export default function Explore() {
     );
 
     const renderEmptyState = () => {
-        if (searchLoading) return null;
+        if (searchLoading || loading) return null;
+
+        const isSearching = searchQuery.length > 0;
+
         return (
-            <EmptyState
-                icon={searchType === 'books' ? "book-outline" : "people-outline"}
-                title="No results found"
-                subtitle={`We couldn't find any ${searchType.toLowerCase()} matching "${searchQuery}"`}
-                onRetry={() => handleSearch(searchQuery)}
-            />
+            <Animated.View entering={FadeInDown.duration(400)} style={styles.emptyWrap}>
+                <EmptyState
+                    icon={isSearching ? (searchType === 'books' ? "book-outline" : "people-outline") : "compass-outline"}
+                    title={isSearching ? "No results found" : "Explore is quiet"}
+                    subtitle={isSearching
+                        ? `We couldn't find any ${searchType.toLowerCase()} matching "${searchQuery}"`
+                        : "There's nothing to explore at the moment. Check back later!"
+                    }
+                    onRetry={isSearching ? () => handleSearch(searchQuery) : handleRefresh}
+                />
+            </Animated.View>
         );
     };
 
@@ -217,9 +233,9 @@ export default function Explore() {
     }
 
     return (
-        <SafeScreen top={true} bottom={false}>
+        <SafeScreen top={false} bottom={false}>
+            <AppHeader showSearch={false} />
             <View style={styles.container}>
-                <View style={styles.header}><Text style={styles.headerTitle}>Explore</Text></View>
                 <View style={styles.searchContainer}>
                     <View style={styles.searchInputRow}>
                         <Ionicons name="search" size={22} color={COLORS.textMuted} style={styles.searchIcon} />
@@ -227,7 +243,7 @@ export default function Explore() {
                         {searchLoading && <ActivityIndicator size="small" color={COLORS.primary} />}
                     </View>
                     {searchQuery.length > 0 && (
-                        <View style={styles.searchTypeToggle}>
+                        <Animated.View entering={FadeInDown.duration(200)} style={styles.searchTypeToggle}>
                             <TouchableOpacity onPress={() => setSearchType('books')} style={[styles.typeBtn, searchType === 'books' && styles.typeBtnActive]}>
                                 <Ionicons name="book" size={16} color={searchType === 'books' ? COLORS.white : COLORS.textMuted} />
                                 <Text style={[styles.typeText, searchType === 'books' && styles.typeTextActive]}>Books</Text>
@@ -236,7 +252,7 @@ export default function Explore() {
                                 <Ionicons name="people" size={16} color={searchType === 'users' ? COLORS.white : COLORS.textMuted} />
                                 <Text style={[styles.typeText, searchType === 'users' && styles.typeTextActive]}>Users</Text>
                             </TouchableOpacity>
-                        </View>
+                        </Animated.View>
                     )}
                 </View>
                 <FlatList
@@ -249,7 +265,7 @@ export default function Explore() {
                     contentContainerStyle={[styles.listContent, { paddingBottom: TAB_BAR_SPACE }]}
                     showsVerticalScrollIndicator={false}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
-                    ListEmptyComponent={searchQuery ? renderEmptyState : null}
+                    ListEmptyComponent={renderEmptyState}
                     ListHeaderComponent={
                         <>
                             {searchQuery.length === 0 && (

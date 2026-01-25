@@ -4,7 +4,7 @@ import { redis } from "./redis";
 import fs from 'fs';
 
 const s3Client = new S3Client({
-    region: process.env.AWS_REGION || 'us-east-1',
+    region: process.env.AWS_REGION || 'ap-south-1',
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
@@ -76,7 +76,8 @@ export const getSignedUrlForFile = async (s3Url: string, expiresIn: number = 360
     const urlParts = s3Url.split('.amazonaws.com/');
     if (urlParts.length < 2) return s3Url;
 
-    const key = urlParts[1];
+    // Strip any existing query params from the key (idempotency)
+    const key = urlParts[1].split('?')[0];
     const cacheKey = `signed_url:${key}`;
 
     // 1. Check Redis Cache
@@ -124,7 +125,7 @@ export const getPresignedPutUrl = async (fileName: string, contentType: string, 
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
     if (!bucketName) throw new Error('AWS_S3_BUCKET_NAME is not defined');
 
-    const key = `${folder}/${Date.now()}-${fileName.replace(/\s+/g, '_')}`;
+    const key = `${folder}/${Date.now()}-${fileName.replace(/[\s()]/g, '_')}`;
 
     const command = new PutObjectCommand({
         Bucket: bucketName,
@@ -133,9 +134,10 @@ export const getPresignedPutUrl = async (fileName: string, contentType: string, 
     });
 
     try {
-        const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 600 }); // 10 minutes
+        const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 600 });
         const finalUrl = `https://${bucketName}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`;
 
+        console.log("[S3] Generated Presigned URL:", { finalUrl });
         return { uploadUrl, finalUrl };
     } catch (error) {
         console.error('Error generating presigned PUT URL:', error);
@@ -157,8 +159,22 @@ export const deleteFileFromS3 = async (s3UrlOrKey: string): Promise<void> => {
 
     // If it's a full URL, extract the key
     if (s3UrlOrKey.includes('.amazonaws.com/')) {
-        const parts = s3UrlOrKey.split('.amazonaws.com/');
-        key = parts[1];
+        // 1. Remove query parameters (for signed URLs)
+        const baseUrl = s3UrlOrKey.split('?')[0];
+
+        // 2. Get the path after the hostname
+        const pathPart = baseUrl.split('.amazonaws.com/')[1];
+
+        if (pathPart) {
+            // 3. Handle path-style URLs: s3.region.amazonaws.com/bucket/key
+            // If the first part of the path matches our bucket, remove it
+            const parts = pathPart.split('/');
+            if (parts[0] === bucketName) {
+                key = parts.slice(1).join('/');
+            } else {
+                key = pathPart;
+            }
+        }
     }
 
     try {

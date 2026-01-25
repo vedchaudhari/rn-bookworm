@@ -16,19 +16,52 @@ export const cleanupSocketTimers = () => {
 
 export const setupSocketIO = (io: Server) => {
     io.on("connection", (socket: AuthenticatedSocket) => {
-        // ... (existing connection logic) ...
-
         socket.on("authenticate", async (userId: string) => {
-            // ...
-            // Clear any pending disconnect timer for this user if they reconnect quickly
-            if (disconnectTimers.has(userId)) {
-                clearTimeout(disconnectTimers.get(userId));
-                disconnectTimers.delete(userId);
+            try {
+                if (!userId) return;
+
+                socket.userId = userId;
+                // Join user's personal room for multi-device sync
+                socket.join(userId);
+
+                console.log(`[Socket] User ${userId} authenticated on socket ${socket.id}`);
+
+                // Clear any pending disconnect timer for this user if they reconnect quickly
+                if (disconnectTimers.has(userId)) {
+                    clearTimeout(disconnectTimers.get(userId));
+                    disconnectTimers.delete(userId);
+                }
+
+                // Update Redis presence
+                await redis.sadd(CACHE_KEYS.USER_SOCKETS(userId), socket.id);
+                await redis.set(CACHE_KEYS.SOCKET_TO_USER(socket.id), userId);
+                await redis.sadd(CACHE_KEYS.ONLINE_USERS, userId);
+
+                // Broadcast online status
+                io.emit("user_status", { userId, status: "online", lastActive: new Date() });
+
+            } catch (error) {
+                console.error("[Socket] Authentication error:", error);
             }
-            // ... (rest of auth logic)
         });
 
-        // ... (typing logic) ...
+        socket.on("typing_start", (data: { receiverId: string }) => {
+            if (socket.userId && data.receiverId) {
+                io.to(data.receiverId).emit("user_typing", {
+                    userId: socket.userId,
+                    isTyping: true
+                });
+            }
+        });
+
+        socket.on("typing_stop", (data: { receiverId: string }) => {
+            if (socket.userId && data.receiverId) {
+                io.to(data.receiverId).emit("user_typing", {
+                    userId: socket.userId,
+                    isTyping: false
+                });
+            }
+        });
 
         socket.on("disconnect", async () => {
             try {

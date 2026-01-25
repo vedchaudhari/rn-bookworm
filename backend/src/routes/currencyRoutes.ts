@@ -13,7 +13,11 @@ const router = express.Router();
  */
 router.get('/balance', protectRoute, async (req: Request, res: Response) => {
     try {
-        const balance = await getInkDropsBalance(req.user!._id.toString());
+        if (!req.user || !req.user._id) {
+            console.error(`[Currency] User or _id missing in request: user=${JSON.stringify(req.user)}`);
+            return res.status(401).json({ success: false, message: "User not authenticated correctly" });
+        }
+        const balance = await getInkDropsBalance(req.user._id.toString());
         res.json({ success: true, balance });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });

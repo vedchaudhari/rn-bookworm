@@ -4,6 +4,7 @@ import authenticateToken from '../middleware/auth.middleware';
 import StreakService from '../services/streakService';
 import DailyChallenge from '../models/DailyChallenge';
 import { addInkDrops } from '../services/inkDropService';
+import { getSignedUrlForFile } from '../lib/s3';
 
 const router = Router();
 
@@ -13,7 +14,11 @@ const router = Router();
  */
 router.get('/my-streak', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user._id.toString();
+        const userId = (req as any).user?._id?.toString();
+        if (!userId) {
+            console.error(`[Streaks] User ID missing in /my-streak: user=${JSON.stringify((req as any).user)}`);
+            return res.status(401).json({ error: "User not authenticated correctly" });
+        }
 
         const streak = await StreakService.getOrCreateStreak(userId);
 
@@ -43,7 +48,11 @@ router.get('/my-streak', authenticateToken, async (req: Request, res: Response) 
  */
 router.post('/check-in', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user._id.toString();
+        const userId = (req as any).user?._id?.toString();
+        if (!userId) {
+            console.error(`[Streaks] User ID missing in /check-in: user=${JSON.stringify((req as any).user)}`);
+            return res.status(401).json({ error: "User not authenticated correctly" });
+        }
         const isPro = (req as any).user.isPro || false;
 
         // Rate limiting check (simple in-memory, use Redis in production)
@@ -113,7 +122,11 @@ router.post('/restore', authenticateToken, async (req: Request, res: Response) =
  */
 router.get('/leaderboard', authenticateToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user._id.toString();
+        const userId = (req as any).user?._id?.toString();
+        if (!userId) {
+            console.error(`[Streaks] User ID missing in request: user=${JSON.stringify((req as any).user)}`);
+            return res.status(401).json({ error: "User not authenticated correctly" });
+        }
         const period = (req.query.period as 'global' | 'monthly') || 'global';
         const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
         const offset = parseInt(req.query.offset as string) || 0;
@@ -125,14 +138,14 @@ router.get('/leaderboard', authenticateToken, async (req: Request, res: Response
         const allStreaks = await StreakService.getLeaderboard(period, 10000, 0); // Get all for ranking
         const currentUserRank = allStreaks.findIndex((s: any) => s.userId._id.toString() === userId) + 1;
 
-        const formattedLeaderboard = leaderboard.map((entry: any, index) => ({
+        const formattedLeaderboard = await Promise.all(leaderboard.map(async (entry: any, index) => ({
             rank: offset + index + 1,
             userId: entry.userId._id.toString(),
             username: entry.userId.username,
-            profileImage: entry.userId.profileImage,
+            profileImage: await getSignedUrlForFile(entry.userId.profileImage),
             streakCount: entry.currentStreak,
             isCurrentUser: entry.userId._id.toString() === userId
-        }));
+        })));
 
         res.json({
             leaderboard: formattedLeaderboard,

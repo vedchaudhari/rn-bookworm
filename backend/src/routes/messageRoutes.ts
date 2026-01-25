@@ -5,7 +5,7 @@ import Message, { IMessageDocument } from "../models/Message";
 import User, { IUserDocument } from "../models/User";
 import { Server } from "socket.io";
 import { redis, CACHE_KEYS, TTL } from "../lib/redis";
-import { getPresignedPutUrl } from "../lib/s3";
+import { getPresignedPutUrl, getSignedUrlForFile } from "../lib/s3";
 
 const router = express.Router();
 
@@ -62,6 +62,12 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
 
         // Generate conversation ID
         const receiverObjectId = new mongoose.Types.ObjectId(receiverId);
+
+        if (!senderId || !receiverObjectId) {
+            console.error(`[Message] Missing senderId (${senderId}) or receiverId (${receiverObjectId}) in /send`);
+            return res.status(500).json({ message: "Internal server error: Missing user identifier" });
+        }
+
         const conversationId = Message.getConversationId(senderId, receiverObjectId);
 
         const newMessage = new Message({
@@ -76,17 +82,16 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
         await newMessage.populate("sender", "username profileImage");
         await newMessage.populate("receiver", "username profileImage");
 
+        // Sign the message image if it exists before emitting and returning
+        if (newMessage.image) {
+            newMessage.image = await getSignedUrlForFile(newMessage.image);
+        }
+
         // Emit real-time message via WebSocket
         const io: Server = req.app.get("io");
 
-        // 1. Get all active sockets for the receiver from Redis
-        const receiverSockets = await redis.smembers(CACHE_KEYS.USER_SOCKETS(receiverId.toString()));
-
-        if (receiverSockets && receiverSockets.length > 0) {
-            receiverSockets.forEach(socketId => {
-                io.to(socketId).emit("new_message", newMessage);
-            });
-        }
+        // 1. Emit to both sender and receiver rooms for instant sync across all devices
+        io.to(senderId.toString()).to(receiverId.toString()).emit("new_message", newMessage);
 
         // Invalidate Redis caches
         await Promise.all([
@@ -96,7 +101,15 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
             redis.del(CACHE_KEYS.MESSAGES(conversationId, receiverId.toString()))
         ]);
 
-        res.status(201).json(newMessage);
+        const messageObj = newMessage.toObject();
+        if (messageObj.sender && typeof messageObj.sender === 'object') {
+            (messageObj.sender as any).profileImage = await getSignedUrlForFile((messageObj.sender as any).profileImage);
+        }
+        if (messageObj.receiver && typeof messageObj.receiver === 'object') {
+            (messageObj.receiver as any).profileImage = await getSignedUrlForFile((messageObj.receiver as any).profileImage);
+        }
+
+        res.status(201).json(messageObj);
     } catch (error) {
         console.error("Error sending message:", error);
         res.status(500).json({ message: "Internal server error" });
@@ -144,8 +157,26 @@ router.get("/conversation/:userId", protectRoute, async (req: Request, res: Resp
             { $set: { read: true } }
         );
 
+        const messagesWithSignedImages = await Promise.all(
+            messages.map(async (msg) => {
+                const msgObj = msg.toObject();
+                if (msgObj.sender && typeof msgObj.sender === 'object') {
+                    (msgObj.sender as any).profileImage = await getSignedUrlForFile((msgObj.sender as any).profileImage);
+                }
+                if (msgObj.receiver && typeof msgObj.receiver === 'object') {
+                    (msgObj.receiver as any).profileImage = await getSignedUrlForFile((msgObj.receiver as any).profileImage);
+                }
+
+                // Sign message image
+                if (msgObj.image) {
+                    msgObj.image = await getSignedUrlForFile(msgObj.image);
+                }
+                return msgObj;
+            })
+        );
+
         const responseData = {
-            messages: messages, // Returns newest first (Descending)
+            messages: messagesWithSignedImages, // Returns newest first (Descending)
             currentPage: page,
             totalMessages,
             totalPages: Math.ceil(totalMessages / limit),
@@ -169,9 +200,18 @@ router.get("/conversations", protectRoute, async (req: Request, res: Response) =
         const userId = new mongoose.Types.ObjectId(req.user!._id);
 
         // 1. Try Cache First
-        const cachedConversations = await redis.get(CACHE_KEYS.CONVERSATIONS(userId.toString()));
+        const cachedConversations: any = await redis.get(CACHE_KEYS.CONVERSATIONS(userId.toString()));
         if (cachedConversations) {
-            return res.json({ conversations: cachedConversations });
+            // Re-sign images from cache as signatures expire
+            const signedConvs = await Promise.all(
+                cachedConversations.map(async (conv: any) => {
+                    if (conv.otherUser && conv.otherUser.profileImage) {
+                        conv.otherUser.profileImage = await getSignedUrlForFile(conv.otherUser.profileImage);
+                    }
+                    return conv;
+                })
+            );
+            return res.json({ conversations: signedConvs });
         }
 
         // Get all unique conversations
@@ -223,9 +263,14 @@ router.get("/conversations", protectRoute, async (req: Request, res: Response) =
                         deletedFor: { $ne: userId },
                     });
 
+                    const signedOtherUser = {
+                        ...(otherUser ? (otherUser.toObject ? otherUser.toObject() : otherUser) : { _id: userId, username: "Unknown User", profileImage: "" })
+                    };
+                    signedOtherUser.profileImage = await getSignedUrlForFile(signedOtherUser.profileImage);
+
                     return {
                         conversationId: conv._id,
-                        otherUser: otherUser || { _id: userId, username: "Unknown User", profileImage: "" },
+                        otherUser: signedOtherUser,
                         lastMessage: {
                             text: msg.text || (msg.image ? "Sent an image" : ""),
                             createdAt: msg.createdAt,
@@ -275,7 +320,12 @@ router.get("/unread-count", protectRoute, async (req: Request, res: Response) =>
 router.put("/mark-read/:userId", protectRoute, async (req: Request, res: Response) => {
     try {
         const { userId } = req.params;
-        const currentUserId = req.user!._id;
+        const currentUserId = req.user?._id;
+
+        if (!currentUserId || !userId) {
+            console.error(`[Message] Missing currentUserId (${currentUserId}) or userId (${userId}) in /mark-read`);
+            return res.status(400).json({ message: "Invalid user identifiers" });
+        }
 
         const conversationId = Message.getConversationId(currentUserId, userId);
 
@@ -287,6 +337,13 @@ router.put("/mark-read/:userId", protectRoute, async (req: Request, res: Respons
             },
             { $set: { read: true } }
         );
+
+        // Emit read receipt via socket to all of sender's devices
+        const io: Server = req.app.get("io");
+        io.to(userId).emit("messages_read", {
+            conversationId,
+            readerId: currentUserId
+        });
 
         res.json({ message: "Messages marked as read" });
     } catch (error) {
@@ -333,12 +390,13 @@ router.patch("/edit/:messageId", protectRoute, async (req: Request, res: Respons
             redis.del(CACHE_KEYS.CONVERSATIONS(message.receiver.toString()))
         ]);
 
-        // Socket update
+        // Socket update - Emit to both participants for full sync
         const io: Server = req.app.get("io");
-        io.to(message.conversationId).emit("message_edited", {
+        io.to(message.sender.toString()).to(message.receiver.toString()).emit("message_edited", {
             messageId: message._id,
             text: message.text,
             editedAt: message.editedAt,
+            conversationId: message.conversationId
         });
 
         res.json(message);
@@ -411,9 +469,9 @@ router.delete("/delete-everyone/:messageId", protectRoute, async (req: Request, 
             redis.del(CACHE_KEYS.CONVERSATIONS(message.receiver.toString()))
         ]);
 
-        // Socket update
+        // Socket update - Emit to both participants for full sync
         const io: Server = req.app.get("io");
-        io.to(message.conversationId).emit("message_deleted", {
+        io.to(message.sender.toString()).to(message.receiver.toString()).emit("message_deleted", {
             messageId: message._id,
             conversationId: message.conversationId
         });

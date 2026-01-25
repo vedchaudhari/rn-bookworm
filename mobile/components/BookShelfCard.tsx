@@ -1,24 +1,22 @@
-// mobile/components/BookShelfCard.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     TouchableOpacity,
-    Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../constants/colors';
+import ProgressiveImage from './ProgressiveImage';
 import {
     SPACING,
     PADDING,
     MARGIN,
     FONT_SIZE,
     BORDER_RADIUS,
-    SHADOWS,
-    COMPONENT_SIZES,
 } from '../constants/styleConstants';
 import type { BookshelfItem } from '../lib/api/bookshelfApi';
+import { useSocialStore } from '../store/socialStore';
 
 interface BookShelfCardProps {
     item: BookshelfItem;
@@ -32,6 +30,19 @@ interface BookShelfCardProps {
  * Displays a book on the user's bookshelf with progress, status, and metadata
  */
 export default function BookShelfCard({ item, onPress, onStartReading, onAddNote }: BookShelfCardProps) {
+    const { syncBookMetrics, bookMetrics } = useSocialStore();
+    const bookId = item?.bookId?._id;
+    const metrics = bookId ? bookMetrics[bookId] : null;
+
+    // Initialize metrics on mount
+    useEffect(() => {
+        if (bookId && item.bookId) {
+            // Social likes and bookshelf favorites are separate.
+            // We pass the current likeCount and commentCount from the book object to synchronize it with global state.
+            syncBookMetrics(bookId, false, (item.bookId as any).likeCount || 0, (item.bookId as any).commentCount || 0);
+        }
+    }, [bookId]);
+
     const getStatusColor = () => {
         switch (item.status) {
             case 'currently_reading':
@@ -46,23 +57,6 @@ export default function BookShelfCard({ item, onPress, onStartReading, onAddNote
                 return COLORS.error;
             default:
                 return COLORS.textMuted;
-        }
-    };
-
-    const getStatusIcon = (): keyof typeof Ionicons.glyphMap => {
-        switch (item.status) {
-            case 'currently_reading':
-                return 'book';
-            case 'completed':
-                return 'checkmark-circle';
-            case 'want_to_read':
-                return 'bookmark';
-            case 'paused':
-                return 'pause-circle';
-            case 'dropped':
-                return 'close-circle';
-            default:
-                return 'book-outline';
         }
     };
 
@@ -81,12 +75,6 @@ export default function BookShelfCard({ item, onPress, onStartReading, onAddNote
             default:
                 return '';
         }
-    };
-
-    const formatDate = (dateString?: string) => {
-        if (!dateString) return null;
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     };
 
     if (!item?.bookId) {
@@ -108,6 +96,8 @@ export default function BookShelfCard({ item, onPress, onStartReading, onAddNote
         );
     }
 
+    const book = item.bookId as any;
+
     return (
         <TouchableOpacity
             style={styles.card}
@@ -115,13 +105,12 @@ export default function BookShelfCard({ item, onPress, onStartReading, onAddNote
             activeOpacity={0.7}
         >
             <View style={styles.cardContent}>
-                {/* Book Cover - Smaller */}
+                {/* Book Cover */}
                 <View style={styles.coverContainer}>
-                    {item.bookId.coverImage ? (
-                        <Image
-                            source={{ uri: item.bookId.coverImage }}
+                    {book.image ? (
+                        <ProgressiveImage
+                            source={{ uri: book.image }}
                             style={styles.cover}
-                            resizeMode="cover"
                         />
                     ) : (
                         <View style={[styles.cover, styles.coverPlaceholder]}>
@@ -130,11 +119,11 @@ export default function BookShelfCard({ item, onPress, onStartReading, onAddNote
                     )}
                 </View>
 
-                {/* Book Info - Right Side */}
+                {/* Book Info */}
                 <View style={styles.info}>
                     <View style={styles.headerRow}>
                         <Text style={styles.title} numberOfLines={1}>
-                            {item.bookId.title || 'Untitled Book'}
+                            {book.title || 'Untitled Book'}
                         </Text>
                         {item.isFavorite && (
                             <Ionicons name="heart" size={14} color={COLORS.error} style={{ marginLeft: 4 }} />
@@ -142,33 +131,45 @@ export default function BookShelfCard({ item, onPress, onStartReading, onAddNote
                     </View>
 
                     <Text style={styles.author} numberOfLines={1}>
-                        {item.bookId.author || 'Unknown Author'}
+                        {book.author || 'Unknown Author'}
                     </Text>
 
-                    {/* Description/Caption */}
-                    {item.bookId.caption ? (
+                    {book.caption ? (
                         <Text style={styles.description} numberOfLines={2}>
-                            {item.bookId.caption}
+                            {book.caption}
                         </Text>
                     ) : null}
 
-                    {/* Progress Fill Bar */}
-                    {item.status !== 'want_to_read' && (
-                        <View style={styles.miniProgressContainer}>
-                            <View style={styles.miniProgressBar}>
-                                <View
-                                    style={[
-                                        styles.miniProgressFill,
-                                        {
-                                            width: `${item.progress || 0}%`,
-                                            backgroundColor: getStatusColor(),
-                                        },
-                                    ]}
-                                />
+                    {/* Progress & Social Strip */}
+                    <View style={styles.metricsRow}>
+                        {item.status !== 'want_to_read' && (
+                            <View style={styles.miniProgressContainer}>
+                                <View style={styles.miniProgressBar}>
+                                    <View
+                                        style={[
+                                            styles.miniProgressFill,
+                                            {
+                                                width: `${item.progress || 0}%`,
+                                                backgroundColor: getStatusColor(),
+                                            },
+                                        ]}
+                                    />
+                                </View>
+                                <Text style={styles.miniProgressText}>{item.progress || 0}%</Text>
                             </View>
-                            <Text style={styles.miniProgressText}>{item.progress || 0}%</Text>
+                        )}
+
+                        <View style={styles.socialBadges}>
+                            <View style={styles.miniStat}>
+                                <Ionicons name="heart" size={10} color={COLORS.error} />
+                                <Text style={styles.miniStatText}>{metrics?.likeCount ?? book.likeCount ?? 0}</Text>
+                            </View>
+                            <View style={styles.miniStat}>
+                                <Ionicons name="chatbubble" size={10} color={COLORS.secondary} />
+                                <Text style={styles.miniStatText}>{metrics?.commentCount ?? book.commentCount ?? 0}</Text>
+                            </View>
                         </View>
-                    )}
+                    </View>
 
                     {/* Actions Row */}
                     <View style={styles.actionsRow}>
@@ -218,7 +219,6 @@ const styles = StyleSheet.create({
         marginBottom: MARGIN.item.medium,
         borderWidth: 1,
         borderColor: COLORS.borderLight,
-        // ...SHADOWS.small,
     },
     cardContent: {
         flexDirection: 'row',
@@ -263,10 +263,17 @@ const styles = StyleSheet.create({
         lineHeight: 16,
         marginBottom: SPACING.sm,
     },
-    miniProgressContainer: {
+    metricsRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         marginBottom: SPACING.sm,
+        gap: SPACING.md,
+    },
+    miniProgressContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     miniProgressBar: {
         flex: 1,
@@ -284,6 +291,21 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: COLORS.textMuted,
         fontWeight: '700',
+    },
+    socialBadges: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    miniStat: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 2,
+    },
+    miniStatText: {
+        fontSize: 10,
+        color: COLORS.textSecondary,
+        fontWeight: '600',
     },
     actionsRow: {
         flexDirection: 'row',

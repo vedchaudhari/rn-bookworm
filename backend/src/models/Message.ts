@@ -86,6 +86,11 @@ messageSchema.statics.getConversationId = function (
     userId1: string | mongoose.Types.ObjectId,
     userId2: string | mongoose.Types.ObjectId
 ): string {
+    if (!userId1 || !userId2) {
+        console.error(`[Message] getConversationId called with missing ID: userId1=${userId1}, userId2=${userId2}`);
+        // Return a stable error ID instead of crashing
+        return "error_missing_ids";
+    }
     const ids = [userId1.toString(), userId2.toString()].sort();
     return `${ids[0]}_${ids[1]}`;
 };
