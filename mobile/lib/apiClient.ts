@@ -1,8 +1,10 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig, AxiosError } from 'axios';
 import { API_URL } from '../constants/api';
 
-export interface RequestOptions extends AxiosRequestConfig {
+export interface RequestOptions extends Record<string, any> {
     params?: Record<string, any>;
+    signal?: any;
+    headers?: any;
 }
 
 export type UnauthorizedCallback = () => void;

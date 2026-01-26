@@ -245,6 +245,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
                         bookId={post._id}
                         initialLiked={post.isLiked}
                         initialCount={post.likeCount || 0}
+                        initialCommentCount={post.commentCount || 0}
                         size={24}
                         showCount={false}
                     />

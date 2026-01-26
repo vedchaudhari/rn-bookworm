@@ -14,7 +14,8 @@
     "android": {
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.readsphere.app"
+      "package": "com.readsphere.app",
+      "googleServicesFile": "./android/app/google-services.json"
     },
     "web": {
       "output": "static",

@@ -20,6 +20,7 @@
     "cors": "^2.8.5",
     "cron": "^4.1.0",
     "dotenv": "^16.4.7",
+    "expo-server-sdk": "^4.0.0",
     "express": "^4.21.2",
     "express-rate-limit": "^8.2.1",
     "jsonwebtoken": "^9.0.2",

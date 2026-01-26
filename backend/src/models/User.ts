@@ -27,7 +27,9 @@ export interface IUser {
     isPro: boolean;
     subscriptionTier?: 'monthly' | 'yearly';
     subscriptionExpiry?: Date;
-    isPrivate: boolean; // For Instagram-style follow requests
+    isPrivate: boolean;
+    expoPushToken?: string | null;
+    notificationsEnabled: boolean;
 }
 
 export interface IUserDocument extends IUser, Document {
@@ -55,6 +57,7 @@ const userSchema = new Schema<IUserDocument>(
             type: String,
             required: true,
             minlength: 6,
+            select: false,
         },
         profileImage: {
             type: String,
@@ -129,6 +132,14 @@ const userSchema = new Schema<IUserDocument>(
         isPrivate: {
             type: Boolean,
             default: false
+        },
+        expoPushToken: {
+            type: String,
+            default: null
+        },
+        notificationsEnabled: {
+            type: Boolean,
+            default: true
         },
     },
     { timestamps: true }

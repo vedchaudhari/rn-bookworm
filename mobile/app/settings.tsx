@@ -20,10 +20,20 @@ export default function SettingsScreen() {
     const [bio, setBio] = useState(user?.bio || '');
     const [isUpdating, setIsUpdating] = useState(false);
 
-    // Placeholder Notification Settings
-    const [pushEnabled, setPushEnabled] = useState(true);
+    // Notifications Settings
+    const [pushEnabled, setPushEnabled] = useState(user?.notificationsEnabled !== false);
     const [emailEnabled, setEmailEnabled] = useState(false);
     const [readingReminders, setReadingReminders] = useState(true);
+
+    const handlePushToggle = async (value: boolean) => {
+        setPushEnabled(value);
+        try {
+            await apiClient.put('/api/users/profile', { notificationsEnabled: value });
+            useAuthStore.setState({ user: { ...user, notificationsEnabled: value } } as any);
+        } catch (error) {
+            console.error('Failed to update push preference:', error);
+        }
+    };
 
     const handleUpdateProfile = async () => {
         if (!username.trim()) {
@@ -139,7 +149,7 @@ export default function SettingsScreen() {
                         icon="notifications-outline"
                         label="Push Notifications"
                         value={pushEnabled}
-                        onToggle={setPushEnabled}
+                        onToggle={handlePushToggle}
                     />
                     <SettingRow
                         icon="mail-outline"

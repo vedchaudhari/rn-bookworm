@@ -9,12 +9,16 @@ export interface AuthenticatedSocket extends Socket {
 
 const disconnectTimers = new Map<string, NodeJS.Timeout>();
 
+let ioInstance: Server | null = null;
+export const getIO = () => ioInstance;
+
 export const cleanupSocketTimers = () => {
     disconnectTimers.forEach(timer => clearTimeout(timer));
     disconnectTimers.clear();
 };
 
 export const setupSocketIO = (io: Server) => {
+    ioInstance = io;
     io.on("connection", (socket: AuthenticatedSocket) => {
         socket.on("authenticate", async (userId: string) => {
             try {

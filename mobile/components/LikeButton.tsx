@@ -10,7 +10,8 @@ import { useAuthStore } from '../store/authContext';
 interface LikeButtonProps {
     bookId: string;
     initialLiked?: boolean;
-    initialCount?: number;
+    initialCount?: number; // Maps to likeCount
+    initialCommentCount?: number;
     size?: number;
     showCount?: boolean;
 }
@@ -19,6 +20,7 @@ export default function LikeButton({
     bookId,
     initialLiked = false,
     initialCount = 0,
+    initialCommentCount = 0,
     size = 24,
     showCount = true
 }: LikeButtonProps) {
@@ -28,14 +30,14 @@ export default function LikeButton({
     // Subscribe to global metrics for this specific book
     const metrics = bookMetrics[bookId];
     const liked = metrics?.liked ?? initialLiked;
-    const likeCount = metrics?.count ?? initialCount;
+    const likeCount = metrics?.likeCount ?? initialCount;
 
     const [isLoading, setIsLoading] = useState(false);
     const scale = useSharedValue(1);
 
     // Register/Sync metrics on mount
     useEffect(() => {
-        syncBookMetrics(bookId, initialLiked, initialCount);
+        syncBookMetrics(bookId, initialLiked, initialCount, initialCommentCount);
     }, [bookId]);
 
     const animatedStyle = useAnimatedStyle(() => ({

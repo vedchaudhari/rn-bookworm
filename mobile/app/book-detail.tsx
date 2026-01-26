@@ -194,7 +194,13 @@ export default function BookDetailScreen() {
                             )}
 
                             <View style={styles.statsRowLarge}>
-                                <LikeButton bookId={book._id} initialLiked={book.isLiked} initialCount={book.likeCount || 0} size={28} />
+                                <LikeButton
+                                    bookId={book._id}
+                                    initialLiked={book.isLiked}
+                                    initialCount={book.likeCount || 0}
+                                    initialCommentCount={book.commentCount || 0}
+                                    size={28}
+                                />
                                 <View style={styles.statLarge}><Ionicons name="chatbubble-outline" size={28} color={COLORS.textSecondary} /><View><Text style={styles.statValLarge}>{book.commentCount || 0}</Text><Text style={styles.statLabLarge}>COMMENTS</Text></View></View>
                             </View>
                         </View>

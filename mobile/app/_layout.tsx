@@ -10,7 +10,8 @@ import { useAuthStore } from "../store/authContext";
 import { useSocialStore } from "../store/socialStore";
 import { useNotificationStore } from '../store/notificationStore';
 import { useMessageStore } from "../store/messageStore";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as Notifications from 'expo-notifications';
 import COLORS from "../constants/colors";
 import { Socket } from "socket.io-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -18,6 +19,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import GlobalAlert from "../components/GlobalAlert";
 import Toast from "../components/Toast";
 import { useUIStore } from "../store/uiStore";
+import { registerForPushNotificationsAsync } from "../lib/pushNotifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -50,6 +52,7 @@ export default function RootLayout() {
 
         if (userId && token && !isCheckingAuth) {
             connect(userId);
+            registerForPushNotificationsAsync();
             fetchNotifUnread(token).catch(console.error);
             fetchMsgUnread(token).catch(console.error);
         } else if (!isCheckingAuth) {
@@ -93,6 +96,36 @@ export default function RootLayout() {
             socket.off('notification', handleNewNotification);
         };
     }, [socket, addReceivedMessage, showToast, user?._id, user?.id, token]);
+
+    // Push Notification Listeners
+    const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
+    const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
+
+    useEffect(() => {
+        // This listener is fired whenever a notification is received while the app is foregrounded
+        notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+            // Optional: You can do something specific here if needed
+        });
+
+        // This listener is fired whenever a user taps on or interacts with a notification
+        responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+            const data = response.notification.request.content.data;
+            if (data?.type === 'MESSAGE' && data.senderId) {
+                router.push({ pathname: '/chat', params: { userId: String(data.senderId) } });
+            } else if (data?.type === 'LIKE' || data?.type === 'COMMENT') {
+                router.push('/(tabs)/explore');
+            }
+        });
+
+        return () => {
+            if (notificationListener.current) {
+                notificationListener.current.remove();
+            }
+            if (responseListener.current) {
+                responseListener.current.remove();
+            }
+        };
+    }, []);
 
     // Handle App State (Online/Offline status)
     const appState = useRef<AppStateStatus>(AppState.currentState);

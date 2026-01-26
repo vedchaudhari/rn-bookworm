@@ -39,13 +39,14 @@ export default function Notifications() {
     useFocusEffect(
         React.useCallback(() => {
             loadNotifications();
-            if (user?._id) connect(user._id);
 
-            // Auto-mark all as read when tab is opened
-            markAllAsRead(token!);
+            // Auto-mark all as read when tab is opened if there are unread items
+            if (token && unreadCount > 0) {
+                markAllAsRead(token);
+            }
 
-            return () => disconnect();
-        }, [])
+            return () => { };
+        }, [token, unreadCount])
     );
 
     const loadNotifications = async () => {

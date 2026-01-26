@@ -24,3 +24,19 @@ Thumbs.db
 [Ee]thernet [Cc]onf*
 .vscode/
 .idea/
+
+
+# Firebase (Android)
+mobile/android/app/google-services.json
+
+# Firebase Admin SDK (private key)
+backend/*firebase-adminsdk*.json
+backend/service-account.json
+
+# Android keystore
+mobile/android/app/*.jks
+mobile/android/app/*.keystore
+
+# Any accidental Firebase keys anywhere
+*firebase-adminsdk*.json
+*service-account*.json

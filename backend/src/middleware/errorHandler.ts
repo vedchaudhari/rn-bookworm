@@ -13,10 +13,9 @@ export const errorHandler = (
     next: NextFunction
 ) => {
     console.error(`[Error] ${err.message}`, {
-        stack: err.stack,
         url: req.originalUrl,
         method: req.method,
-        body: req.body,
+        // body: req.body, // Removed for security to avoid logging passwords/PII
         query: req.query,
         params: req.params,
     });

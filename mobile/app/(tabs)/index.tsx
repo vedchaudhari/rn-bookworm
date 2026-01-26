@@ -10,7 +10,6 @@ import { Ionicons } from "@expo/vector-icons";
 import COLORS from '../../constants/colors';
 import { formatPublishDate } from '../../lib/utils';
 import Loader from '../../components/Loader';
-import LikeButton from '../../components/LikeButton';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import BannerAdComponent from '../../components/ads/BannerAd';
 import SafeScreen from "../../components/SafeScreen";
