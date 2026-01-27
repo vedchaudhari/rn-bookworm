@@ -144,7 +144,7 @@ export const getPresignedPutUrl = async (fileName: string, contentType: string, 
     });
 
     try {
-        // Use default signing (only signs host by default) to maximize compatibility with mobile fetch
+        // Use default signing (only sign host by default) to maximize compatibility with mobile fetch
         const uploadUrl = await getSignedUrl(s3Client, command, {
             expiresIn: 600
         });
