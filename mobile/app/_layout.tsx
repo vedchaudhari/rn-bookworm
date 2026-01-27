@@ -11,7 +11,7 @@ import { useSocialStore } from "../store/socialStore";
 import { useNotificationStore } from '../store/notificationStore';
 import { useMessageStore } from "../store/messageStore";
 import { useEffect, useRef, useState } from "react";
-import * as Notifications from 'expo-notifications';
+// import * as Notifications from 'expo-notifications';
 import COLORS from "../constants/colors";
 import { Socket } from "socket.io-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -19,7 +19,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import GlobalAlert from "../components/GlobalAlert";
 import Toast from "../components/Toast";
 import { useUIStore } from "../store/uiStore";
-import { registerForPushNotificationsAsync } from "../lib/pushNotifications";
+// import { registerForPushNotificationsAsync } from "../lib/pushNotifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -52,7 +52,7 @@ export default function RootLayout() {
 
         if (userId && token && !isCheckingAuth) {
             connect(userId);
-            registerForPushNotificationsAsync();
+            // registerForPushNotificationsAsync();
             fetchNotifUnread(token).catch(console.error);
             fetchMsgUnread(token).catch(console.error);
         } else if (!isCheckingAuth) {
@@ -68,9 +68,13 @@ export default function RootLayout() {
         if (!socket) return;
 
         const handleNewMessage = (message: any) => {
-            addReceivedMessage(message);
+            const currentUserId = user?._id || user?.id;
+            if (currentUserId) {
+                addReceivedMessage(message, currentUserId);
+            }
             // Only show toast if it's not from self
-            if (message.sender?._id !== (user?._id || user?.id)) {
+            if (message.sender?._id !== currentUserId) {
+
                 showToast({
                     title: `New Message from ${message.sender?.username || 'User'}`,
                     message: message.text || "📷 Image",
@@ -97,10 +101,13 @@ export default function RootLayout() {
         };
     }, [socket, addReceivedMessage, showToast, user?._id, user?.id, token]);
 
+    /* 
     // Push Notification Listeners
     const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
     const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
+    */
 
+    /*
     useEffect(() => {
         // This listener is fired whenever a notification is received while the app is foregrounded
         notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
@@ -126,6 +133,7 @@ export default function RootLayout() {
             }
         };
     }, []);
+    */
 
     // Handle App State (Online/Offline status)
     const appState = useRef<AppStateStatus>(AppState.currentState);

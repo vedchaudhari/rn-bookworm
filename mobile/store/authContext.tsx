@@ -224,7 +224,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     logout: async () => {
         try {
-            set({ isLoading: true });
 
             // 1. Clear storage
             await AsyncStorage.multiRemove(["token", "user"]);
@@ -273,14 +272,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 }
             } catch (e) { console.log('Store reset failed: Currency'); }
 
-            set({ token: null, user: null, isLoading: false });
+            set({ token: null, user: null });
 
             // Sync with apiClient
             apiClient.setAuthToken(null);
 
             return { success: true };
         } catch (error) {
-            set({ isLoading: false });
             return { success: false, error: "Logout failed" };
         }
     }

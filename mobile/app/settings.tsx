@@ -66,12 +66,13 @@ export default function SettingsScreen() {
             showCancel: true,
             confirmText: 'Logout',
             type: 'warning',
-            onConfirm: () => {
-                logout();
-                router.replace('/(auth)');
+            onConfirm: async () => {
+                await logout();
+                // Redirection will happen automatically via _layout.tsx
             }
         });
     };
+
 
     const renderHeader = () => (
         <View style={styles.header}>

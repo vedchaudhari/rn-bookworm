@@ -40,7 +40,7 @@ interface MessageState {
     fetchConversations: (token: string) => Promise<{ success: boolean; error?: string }>;
     fetchMessages: (userId: string, token: string, page?: number) => Promise<{ success: boolean; hasMore?: boolean; error?: string }>;
     sendMessage: (receiverId: string, text: string, image: string | undefined, token: string, localImage?: string, width?: number, height?: number) => Promise<{ success: boolean; message?: Message; error?: string }>;
-    addReceivedMessage: (message: Message) => void;
+    addReceivedMessage: (message: Message, currentUserId: string) => void;
     fetchUnreadCount: (token: string) => Promise<{ success: boolean; error?: string }>;
     markAsRead: (userId: string, token: string) => Promise<{ success: boolean; error?: string }>;
     setActiveConversation: (id: string | null) => void;
@@ -241,11 +241,21 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     },
 
     // Add received message (from WebSocket)
-    addReceivedMessage: (message: Message) => {
+    addReceivedMessage: (message: Message, currentUserId: string) => {
         const senderId = typeof message.sender === 'object' ? message.sender._id : message.sender;
+        const receiverId = message.receiver;
+        const isSelf = senderId === currentUserId;
+
+        // The key for organizing messages is always the 'other' user in the conversation
+        const targetUserId = isSelf ? receiverId : senderId;
+
+        if (!targetUserId) {
+            console.error('[MessageStore] Cannot determine target user for message:', message);
+            return;
+        }
 
         set(state => {
-            const userMessages = state.messages[senderId] || [];
+            const userMessages = state.messages[targetUserId] || [];
 
             // Check if this is an echo of my own message (optimally sent)
             const pendingIndex = userMessages.findIndex(m =>
@@ -263,31 +273,36 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                 updatedMessages = [message, ...userMessages];
             }
 
-            // Deduplicate by ID - this silently bypasses duplicates
+            // Deduplicate by ID
             const deduped = Array.from(new Map(updatedMessages.map(m => [m._id, m])).values());
 
+            // Only increment global unread count if it's NOT from self and NOT in active conversation
+            const shouldIncrementUnread = !isSelf && state.activeConversation !== targetUserId;
+
             return {
-                messages: { ...state.messages, [senderId]: deduped },
-                unreadCount: state.activeConversation !== senderId ? state.unreadCount + 1 : state.unreadCount
+                messages: { ...state.messages, [targetUserId]: deduped },
+                unreadCount: shouldIncrementUnread ? state.unreadCount + 1 : state.unreadCount
             };
         });
 
         const { conversations, activeConversation } = get();
         const updatedConversations = [...conversations];
         const existingConvIndex = updatedConversations.findIndex(c =>
-            (typeof c.otherUser === 'object' ? c.otherUser._id : c.otherUser) === senderId
+            (typeof c.otherUser === 'object' ? c.otherUser._id : c.otherUser) === targetUserId
         );
 
         if (existingConvIndex !== -1) {
             const conv = updatedConversations[existingConvIndex];
+            const shouldIncrementItemUnread = !isSelf && activeConversation !== targetUserId;
+
             updatedConversations[existingConvIndex] = {
                 ...conv,
                 lastMessage: {
-                    text: message.text || '',
+                    text: message.text || (message.image ? "Sent an image" : ""),
                     createdAt: message.createdAt,
                     senderId: senderId
                 },
-                unreadCount: activeConversation === senderId ? 0 : (conv.unreadCount || 0) + 1
+                unreadCount: shouldIncrementItemUnread ? (conv.unreadCount || 0) + 1 : (activeConversation === targetUserId ? 0 : (conv.unreadCount || 0))
             };
 
             const updatedConv = updatedConversations.splice(existingConvIndex, 1)[0];
@@ -298,13 +313,13 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             // New conversation!
             const newConv: Conversation = {
                 _id: message.conversationId || `conv_${Date.now()}`,
-                otherUser: message.sender,
+                otherUser: isSelf ? receiverId : message.sender, // Store the OTHER user's info
                 lastMessage: {
-                    text: message.text || '',
+                    text: message.text || (message.image ? "Sent an image" : ""),
                     createdAt: message.createdAt,
                     senderId: senderId
                 },
-                unreadCount: activeConversation === senderId ? 0 : 1
+                unreadCount: (!isSelf && activeConversation !== targetUserId) ? 1 : 0
             };
             set({ conversations: [newConv, ...updatedConversations] });
         }

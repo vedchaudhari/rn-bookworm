@@ -1,8 +1,10 @@
+/*
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
 import User from '../models/User';
 
 // Create a new Expo SDK client
 const expo = new Expo();
+*/
 
 interface PushOptions {
     title: string;
@@ -13,72 +15,20 @@ interface PushOptions {
 
 /**
  * Send a push notification to a specific user
+ * [DISABLED] - Commented out to remove push functionality
  */
 export const sendPushNotification = async (userId: string, options: PushOptions) => {
+    // console.log(`[Push] Skipping push notification for user ${userId} (Service Disabled)`);
+    return;
+
+    /*
     try {
         const user = await User.findById(userId).select('expoPushToken notificationsEnabled');
-
-        if (!user) {
-            console.error(`[Push Debug] User not found: ${userId}`);
-            return;
-        }
-
-        if (!user.expoPushToken) {
-            console.warn(`[Push Debug] User ${userId} has no Expo Push Token. Did they register?`);
-            return;
-        }
-
-        if (!user.notificationsEnabled) {
-            console.warn(`[Push Debug] Notifications are disabled for user ${userId}`);
-            return;
-        }
-
-        console.log(`[Push Debug] Attempting to send to token: ${user.expoPushToken}`);
-
-        // Check that all your push tokens appear to be valid Expo push tokens
-        if (!Expo.isExpoPushToken(user.expoPushToken)) {
-            console.error(`[Push Debug] Token ${user.expoPushToken} is NOT a valid Expo push token`);
-            // Optionally clear the invalid token
-            await User.findByIdAndUpdate(userId, { expoPushToken: null });
-            return;
-        }
-
-        const message: ExpoPushMessage = {
-            to: user.expoPushToken,
-            sound: options.sound || 'default',
-            title: options.title,
-            body: options.body,
-            data: options.data,
-            priority: 'high',
-            channelId: 'default', // Match the channel created in mobile/lib/pushNotifications.ts
-        };
-
-        const chunks = expo.chunkPushNotifications([message]);
-        const tickets = [];
-
-        for (const chunk of chunks) {
-            try {
-                const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-                tickets.push(...ticketChunk);
-            } catch (error) {
-                console.error('[Push] Error sending chunk:', error);
-            }
-        }
-
-        // Handle tickets (in a real app, you might want to do this in a separate worker)
-        for (let ticket of tickets) {
-            // NOTE: Not all tickets have IDs; some may have errors immediately
-            if (ticket.status === 'error') {
-                console.error(`[Push] Error sending notification: ${ticket.message}`);
-                if (ticket.details && ticket.details.error === 'DeviceNotRegistered') {
-                    console.log(`[Push] Clearing invalid token for user ${userId}`);
-                    await User.findByIdAndUpdate(userId, { expoPushToken: null });
-                }
-            }
-        }
+        ... existing logic ...
     } catch (error) {
         console.error('[Push] Fatal error in sendPushNotification:', error);
     }
+    */
 };
 
 /**
@@ -106,3 +56,4 @@ export const NOTIF_TEMPLATES = {
         body: `Congratulations! You just earned the "${name}" achievement!`,
     }),
 };
+

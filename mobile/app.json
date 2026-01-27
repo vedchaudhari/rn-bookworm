@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Readsphere",
-    "slug": "mobile",
+    "slug": "readsphere",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,7 +15,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.readsphere.app",
-      "googleServicesFile": "./android/app/google-services.json"
+      "//googleServicesFile": "./android/app/google-services.json"
     },
     "web": {
       "output": "static",

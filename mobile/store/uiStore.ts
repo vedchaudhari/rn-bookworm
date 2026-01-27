@@ -13,17 +13,20 @@ interface AlertOptions {
     title: string;
     message: string;
     type?: AlertType;
-    onConfirm?: () => void;
+    onConfirm?: () => void | Promise<void>;
     confirmText?: string;
     cancelText?: string;
     showCancel?: boolean;
+    loading?: boolean;
 }
 
 interface UIState {
     alert: AlertOptions | null;
     toast: ToastOptions | null;
+    isAlertLoading: boolean;
     showAlert: (options: AlertOptions) => void;
     hideAlert: () => void;
+    setAlertLoading: (loading: boolean) => void;
     showToast: (options: ToastOptions) => void;
     hideToast: () => void;
 }
@@ -31,8 +34,10 @@ interface UIState {
 export const useUIStore = create<UIState>((set) => ({
     alert: null,
     toast: null,
-    showAlert: (options) => set({ alert: options }),
-    hideAlert: () => set({ alert: null }),
+    isAlertLoading: false,
+    showAlert: (options) => set({ alert: options, isAlertLoading: false }),
+    hideAlert: () => set({ alert: null, isAlertLoading: false }),
+    setAlertLoading: (loading) => set({ isAlertLoading: loading }),
     showToast: (options) => {
         set({ toast: options });
         // Auto-hide after duration

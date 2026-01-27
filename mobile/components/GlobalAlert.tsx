@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, Dimensions, Pressable } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, Dimensions, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from 'react-native-reanimated';
 import { useUIStore } from '../store/uiStore';
@@ -10,7 +10,7 @@ import GlassCard from './GlassCard';
 const { width } = Dimensions.get('window');
 
 export default function GlobalAlert() {
-    const { alert, hideAlert } = useUIStore();
+    const { alert, hideAlert, isAlertLoading, setAlertLoading } = useUIStore();
 
     if (!alert) return null;
 
@@ -25,15 +25,34 @@ export default function GlobalAlert() {
 
     const icon = getIcon();
 
-    const handleConfirm = () => {
-        if (alert.onConfirm) alert.onConfirm();
+    const handleConfirm = async () => {
+        if (!alert) return;
+
+        if (alert.onConfirm) {
+            const result = alert.onConfirm();
+            if (result instanceof Promise) {
+                setAlertLoading(true);
+                try {
+                    await result;
+                } catch (error) {
+                    console.error('Alert confirm error:', error);
+                } finally {
+                    setAlertLoading(false);
+                }
+            }
+        }
+        hideAlert();
+    };
+
+    const handleCancel = () => {
+        if (isAlertLoading) return;
         hideAlert();
     };
 
     return (
-        <Modal transparent visible={!!alert} animationType="none" onRequestClose={hideAlert}>
+        <Modal transparent visible={!!alert} animationType="none" onRequestClose={handleCancel}>
             <View style={styles.overlay}>
-                <Pressable style={StyleSheet.absoluteFill} onPress={hideAlert} />
+                <Pressable style={StyleSheet.absoluteFill} onPress={handleCancel} />
 
                 <Animated.View
                     entering={ZoomIn}
@@ -51,18 +70,24 @@ export default function GlobalAlert() {
                         <View style={styles.buttonContainer}>
                             {alert.showCancel && (
                                 <TouchableOpacity
-                                    style={[styles.button, styles.cancelButton]}
-                                    onPress={hideAlert}
+                                    style={[styles.button, styles.cancelButton, isAlertLoading && { opacity: 0.5 }]}
+                                    onPress={handleCancel}
+                                    disabled={isAlertLoading}
                                 >
                                     <Text style={styles.cancelButtonText}>{alert.cancelText || 'Cancel'}</Text>
                                 </TouchableOpacity>
                             )}
 
                             <TouchableOpacity
-                                style={[styles.button, styles.confirmButton]}
+                                style={[styles.button, styles.confirmButton, isAlertLoading && { opacity: 0.9 }]}
                                 onPress={handleConfirm}
+                                disabled={isAlertLoading}
                             >
-                                <Text style={styles.confirmButtonText}>{alert.confirmText || 'OK'}</Text>
+                                {isAlertLoading ? (
+                                    <ActivityIndicator color={COLORS.background} size="small" />
+                                ) : (
+                                    <Text style={styles.confirmButtonText}>{alert.confirmText || 'OK'}</Text>
+                                )}
                             </TouchableOpacity>
                         </View>
                     </GlassCard>

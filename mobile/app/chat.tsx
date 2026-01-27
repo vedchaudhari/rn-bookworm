@@ -278,12 +278,14 @@ export default function ChatScreen() {
     }, [userId, token]);
 
     const handleNewMessage = (message: Message) => {
+        const currentUserId = user?._id || user?.id;
         const senderId = typeof message.sender === 'object' ? message.sender._id : message.sender;
-        if (senderId === userId) {
-            addReceivedMessage(message);
+        if (senderId === userId && currentUserId) {
+            addReceivedMessage(message, currentUserId);
             markAsRead(userId!, token!);
         }
     };
+
 
     const handleMessageEdited = (data: any) => {
         updateLocalEditedMessage(data);
