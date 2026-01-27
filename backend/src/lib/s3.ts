@@ -43,6 +43,7 @@ export const uploadFileToS3 = async (filePath: string, fileName: string, content
 
     const fileStream = fs.createReadStream(filePath);
     const key = `pdfs/${Date.now()}-${fileName.replace(/\s+/g, '_')}`;
+    console.log("Key is", key)
 
     const uploadParams = {
         Bucket: bucketName,
@@ -53,6 +54,7 @@ export const uploadFileToS3 = async (filePath: string, fileName: string, content
 
     try {
         await s3Client.send(new PutObjectCommand(uploadParams));
+        console.log("Uplaod file to s3 link", `https://${bucketName}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`)
 
         // Return the public URL
         return `https://${bucketName}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`;
@@ -88,6 +90,8 @@ export const getSignedUrlForFile = async (s3Url: string, expiresIn: number = 360
     // 1. Check Redis Cache
     try {
         const cachedUrl = await redis.get<string>(cacheKey);
+
+        console.log("Redis cached url", cachedUrl)
         if (cachedUrl) return cachedUrl;
     } catch (e) {
         console.error('Redis error in getSignedUrlForFile:', e);
@@ -102,6 +106,7 @@ export const getSignedUrlForFile = async (s3Url: string, expiresIn: number = 360
 
         // Generate URL that expires in 'expiresIn'
         const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
+        console.log("Signed url from getSignedUrlforFile", signedUrl)
 
         // 3. Cache in Redis
         // Set TTL slightly less than expiration to be safe (e.g. 5 minutes buffer)
@@ -145,6 +150,8 @@ export const getPresignedPutUrl = async (fileName: string, contentType: string, 
             signableHeaders: new Set(['content-type', 'host'])
         });
         const finalUrl = `https://${bucketName}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`;
+        console.log("Final url from getPresignedPutUrl", finalUrl)
+        
 
         console.log("[S3] Generated Presigned URL for folder:", folder, { finalUrl });
         return { uploadUrl, finalUrl };
