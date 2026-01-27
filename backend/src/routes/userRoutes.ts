@@ -113,6 +113,7 @@ router.get("/presigned-url/profile-image", protectRoute, async (req: Request, re
         const data = await getPresignedPutUrl(
             fileName as string,
             contentType as string,
+            req.user!._id.toString(), // Add path isolation
             'profiles' // Use 'profiles' folder
         );
 

@@ -2,6 +2,7 @@ import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } fro
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { redis } from "./redis";
 import fs from 'fs';
+import crypto from 'crypto';
 
 const s3Client = new S3Client({
     region: process.env.AWS_REGION || 'ap-south-1',
@@ -34,16 +35,24 @@ export const isS3Configured = (): boolean => {
  * @param fileName Original filename or desired S3 filename
  * @param contentType File MIME type
  * @returns Public URL of the uploaded file
+ * @param userId ID of the user performing the upload
+ * @param filePath Local path to the file
+ * @param fileName Original filename (used only for extension)
+ * @param contentType File MIME type
+ * @returns Public URL of the uploaded file
  */
-export const uploadFileToS3 = async (filePath: string, fileName: string, contentType: string): Promise<string> => {
+export const uploadFileToS3 = async (userId: string, filePath: string, fileName: string, contentType: string): Promise<string> => {
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
     if (!bucketName) {
         throw new Error('AWS_S3_BUCKET_NAME is not defined in environment variables');
     }
 
     const fileStream = fs.createReadStream(filePath);
-    const key = `pdfs/${Date.now()}-${fileName.replace(/\s+/g, '_')}`;
-    console.log("Key is", key)
+    const ext = fileName.split('.').pop()?.toLowerCase() || 'pdf';
+    const uuid = crypto.randomUUID();
+    const key = `manuscripts/${userId}/${uuid}.${ext}`;
+
+    console.log("[S3] Uploading manuscript to:", key)
 
     const uploadParams = {
         Bucket: bucketName,
@@ -54,12 +63,12 @@ export const uploadFileToS3 = async (filePath: string, fileName: string, content
 
     try {
         await s3Client.send(new PutObjectCommand(uploadParams));
-        console.log("Uplaod file to s3 link", `https://${bucketName}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`)
+        const url = `https://${bucketName}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`;
+        console.log("[S3] Manuscript upload success:", url);
 
-        // Return the public URL
-        return `https://${bucketName}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`;
+        return url;
     } catch (error) {
-        console.error('Error uploading to S3:', error);
+        console.error('[S3] Error uploading manuscript:', error);
         throw error;
     }
 };
@@ -85,13 +94,24 @@ export const getSignedUrlForFile = async (s3Url: string, expiresIn: number = 360
 
     // Strip any existing query params from the key (idempotency)
     const key = urlParts[1].split('?')[0];
+
+    // OPTIMIZATION: Public assets don't need signing
+    // This reduces latency and backend load
+    const publicFolders = ['profiles', 'covers'];
+    const folder = key.split('/')[0];
+
+    if (publicFolders.includes(folder)) {
+        // Return the clean, public URL
+        return `https://${bucketName}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`;
+    }
+
     const cacheKey = `signed_url:${key}`;
 
     // 1. Check Redis Cache
     try {
         const cachedUrl = await redis.get<string>(cacheKey);
 
-        console.log("Redis cached url", cachedUrl)
+        // console.log("Redis cached url", cachedUrl)
         if (cachedUrl) return cachedUrl;
     } catch (e) {
         console.error('Redis error in getSignedUrlForFile:', e);
@@ -106,7 +126,7 @@ export const getSignedUrlForFile = async (s3Url: string, expiresIn: number = 360
 
         // Generate URL that expires in 'expiresIn'
         const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
-        console.log("Signed url from getSignedUrlforFile", signedUrl)
+        // console.log("Signed url from getSignedUrlforFile", signedUrl)
 
         // 3. Cache in Redis
         // Set TTL slightly less than expiration to be safe (e.g. 5 minutes buffer)
@@ -126,16 +146,47 @@ export const getSignedUrlForFile = async (s3Url: string, expiresIn: number = 360
 
 /**
  * Generates a presigned URL for uploading a file to S3
- * @param fileName Desired filename
+ * @param fileName Desired filename (used only for extension)
  * @param contentType File MIME type
- * @param folder S3 folder (e.g. 'chat', 'covers', 'profiles')
+ * @param userId ID of the user performing the upload
+ * @param folder S3 folder (e.g. 'chat', 'covers', 'profiles', 'manuscripts')
  * @returns Object containing the upload URL and the final destination URL
  */
-export const getPresignedPutUrl = async (fileName: string, contentType: string, folder: string = 'chat'): Promise<{ uploadUrl: string; finalUrl: string }> => {
+export const getPresignedPutUrl = async (
+    fileName: string,
+    contentType: string,
+    userId: string,
+    folder: string = 'chat'
+): Promise<{ uploadUrl: string; finalUrl: string }> => {
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
     if (!bucketName) throw new Error('AWS_S3_BUCKET_NAME is not defined');
 
-    const key = `${folder}/${Date.now()}-${fileName.replace(/[\s()]/g, '_')}`;
+    // 1. Validate Folder
+    const allowedFolders = ['profiles', 'covers', 'chat', 'manuscripts', 'drafts'];
+    if (!allowedFolders.includes(folder)) {
+        throw new Error(`Invalid upload folder: ${folder}`);
+    }
+
+    // 2. Validate Content Type (Basic check)
+    const validMimes: Record<string, string[]> = {
+        profiles: ['image/jpeg', 'image/png', 'image/webp'],
+        covers: ['image/jpeg', 'image/png', 'image/webp'],
+        chat: ['image/jpeg', 'image/png', 'image/webp', 'video/mp4'],
+        manuscripts: ['application/pdf', 'text/plain'],
+        drafts: ['application/pdf', 'text/plain']
+    };
+
+    if (validMimes[folder] && !validMimes[folder].includes(contentType)) {
+        throw new Error(`Invalid content type ${contentType} for folder ${folder}`);
+    }
+
+    // 3. Extract Extension
+    const ext = fileName.split('.').pop()?.toLowerCase() || 'bin';
+
+    // 4. Generate Secure UUID-based Key with Path Isolation
+    // Structure: folder/userId/uuid.ext
+    const uuid = crypto.randomUUID();
+    const key = `${folder}/${userId}/${uuid}.${ext}`;
 
     const command = new PutObjectCommand({
         Bucket: bucketName,

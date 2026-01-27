@@ -313,7 +313,7 @@ router.post('/:bookId/upload', protectRoute, upload.single('manuscript'), async 
 
                 if (isS3Configured()) {
                     // Upload to S3
-                    savedUrl = await uploadFileToS3(filePath, file.originalname, file.mimetype);
+                    savedUrl = await uploadFileToS3(authorId.toString(), filePath, file.originalname, file.mimetype);
                     cleanupUploadedFile(filePath); // Cleanup local temp file
                 } else {
                     // Fallback to local storage (keep the file in uploadsDir)

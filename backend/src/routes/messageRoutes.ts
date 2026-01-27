@@ -23,7 +23,12 @@ router.get("/presigned-url", protectRoute, async (req: Request, res: Response) =
             return res.status(400).json({ message: "fileName and contentType are required" });
         }
 
-        const data = await getPresignedPutUrl(fileName as string, contentType as string, (folder as string) || 'chat');
+        const data = await getPresignedPutUrl(
+            fileName as string,
+            contentType as string,
+            req.user!._id.toString(), // Add path isolation
+            (folder as string) || 'chat'
+        );
         res.json(data);
     } catch (error) {
         console.error("Error generating presigned URL:", error);

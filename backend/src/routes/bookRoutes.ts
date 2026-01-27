@@ -46,6 +46,42 @@ export const signBookUrls = async (books: any[]) => {
     }));
 };
 
+// Get presigned URL for book cover upload
+router.get("/presigned-url/cover", protectRoute, async (req: Request, res: Response) => {
+    try {
+        const { fileName, contentType } = req.query;
+
+        if (!fileName || !contentType) {
+            return res.status(400).json({
+                message: "fileName and contentType are required"
+            });
+        }
+
+        // Validate content type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(contentType as string)) {
+            return res.status(400).json({
+                message: "Invalid content type. Must be JPEG, PNG, or WebP"
+            });
+        }
+
+        // @ts-ignore
+        const { getPresignedPutUrl } = await import("../lib/s3");
+
+        const data = await getPresignedPutUrl(
+            fileName as string,
+            contentType as string,
+            req.user!._id.toString(),
+            'covers'
+        );
+
+        res.json(data);
+    } catch (error) {
+        console.error("Error generating presigned URL for cover:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
 router.post("/", protectRoute, asyncHandler(async (req: Request, res: Response) => {
     const { title, caption, rating, image, genre, author, tags, visibility } = req.body as CreateBookBody;
 
