@@ -49,12 +49,12 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
+    "owner": "vedchaudhari",
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "d0e906ea-20d4-4f39-965a-28e39c4686b1"
+        "projectId": "1751609a-939a-441a-be9b-9bb2dfe44221"
       }
-    },
-    "owner": "vedchaudhari"
+    }
   }
 }
