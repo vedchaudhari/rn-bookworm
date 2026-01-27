@@ -144,17 +144,18 @@ export const getPresignedPutUrl = async (fileName: string, contentType: string, 
     });
 
     try {
-        // Explicitly sign the content-type header to prevent 403 mismatches
+        // Use default signing (only signs host by default) to maximize compatibility with mobile fetch
         const uploadUrl = await getSignedUrl(s3Client, command, {
-            expiresIn: 600,
-            signableHeaders: new Set(['content-type', 'host'])
+            expiresIn: 600
         });
-        const finalUrl = `https://${bucketName}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`;
-        console.log("Final url from getPresignedPutUrl", finalUrl)
-        
 
-        console.log("[S3] Generated Presigned URL for folder:", folder, { finalUrl });
+        const finalUrl = `https://${bucketName}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`;
+
+        console.log(`[S3] Generated Presigned Upload URL (use this for PUT): ${uploadUrl}`);
+        console.log(`[S3] Generated Public Final URL (use this for GET/DB): ${finalUrl}`);
+
         return { uploadUrl, finalUrl };
+
     } catch (error) {
 
         console.error('Error generating presigned PUT URL:', error);
