@@ -50,6 +50,7 @@ interface SubscriptionStore {
 
 type ActiveView = 'posts' | 'followers' | 'following';
 
+
 export default function Profile() {
     const { user: currentUser, token, isCheckingAuth } = useAuthStore() as AuthStore;
     const { isPro } = useSubscriptionStore() as SubscriptionStore;
