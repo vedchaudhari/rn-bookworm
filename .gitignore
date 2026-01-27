@@ -40,3 +40,5 @@ mobile/android/app/*.keystore
 # Any accidental Firebase keys anywhere
 *firebase-adminsdk*.json
 # *service-account*.json
+
+.DS_Store
