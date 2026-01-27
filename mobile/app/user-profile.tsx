@@ -81,19 +81,20 @@ export default function UserProfile() {
             });
 
             if (!result.canceled && result.assets[0].uri) {
-                const fileUri = result.assets[0].uri;
-                const fileName = fileUri.split('/').pop() || 'profile.jpg';
-                const fileExtension = fileName.split('.').pop() || 'jpg';
-                const contentType = `image/${fileExtension === 'png' ? 'png' : 'jpeg'}`;
+                const imageUri = result.assets[0].uri;
+                const fileName = imageUri.split('/').pop() || 'profile.jpg';
+                const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
 
-                // 1. Get Presigned URL
+                let contentType = 'image/jpeg';
+                if (fileExtension === 'png') contentType = 'image/png';
+                else if (fileExtension === 'webp') contentType = 'image/webp';
+
                 const { uploadUrl, finalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
                     '/api/messages/presigned-url',
                     { fileName, contentType, folder: 'profiles' }
                 );
 
-                // 2. Upload to S3
-                const blobRes = await fetch(fileUri);
+                const blobRes = await fetch(imageUri);
                 const blob = await blobRes.blob();
 
                 const uploadRes = await fetch(uploadUrl, {
@@ -104,14 +105,8 @@ export default function UserProfile() {
 
                 if (!uploadRes.ok) throw new Error('Cloud upload failed');
 
-                // 3. Update Profile Backend
                 await apiClient.put('/api/users/update-profile-image', { profileImage: finalUrl });
-
-                // Update Local UI
                 setUser(prev => prev ? { ...prev, profileImage: finalUrl } : null);
-
-                // Update Auth Store if it's the current user (which it is)
-                // Assuming useAuthStore has a way to update or we just re-fetch
                 fetchData();
             }
         } catch (error: any) {
@@ -119,6 +114,7 @@ export default function UserProfile() {
             fetchData();
         }
     };
+
 
     useEffect(() => { fetchData(); }, [userId, token]);
     const handleRefresh = () => { setRefreshing(true); fetchData(); };

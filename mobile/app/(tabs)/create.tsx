@@ -91,10 +91,15 @@ export default function CreateTab() {
             setUploadProgress(0);
 
             // 1. Upload Cover Image to S3
-            const fileUri = image;
-            const fileName = fileUri.split('/').pop() || 'cover.jpg';
-            const fileExtension = fileName.split('.').pop() || 'jpg';
-            const contentType = `image/${fileExtension === 'png' ? 'png' : 'jpeg'}`;
+            const imageUri = image;
+            const fileName = imageUri.split('/').pop() || 'cover.jpg';
+            const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+
+            // Map common extensions to specific mime types
+            let contentType = 'image/jpeg';
+            if (fileExtension === 'png') contentType = 'image/png';
+            else if (fileExtension === 'webp') contentType = 'image/webp';
+
 
             // Get Presigned URL for covers
             const { uploadUrl, finalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
@@ -103,7 +108,7 @@ export default function CreateTab() {
             );
 
             // Upload to S3
-            const imageBlobRes = await fetch(fileUri);
+            const imageBlobRes = await fetch(imageUri);
             const imageBlob = await imageBlobRes.blob();
 
             const s3UploadRes = await fetch(uploadUrl, {
@@ -115,38 +120,29 @@ export default function CreateTab() {
             if (!s3UploadRes.ok) throw new Error('Cover upload failed');
 
             // 2. Create Book with S3 URL
-            const res = await fetch(
-                `${API_URL}/api/books`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        title,
-                        caption,
-                        rating: rating.toString(),
-                        image: finalUrl, // S3 URL
-                        genre,
-                        author,
-                    }),
-                }
-            )
+            const bookData = await apiClient.post<any>('/api/books', {
+                title,
+                caption,
+                rating: rating.toString(),
+                image: finalUrl, // S3 URL
+                genre,
+                author,
+            });
 
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.message || "Something went wrong creating book");
+            const bookId = bookData._id || bookData.id;
 
-            const bookId = data._id || data.id;
 
             // 2. Upload File if selected
             if (file && bookId) {
+                // Convert file URI to blob for more reliable upload in production builds
+                const fileBlobRes = await fetch(file.uri);
+                const fileBlob = await fileBlobRes.blob();
+
                 const formData = new FormData();
-                formData.append('manuscript', {
-                    uri: file.uri,
-                    type: file.mimeType || 'application/pdf',
-                    name: file.name
-                } as any);
+                formData.append('manuscript', fileBlob, file.name);
+
+
+
 
                 // Use XMLHttpRequest for upload progress tracking
                 const uploadFileWithProgress = (): Promise<any> => {

@@ -9,7 +9,12 @@ const s3Client = new S3Client({
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
     },
-});
+    // Prevent the SDK from adding checksums that React Native fetch cannot easily match
+    // This resolves the 403 errors seen in production builds
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED"
+} as any);
+
 
 /**
  * Check if S3 is properly configured
@@ -134,12 +139,17 @@ export const getPresignedPutUrl = async (fileName: string, contentType: string, 
     });
 
     try {
-        const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 600 });
+        // Explicitly sign the content-type header to prevent 403 mismatches
+        const uploadUrl = await getSignedUrl(s3Client, command, {
+            expiresIn: 600,
+            signableHeaders: new Set(['content-type', 'host'])
+        });
         const finalUrl = `https://${bucketName}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`;
 
-        console.log("[S3] Generated Presigned URL:", { finalUrl });
+        console.log("[S3] Generated Presigned URL for folder:", folder, { finalUrl });
         return { uploadUrl, finalUrl };
     } catch (error) {
+
         console.error('Error generating presigned PUT URL:', error);
         throw error;
     }

@@ -332,10 +332,15 @@ export default function ChatScreen() {
         setSending(true);
 
         try {
-            const fileUri = selectedImage;
-            const fileName = fileUri.split('/').pop() || 'image.jpg';
-            const fileExtension = fileName.split('.').pop() || 'jpg';
-            const contentType = `image/${fileExtension === 'png' ? 'png' : 'jpeg'}`;
+            const imageUri = selectedImage;
+            const fileName = imageUri.split('/').pop() || 'image.jpg';
+            const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+
+            // Map common extensions to specific mime types
+            let contentType = 'image/jpeg';
+            if (fileExtension === 'png') contentType = 'image/png';
+            else if (fileExtension === 'webp') contentType = 'image/webp';
+
 
             // 1. Get Presigned URL
             const { uploadUrl, finalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
@@ -345,7 +350,7 @@ export default function ChatScreen() {
 
             // 2. Upload to S3
             // Convert file URI to blob for upload
-            const blobResponse = await fetch(fileUri);
+            const blobResponse = await fetch(imageUri);
             const blob = await blobResponse.blob();
 
             const uploadResponse = await fetch(uploadUrl, {
@@ -524,7 +529,10 @@ export default function ChatScreen() {
                                     showCancel: true,
                                     confirmText: 'Clear',
                                     type: 'warning',
-                                    onConfirm: () => clearChatHistory(userId!, token!)
+                                    onConfirm: async () => {
+                                        await clearChatHistory(userId!, token!);
+                                    }
+
                                 });
                             }}
                             style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}

@@ -170,24 +170,35 @@ export default function Profile() {
             const imageUri = result.assets[0].uri;
             const fileName = imageUri.split('/').pop() || 'profile.jpg';
             const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
-            const contentType = `image/${fileExtension === 'png' ? 'png' : 'jpeg'}`;
+
+            // Map common extensions to specific mime types
+            let contentType = 'image/jpeg';
+            if (fileExtension === 'png') contentType = 'image/png';
+            else if (fileExtension === 'webp') contentType = 'image/webp';
 
             const { uploadUrl, finalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
                 '/api/users/presigned-url/profile-image', { fileName, contentType }
             );
 
-            console.log('[Upload] 2. Uploading to S3 (Legacy API)...', uploadUrl);
-            const { uploadAsync, FileSystemUploadType } = await import('expo-file-system/legacy');
-            const uploadResponse = await uploadAsync(uploadUrl, imageUri, {
-                httpMethod: 'PUT',
-                headers: { 'Content-Type': contentType },
-                uploadType: FileSystemUploadType.BINARY_CONTENT,
+            console.log('[Upload] 2. Uploading to S3...', uploadUrl);
+
+            // Convert file URI to blob for upload - more reliable in production builds
+            const blobResponse = await fetch(imageUri);
+            const blob = await blobResponse.blob();
+
+            const uploadResponse = await fetch(uploadUrl, {
+                method: 'PUT',
+                body: blob,
+                headers: {
+                    'Content-Type': contentType,
+                }
             });
 
-            if (uploadResponse.status !== 200) {
-                console.error('[Upload] S3 Error:', uploadResponse);
+            if (!uploadResponse.ok) {
+                console.error('[Upload] S3 Error:', uploadResponse.status);
                 throw new Error(`Cloud upload failed: Status ${uploadResponse.status}`);
             }
+
 
             console.log('[Upload] 3. Syncing with backend...');
             const updateResponse = await apiClient.put<{ success: boolean; user: any }>('/api/users/update-profile-image', {
