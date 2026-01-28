@@ -14,7 +14,8 @@
     "android": {
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.readsphere.app"
+      "package": "com.readsphere.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
@@ -23,6 +24,13 @@
     "backgroundColor": "#0A0908",
     "plugins": [
       "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#ffffff"
+        }
+      ],
       [
         "react-native-google-mobile-ads",
         {

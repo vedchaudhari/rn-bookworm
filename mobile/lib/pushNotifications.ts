@@ -38,11 +38,17 @@ export async function registerForPushNotificationsAsync(token: string) {
             return null;
         }
 
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+        if (!projectId) {
+            console.error('❌ [Push] Missing projectId in app.json extra.eas.projectId. Expo Push Tokens require a projectId.');
+            return null;
+        }
+
         const expoToken = (await Notifications.getExpoPushTokenAsync({
-            projectId: Constants.expoConfig?.extra?.eas?.projectId,
+            projectId,
         })).data;
 
-        console.log('ℹ️ [Push] Token received:', expoToken);
+        console.log('ℹ [Push] Token received:', expoToken);
 
         // Sync with backend
         const response = await fetch(`${API_URL}/api/notifications/register-token`, {
