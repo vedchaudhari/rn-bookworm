@@ -17,6 +17,49 @@ export const cleanupSocketTimers = () => {
     disconnectTimers.clear();
 };
 
+/**
+ * Prunes 'zombie' sockets from Redis that are no longer locally connected.
+ * This ensures accurate online/offline status even if devices don't disconnect cleanly.
+ */
+const cleanupUserSockets = async (userId: string, io: Server) => {
+    try {
+        const socketIds = await redis.smembers(CACHE_KEYS.USER_SOCKETS(userId));
+        if (!socketIds || socketIds.length === 0) return 0;
+
+        const deadSockets: string[] = [];
+        const liveSockets: string[] = [];
+
+        for (const sid of socketIds) {
+            // If the socket is not in our local server's connected sockets, it's a zombie
+            if (!io.sockets.sockets.has(sid)) {
+                deadSockets.push(sid);
+            } else {
+                liveSockets.push(sid);
+            }
+        }
+
+        if (deadSockets.length > 0) {
+            console.log(`[Socket] Pruning ${deadSockets.length} zombie sockets for user ${userId}`);
+            await Promise.all([
+                ...deadSockets.map(sid => redis.srem(CACHE_KEYS.USER_SOCKETS(userId), sid)),
+                ...deadSockets.map(sid => redis.del(CACHE_KEYS.SOCKET_TO_USER(sid)))
+            ]);
+        }
+
+        // If no live sockets remain, ensure user is marked offline
+        if (liveSockets.length === 0) {
+            await redis.srem(CACHE_KEYS.ONLINE_USERS, userId);
+            io.emit("user_status", { userId, status: "offline", lastActive: new Date() });
+            console.log(`[Socket] User ${userId} marked offline after zombie pruning`);
+        }
+
+        return liveSockets.length;
+    } catch (error) {
+        console.error(`[Socket] Error cleaning up sockets for user ${userId}:`, error);
+        return 0;
+    }
+};
+
 export const setupSocketIO = (io: Server) => {
     ioInstance = io;
     io.on("connection", (socket: AuthenticatedSocket) => {
@@ -40,6 +83,9 @@ export const setupSocketIO = (io: Server) => {
                 await redis.sadd(CACHE_KEYS.USER_SOCKETS(userId), socket.id);
                 await redis.set(CACHE_KEYS.SOCKET_TO_USER(socket.id), userId);
                 await redis.sadd(CACHE_KEYS.ONLINE_USERS, userId);
+
+                // Run cleanup to prune zombie sockets from previous crashed sessions
+                await cleanupUserSockets(userId, io);
 
                 // Send current online users to this client
                 const onlineUsers = await redis.smembers(CACHE_KEYS.ONLINE_USERS);
@@ -79,9 +125,10 @@ export const setupSocketIO = (io: Server) => {
                     await redis.srem(CACHE_KEYS.USER_SOCKETS(userId), socket.id);
                     await redis.del(CACHE_KEYS.SOCKET_TO_USER(socket.id));
 
-                    const remainingSockets = await redis.scard(CACHE_KEYS.USER_SOCKETS(userId));
+                    // Verify remaining sockets are actually alive
+                    const actualLiveCount = await cleanupUserSockets(userId, io);
 
-                    if (remainingSockets === 0) {
+                    if (actualLiveCount === 0) {
                         // Clear existing timer if any
                         if (disconnectTimers.has(userId)) {
                             clearTimeout(disconnectTimers.get(userId));

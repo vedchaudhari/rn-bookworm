@@ -162,6 +162,9 @@ router.get("/conversation/:userId", protectRoute, async (req: Request, res: Resp
             { $set: { read: true } }
         );
 
+        // Invalidate conversation list cache to clear unread highlights/count
+        await redis.del(CACHE_KEYS.CONVERSATIONS(currentUserId.toString()));
+
         const messagesWithSignedImages = await Promise.all(
             messages.map(async (msg) => {
                 const msgObj = msg.toObject();
@@ -342,6 +345,10 @@ router.put("/mark-read/:userId", protectRoute, async (req: Request, res: Respons
             },
             { $set: { read: true } }
         );
+
+        // Invalidate conversation list cache to clear unread highlights/count
+        await redis.del(CACHE_KEYS.CONVERSATIONS(currentUserId.toString()));
+        await redis.del(CACHE_KEYS.MESSAGES(conversationId, currentUserId.toString()));
 
         // Emit read receipt via socket to all of sender's devices
         const io: Server = req.app.get("io");

@@ -58,6 +58,8 @@ const httpServer = createServer(app);
 // Setup Socket.IO
 const io = new Server(httpServer, {
     maxHttpBufferSize: 5e7, // 50MB
+    pingTimeout: 5000,
+    pingInterval: 10000,
     cors: {
         origin: "*",
         methods: ["GET", "POST"],
