@@ -134,12 +134,14 @@ export default function CreateTab() {
 
             // 2. Upload File if selected
             if (file && bookId) {
-                // Convert file URI to blob for more reliable upload in production builds
-                const fileBlobRes = await fetch(file.uri);
-                const fileBlob = await fileBlobRes.blob();
-
                 const formData = new FormData();
-                formData.append('manuscript', fileBlob, file.name);
+                // Use standard React Native FormData format (stream from native side)
+                // This prevents OOM errors and 'Network Error' with large files
+                formData.append('manuscript', {
+                    uri: file.uri,
+                    name: file.name,
+                    type: file.mimeType || 'application/pdf'
+                } as any);
 
 
 
