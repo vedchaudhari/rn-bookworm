@@ -1,7 +1,10 @@
 import { SplashScreen, Stack, useRouter } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, LogBox } from 'react-native';
 import SafeScreen from "../components/SafeScreen";
+
+// Suppress expo-notifications warning in Expo Go (Android)
+LogBox.ignoreLogs(['expo-notifications: Android Push notifications']);
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -11,7 +14,6 @@ import { useSocialStore } from "../store/socialStore";
 import { useNotificationStore } from '../store/notificationStore';
 import { useMessageStore } from "../store/messageStore";
 import { useEffect, useRef, useState } from "react";
-import * as Notifications from 'expo-notifications';
 import COLORS from "../constants/colors";
 import { Socket } from "socket.io-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -19,7 +21,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import GlobalAlert from "../components/GlobalAlert";
 import Toast from "../components/Toast";
 import { useUIStore } from "../store/uiStore";
-import { registerForPushNotificationsAsync } from "../lib/pushNotifications";
+import { registerForPushNotificationsAsync, setupPushNotificationListeners } from "../lib/pushNotifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -102,40 +104,10 @@ export default function RootLayout() {
     }, [socket, addReceivedMessage, showToast, user?._id, user?.id, token]);
 
     // Push Notification Listeners
-    const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
-    const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
-
     useEffect(() => {
-        // This listener is fired whenever a notification is received while the app is foregrounded
-        notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-            console.log('[Push] Notification received in foreground:', notification);
-        });
-
-        // This listener is fired whenever a user taps on or interacts with a notification
-        responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-            const data = response.notification.request.content.data;
-            console.log('[Push] Notification response received:', data);
-
-            if (data?.type === 'MESSAGE' && data.senderId) {
-                router.push({
-                    pathname: '/chat',
-                    params: {
-                        userId: String(data.senderId),
-                        username: String(data.senderName || 'Chat')
-                    }
-                });
-            } else if (data?.type === 'LIKE' || data?.type === 'COMMENT' || data?.type === 'FOLLOW') {
-                router.push('/(tabs)/notifications');
-            }
-        });
-
+        const cleanup = setupPushNotificationListeners(router);
         return () => {
-            if (notificationListener.current) {
-                notificationListener.current.remove();
-            }
-            if (responseListener.current) {
-                responseListener.current.remove();
-            }
+            if (cleanup) cleanup();
         };
     }, []);
 
@@ -183,20 +155,28 @@ export default function RootLayout() {
 
     // Force redirect based on auth state
     useEffect(() => {
-        if (!isAuthLoading && !isCheckingAuth) {
+        if (!isAuthLoading && !isCheckingAuth && fontsLoaded) {
             const checkOnboarding = async () => {
                 const completed = await AsyncStorage.getItem('onboarding_completed');
-                if (!completed) {
-                    router.replace('/onboarding');
-                } else if (isAuthenticated) {
-                    router.replace('/(tabs)');
-                } else {
-                    router.replace('/(auth)');
-                }
+
+                // Add a small delay to ensure navigator is mounted
+                setTimeout(() => {
+                    try {
+                        if (!completed) {
+                            router.replace('/onboarding');
+                        } else if (isAuthenticated) {
+                            router.replace('/(tabs)');
+                        } else {
+                            router.replace('/(auth)');
+                        }
+                    } catch (e) {
+                        console.warn('Navigation failed, retrying...', e);
+                    }
+                }, 100);
             };
             checkOnboarding();
         }
-    }, [isAuthenticated, isAuthLoading, isCheckingAuth]);
+    }, [isAuthenticated, isAuthLoading, isCheckingAuth, fontsLoaded]);
 
     // ====================================================================
     // AUTH GATE: Prevent navigation rendering until auth state is resolved

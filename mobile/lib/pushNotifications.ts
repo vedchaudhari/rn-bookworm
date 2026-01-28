@@ -5,17 +5,23 @@ import Constants from 'expo-constants';
 import { API_URL } from '../constants/api';
 
 // Configure how notifications are handled when the app is foregrounded
-Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-        shouldShowBanner: true,
-        shouldShowList: true,
-    }),
-});
+if (Constants.executionEnvironment !== 'storeClient') {
+    Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: true,
+            shouldShowBanner: true,
+            shouldShowList: true,
+        }),
+    });
+}
 
 export async function registerForPushNotificationsAsync(token: string) {
+    if (Constants.executionEnvironment === 'storeClient') {
+        return null;
+    }
+
     if (!Device.isDevice) {
         console.warn('⚠️ [Push] You are on a simulator. Push notifications may not appear visually, but we will still attempt to register a token for testing.');
     }
@@ -65,6 +71,48 @@ export async function registerForPushNotificationsAsync(token: string) {
     } catch (error) {
         console.error('❌ [Push] Error registering for push notifications:', error);
         return null;
+    }
+}
+
+/**
+ * Setup listeners for when notifications are received or interacted with
+ */
+export function setupPushNotificationListeners(router: any) {
+    if (Constants.executionEnvironment === 'storeClient') {
+        // console.log('ℹ️ [Push] Skipping listeners in Expo Go to avoid SDK warnings.');
+        return () => { };
+    }
+
+    try {
+        // Standard listeners for real push notifications
+        const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+            console.log('[Push] Notification received in foreground:', notification);
+        });
+
+        const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+            const data = response.notification.request.content.data;
+            console.log('[Push] Notification response received:', data);
+
+            if (data?.type === 'MESSAGE' && data.senderId) {
+                router.push({
+                    pathname: '/chat',
+                    params: {
+                        userId: String(data.senderId),
+                        username: String(data.senderName || 'Chat')
+                    }
+                });
+            } else if (data?.type === 'LIKE' || data?.type === 'COMMENT' || data?.type === 'FOLLOW') {
+                router.push('/(tabs)/notifications');
+            }
+        });
+
+        return () => {
+            if (notificationListener) notificationListener.remove();
+            if (responseListener) responseListener.remove();
+        };
+    } catch (err) {
+        console.warn('⚠️ [Push] Failed to initialize listeners. Notifications may be unsupported in this environment.');
+        return () => { };
     }
 }
 
