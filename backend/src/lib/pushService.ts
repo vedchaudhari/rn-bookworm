@@ -1,10 +1,8 @@
-/*
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
 import User from '../models/User';
 
 // Create a new Expo SDK client
 const expo = new Expo();
-*/
 
 interface PushOptions {
     title: string;
@@ -15,20 +13,43 @@ interface PushOptions {
 
 /**
  * Send a push notification to a specific user
- * [DISABLED] - Commented out to remove push functionality
  */
 export const sendPushNotification = async (userId: string, options: PushOptions) => {
-    // console.log(`[Push] Skipping push notification for user ${userId} (Service Disabled)`);
-    return;
-
-    /*
     try {
         const user = await User.findById(userId).select('expoPushToken notificationsEnabled');
-        ... existing logic ...
+
+        if (!user || !user.expoPushToken || !user.notificationsEnabled) {
+            // console.log(`[Push] Skipping push: User ${userId} has no token or notifications disabled.`);
+            return;
+        }
+
+        if (!Expo.isExpoPushToken(user.expoPushToken)) {
+            console.error(`[Push] Invalid Expo push token for user ${userId}: ${user.expoPushToken}`);
+            return;
+        }
+
+        const message: ExpoPushMessage = {
+            to: user.expoPushToken,
+            sound: options.sound || 'default',
+            title: options.title,
+            body: options.body,
+            data: options.data,
+        };
+
+        const chunks = expo.chunkPushNotifications([message]);
+
+        // Send the chunks - we only have one message here but keeping it robust
+        for (const chunk of chunks) {
+            try {
+                const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+                // console.log('[Push] Notification ticket:', ticketChunk);
+            } catch (error) {
+                console.error('[Push] Error sending chunk:', error);
+            }
+        }
     } catch (error) {
         console.error('[Push] Fatal error in sendPushNotification:', error);
     }
-    */
 };
 
 /**

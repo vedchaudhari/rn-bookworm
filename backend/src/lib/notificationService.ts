@@ -52,9 +52,7 @@ export const createNotification = async ({ user, type, data }: CreateNotificatio
             console.error('[Socket] Error emitting notification:', socketErr);
         }
 
-        /*
         // Send Push Notification
-        // [DISABLED] - Commented out to remove push functionality
         try {
             let template;
             switch (type) {
@@ -80,7 +78,6 @@ export const createNotification = async ({ user, type, data }: CreateNotificatio
         } catch (pushErr) {
             console.error('[Push] Error triggering push from notification:', pushErr);
         }
-        */
 
 
 

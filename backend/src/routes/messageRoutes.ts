@@ -6,6 +6,7 @@ import User, { IUserDocument } from "../models/User";
 import { Server } from "socket.io";
 import { redis, CACHE_KEYS, TTL } from "../lib/redis";
 import { getPresignedPutUrl, getSignedUrlForFile } from "../lib/s3";
+import { sendPushNotification } from "../lib/pushService";
 
 const router = express.Router();
 
@@ -97,6 +98,18 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
 
         // 1. Emit to both sender and receiver rooms for instant sync across all devices
         io.to(senderId.toString()).to(receiverId.toString()).emit("new_message", newMessage);
+
+        // 2. Send push notification to receiver
+        const sender = newMessage.sender as any;
+        sendPushNotification(receiverId.toString(), {
+            title: `New Message from ${sender?.username || 'Bookworm'}`,
+            body: trimmedText || "📷 Sent an image",
+            data: {
+                type: "MESSAGE",
+                senderId: senderId.toString(),
+                senderName: sender?.username
+            }
+        }).catch(err => console.error('[Push] Message push failed:', err));
 
         // Invalidate Redis caches
         await Promise.all([
