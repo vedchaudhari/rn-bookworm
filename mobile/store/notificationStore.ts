@@ -61,12 +61,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                 existingSocket.connect();
             }
 
-            // Prevent redundant authentication for existing socket
-            if ((get() as any).lastAuthenticatedUserId === userId) {
-                console.log('⚡ Socket already authenticated (existing) for user:', userId);
-                return;
-            }
-
             console.log('[Store] Re-authenticating with userId:', userId);
             existingSocket.emit('authenticate', userId);
             set({ lastAuthenticatedUserId: userId } as any);
@@ -94,12 +88,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                 clearTimeout(disconnectTimer);
                 disconnectTimer = null;
             }
-            // Prevent redundant authentication
-            if (get().socket?.connected && (get() as any).lastAuthenticatedUserId === userId) {
-                console.log('⚡ Socket already authenticated for user:', userId);
-                return;
-            }
-
             console.log('[Store] Authenticating socket with userId:', userId);
             socket.emit('authenticate', userId);
             set({ lastAuthenticatedUserId: userId } as any); // Track verified user
