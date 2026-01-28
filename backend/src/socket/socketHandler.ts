@@ -41,7 +41,11 @@ export const setupSocketIO = (io: Server) => {
                 await redis.set(CACHE_KEYS.SOCKET_TO_USER(socket.id), userId);
                 await redis.sadd(CACHE_KEYS.ONLINE_USERS, userId);
 
-                // Broadcast online status
+                // Send current online users to this client
+                const onlineUsers = await redis.smembers(CACHE_KEYS.ONLINE_USERS);
+                socket.emit("active_users", onlineUsers);
+
+                // Broadcast online status to others
                 io.emit("user_status", { userId, status: "online", lastActive: new Date() });
 
             } catch (error) {
@@ -51,18 +55,16 @@ export const setupSocketIO = (io: Server) => {
 
         socket.on("typing_start", (data: { receiverId: string }) => {
             if (socket.userId && data.receiverId) {
-                io.to(data.receiverId).emit("user_typing", {
-                    userId: socket.userId,
-                    isTyping: true
+                io.to(data.receiverId).emit("typing_start", {
+                    senderId: socket.userId
                 });
             }
         });
 
         socket.on("typing_stop", (data: { receiverId: string }) => {
             if (socket.userId && data.receiverId) {
-                io.to(data.receiverId).emit("user_typing", {
-                    userId: socket.userId,
-                    isTyping: false
+                io.to(data.receiverId).emit("typing_stop", {
+                    senderId: socket.userId
                 });
             }
         });
