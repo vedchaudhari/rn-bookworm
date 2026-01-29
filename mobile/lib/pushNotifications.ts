@@ -3,15 +3,16 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { API_URL } from '../constants/api';
+import { useMessageStore } from '../store/messageStore';
 
 // Configure how notifications are handled when the app is foregrounded
 if (Constants.executionEnvironment !== 'storeClient') {
     Notifications.setNotificationHandler({
         handleNotification: async () => ({
-            shouldShowAlert: true,
-            shouldPlaySound: true,
+            shouldShowAlert: false,
+            shouldPlaySound: false,
             shouldSetBadge: true,
-            shouldShowBanner: true,
+            shouldShowBanner: false,
             shouldShowList: true,
         }),
     });
@@ -100,11 +101,22 @@ export function setupPushNotificationListeners(router: any) {
             const data = response.notification.request.content.data;
             console.log('[Push] Notification response received:', data);
 
+            // Access store state directly to check if we are already in this conversation
+            const activeConversation = useMessageStore.getState().activeConversation;
+
             if (data?.type === 'MESSAGE' && data.senderId) {
+                const targetUserId = String(data.senderId);
+
+                // If we are already in the chat with this user, do not push a new screen
+                if (activeConversation === targetUserId) {
+                    console.log('[Push] Already in active conversation with', targetUserId, '- skipping navigation');
+                    return;
+                }
+
                 router.push({
                     pathname: '/chat',
                     params: {
-                        userId: String(data.senderId),
+                        userId: targetUserId,
                         username: String(data.senderName || 'Chat')
                     }
                 });

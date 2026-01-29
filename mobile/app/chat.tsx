@@ -521,6 +521,105 @@ export default function ChatScreen() {
         setViewerVisible(true);
     }, []);
 
+
+    // Use refs to track current state for socket callbacks to avoid stale closures
+    const activeConversationRef = useRef<string | null>(null);
+    const userIdRef = useRef<string | null>(null);
+
+    // Keep refs in sync with state/props
+    useEffect(() => {
+        activeConversationRef.current = userId; // The userId passed as prop IS the active conversation ID
+    }, [userId]);
+
+    useEffect(() => {
+        userIdRef.current = user?._id || user?.id || null;
+    }, [user]);
+
+    useEffect(() => {
+        // We set the active conversation in the store, but we also need to track it locally specifically for this screen's focus
+        setActiveConversation(userId!);
+
+        return () => {
+            setActiveConversation(null);
+        };
+    }, [userId]);
+
+    const getConversationId = (id1: string, id2: string) => {
+        const ids = [id1.toString(), id2.toString()].sort();
+        return `${ids[0]}_${ids[1]}`;
+    };
+
+    useEffect(() => { if (isConnected) loadMessages(); }, [isConnected]);
+
+    const appState = useRef<AppStateStatus>(AppState.currentState);
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+            if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+                loadMessages();
+                markAsRead(userId!, token!);
+                // Use current user from store/ref for checking
+                const currentId = user?._id || user?.id;
+                if (socket && currentId) {
+                    socket.emit('message_read', {
+                        conversationId: getConversationId(currentId, userId!),
+                        senderId: userId!
+                    });
+                }
+            }
+            appState.current = nextAppState;
+        });
+        return () => subscription.remove();
+    }, [userId, token, user]);
+
+    // Define socket handlers with useCallback but reading from REFS
+    const handleNewMessage = useCallback((message: Message) => {
+        const currentUserId = userIdRef.current;
+        const activeConvId = activeConversationRef.current;
+
+        const senderId = typeof message.sender === 'object' ? message.sender._id : message.sender;
+
+        // Auto-acknowledge read if we are looking at THIS conversation
+        if (senderId === activeConvId && currentUserId && socket) {
+            socket.emit('message_read', {
+                conversationId: message.conversationId,
+                senderId: senderId
+            });
+        }
+
+        if (currentUserId) {
+            // Store handles whether to increment unread count based on active conversation
+            addReceivedMessage(message, currentUserId);
+
+            // If we are in this conversation, ensure we mark as read locally too
+            if (senderId === activeConvId) {
+                markAsRead(activeConvId, token!);
+            }
+        }
+    }, [socket, token]); // Dependencies that rarely change
+
+    const handleMessageEdited = useCallback((data: any) => {
+        updateLocalEditedMessage(data);
+    }, []);
+
+    const handleMessageDeleted = useCallback((data: any) => {
+        updateLocalDeletedMessage(data);
+    }, []);
+
+    const handleMessagesRead = useCallback((data: any) => {
+        // We need to check if this read event relates to the conversation we are viewing
+        // But importantly, updates should happen regardless so the list updates
+        const activeConvId = activeConversationRef.current;
+        const currentUserId = userIdRef.current;
+
+        if (data.conversationId === getConversationId(currentUserId || '', activeConvId || '')) {
+            updateLocalMessagesRead(data);
+        }
+    }, []);
+
+    const handleMessageDelivered = useCallback((data: { messageId: string, deliveredAt: string }) => {
+        updateLocalMessageDelivered(data);
+    }, []);
+
     useEffect(() => {
         if (isOnline) {
             pulseOpacity.value = withRepeat(withSequence(withTiming(1, { duration: 1000 }), withTiming(0.4, { duration: 1000 })), -1, true);
@@ -528,7 +627,6 @@ export default function ChatScreen() {
 
         loadMessages();
         markAsRead(userId!, token!);
-        setActiveConversation(userId!);
 
         if (socket) {
             socket.on('new_message', handleNewMessage);
@@ -537,8 +635,8 @@ export default function ChatScreen() {
             socket.on('messages_read', handleMessagesRead);
             socket.on('message_delivered', handleMessageDelivered);
         }
+
         return () => {
-            setActiveConversation(null);
             if (socket) {
                 socket.off('new_message', handleNewMessage);
                 socket.off('message_edited', handleMessageEdited);
@@ -552,66 +650,7 @@ export default function ChatScreen() {
                 typingTimeoutRef.current = null;
             }
         };
-    }, [userId, socket, isOnline]);
-
-    useEffect(() => { if (isConnected) loadMessages(); }, [isConnected]);
-
-    const appState = useRef<AppStateStatus>(AppState.currentState);
-    useEffect(() => {
-        const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
-            if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-                loadMessages();
-                markAsRead(userId!, token!);
-                if (socket) socket.emit('message_read', { conversationId: getConversationId(user?._id || user?.id || '', userId!), senderId: userId! });
-            }
-            appState.current = nextAppState;
-        });
-        return () => subscription.remove();
-    }, [userId, token]);
-
-    const handleNewMessage = (message: Message) => {
-        const currentUserId = user?._id || user?.id;
-        const senderId = typeof message.sender === 'object' ? message.sender._id : message.sender;
-
-        // Auto-acknowledge read if we are looking at THIS conversation
-        if (senderId === userId && currentUserId && socket) {
-            if (activeConversation === senderId) {
-                socket.emit('message_read', {
-                    conversationId: message.conversationId,
-                    senderId: senderId
-                });
-            }
-        }
-
-        if (senderId === userId && currentUserId) {
-            addReceivedMessage(message, currentUserId);
-            markAsRead(userId!, token!);
-        }
-    };
-
-
-    const handleMessageEdited = (data: any) => {
-        updateLocalEditedMessage(data);
-    };
-
-    const handleMessageDeleted = (data: any) => {
-        updateLocalDeletedMessage(data);
-    };
-
-    const getConversationId = (id1: string, id2: string) => {
-        const ids = [id1.toString(), id2.toString()].sort();
-        return `${ids[0]}_${ids[1]}`;
-    };
-
-    const handleMessagesRead = (data: any) => {
-        if (data.conversationId === getConversationId(user?._id || user?.id || '', userId!)) {
-            updateLocalMessagesRead(data);
-        }
-    };
-
-    const handleMessageDelivered = (data: { messageId: string, deliveredAt: string }) => {
-        updateLocalMessageDelivered(data);
-    };
+    }, [userId, socket, isOnline, handleNewMessage, handleMessageEdited, handleMessageDeleted, handleMessagesRead, handleMessageDelivered]);
 
     const animatedStatusStyle = useAnimatedStyle(() => ({ opacity: pulseOpacity.value }));
     const loadMessages = async () => { await fetchMessages(userId!, token!); };
