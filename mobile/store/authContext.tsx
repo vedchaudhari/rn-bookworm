@@ -23,12 +23,14 @@ interface AuthState {
     isLoading: boolean;
     isCheckingAuth: boolean;
     isAuthLoading: boolean;
+    hasCompletedOnboarding: boolean;
     register: (email: string, username: string, password: string) => Promise<{ success: boolean; error?: string }>;
     checkAuth: () => Promise<void>;
     login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
     refreshUser: () => Promise<{ success: boolean; user?: User; error?: string }>;
     updateUser: (userData: Partial<User>) => Promise<{ success: boolean; error?: string }>;
     logout: () => Promise<{ success: boolean; error?: string }>;
+    completeOnboarding: () => Promise<void>;
 }
 
 // Simple Base64 decoder for JWT payload
@@ -70,6 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     isLoading: false,
     isCheckingAuth: true,
     isAuthLoading: true,
+    hasCompletedOnboarding: false,
 
     register: async (email: string, username: string, password: string) => {
         set({ isLoading: true });
@@ -137,6 +140,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     });
                 }
             }
+
+            const onboarding = await AsyncStorage.getItem('onboarding_completed');
+            set({ hasCompletedOnboarding: onboarding === 'true' });
 
             if (!cachedToken) {
                 set({ token: null, user: null });
@@ -281,6 +287,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch (error) {
             return { success: false, error: "Logout failed" };
         }
+    },
+
+    completeOnboarding: async () => {
+        await AsyncStorage.setItem('onboarding_completed', 'true');
+        set({ hasCompletedOnboarding: true });
     }
 }))
 

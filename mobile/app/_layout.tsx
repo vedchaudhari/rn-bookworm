@@ -26,7 +26,7 @@ import { registerForPushNotificationsAsync, setupPushNotificationListeners } fro
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-    const { checkAuth, user, token, isCheckingAuth, isAuthLoading } = useAuthStore();
+    const { checkAuth, user, token, isCheckingAuth, isAuthLoading, hasCompletedOnboarding } = useAuthStore();
     const { hydrate } = useSocialStore();
 
     const [fontsLoaded] = useFonts({
@@ -34,10 +34,15 @@ export default function RootLayout() {
     });
 
     useEffect(() => {
-        if (fontsLoaded && !isAuthLoading) {
+        // PRODUCTION-GRADE READY CHECK:
+        // Splash screen remains until:
+        // 1. Fonts are loaded
+        // 2. Auth state is fully hydrated (token + user)
+        // 3. Onboarding status is loaded
+        if (fontsLoaded && !isCheckingAuth && !isAuthLoading) {
             SplashScreen.hideAsync();
         }
-    }, [fontsLoaded, isAuthLoading]);
+    }, [fontsLoaded, isCheckingAuth, isAuthLoading]);
 
     useEffect(() => {
         checkAuth();
@@ -153,38 +158,14 @@ export default function RootLayout() {
     const isAuthenticated = !!(user && token);
     const router = useRouter();
 
-    // Force redirect based on auth state
-    useEffect(() => {
-        if (!isAuthLoading && !isCheckingAuth && fontsLoaded) {
-            const checkOnboarding = async () => {
-                const completed = await AsyncStorage.getItem('onboarding_completed');
-
-                // Add a small delay to ensure navigator is mounted
-                setTimeout(() => {
-                    try {
-                        if (!completed) {
-                            router.replace('/onboarding');
-                        } else if (isAuthenticated) {
-                            router.replace('/(tabs)');
-                        } else {
-                            router.replace('/(auth)');
-                        }
-                    } catch (e) {
-                        console.warn('Navigation failed, retrying...', e);
-                    }
-                }, 100);
-            };
-            checkOnboarding();
-        }
-    }, [isAuthenticated, isAuthLoading, isCheckingAuth, fontsLoaded]);
+    // Imperative redirection is REMOVED to prevent flicker and logout exit.
+    // Navigation is now handled declaratively by the Stack rendering logic below.
+    // Expo Router will automatically navigate to the first available screen in the stack.
 
     // ====================================================================
     // AUTH GATE: Prevent navigation rendering until auth state is resolved
-    // This eliminates the flicker where Home screen briefly appears before
-    // Login screen for unauthenticated users
     // ====================================================================
-    if (!fontsLoaded || isAuthLoading) {
-        // Keep splash screen visible until ready
+    if (!fontsLoaded || isCheckingAuth || isAuthLoading) {
         return null;
     }
 
@@ -201,12 +182,25 @@ export default function RootLayout() {
                         animation: 'slide_from_right',
                     }}
                 >
-                    <Stack.Screen name="onboarding" />
-                    <Stack.Screen name="(auth)" />
-                    <Stack.Screen name="(tabs)" />
-                    <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
-                    <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
-                    <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
+                    {/* 
+                        DECLARATIVE SCREEN SELECTION 
+                        Benefits:
+                        1. NO FLICKER: The app never renders the wrong group.
+                        2. STABLE LOGOUT: No race conditions with imperative replace() calls.
+                        3. SECURE: Private routes simply don't exist until authenticated.
+                    */}
+                    {!hasCompletedOnboarding ? (
+                        <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+                    ) : !isAuthenticated ? (
+                        <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
+                    ) : (
+                        <>
+                            <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+                            <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
+                            <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
+                            <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
+                        </>
+                    )}
                 </Stack>
                 <StatusBar style="light" />
                 <GlobalAlert />

@@ -6,7 +6,7 @@ import COLORS from '../constants/colors';
 import SafeScreen from '../components/SafeScreen';
 import GlazedButton from '../components/GlazedButton';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '../store/authContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -39,6 +39,7 @@ export default function Onboarding() {
     const scrollX = useRef(new Animated.Value(0)).current;
     const slidesRef = useRef<FlatList>(null);
     const router = useRouter();
+    const { completeOnboarding } = useAuthStore();
 
     const viewableItemsChanged = useRef(({ viewableItems }: any) => {
         setCurrentIndex(viewableItems[0].index);
@@ -51,8 +52,8 @@ export default function Onboarding() {
             slidesRef.current?.scrollToIndex({ index: currentIndex + 1 });
         } else {
             // Finish Onboarding
-            await AsyncStorage.setItem('onboarding_completed', 'true');
-            router.replace('/(auth)');
+            await completeOnboarding();
+            // Note: Declarative navigation will handle the move to /auth
         }
     };
 
