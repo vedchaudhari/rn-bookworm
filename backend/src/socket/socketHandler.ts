@@ -94,6 +94,24 @@ export const setupSocketIO = (io: Server) => {
                 // Broadcast online status to others
                 io.emit("user_status", { userId, status: "online", lastActive: new Date() });
 
+                // Catch-up: Find messages received by this user that are not yet marked delivered
+                const Message = require("../models/Message").default;
+                const undeliveredMessages = await Message.find({
+                    receiver: userId,
+                    $or: [
+                        { deliveredAt: { $exists: false } },
+                        { deliveredAt: null }
+                    ]
+                }).select("_id sender");
+
+                if (undeliveredMessages.length > 0) {
+                    console.log(`[Socket] Pushing ${undeliveredMessages.length} pending deliveries to user ${userId}`);
+                    socket.emit("pending_delivery", undeliveredMessages.map((m: any) => ({
+                        messageId: m._id,
+                        senderId: m.sender
+                    })));
+                }
+
             } catch (error) {
                 console.error("[Socket] Authentication error:", error);
             }
@@ -112,6 +130,80 @@ export const setupSocketIO = (io: Server) => {
                 io.to(data.receiverId).emit("typing_stop", {
                     senderId: socket.userId
                 });
+            }
+        });
+
+        // WhatsApp-style: Message delivered acknowledgment
+        socket.on("message_delivered", async (data: { messageId: string, senderId: string }) => {
+            try {
+                if (!socket.userId || !data.messageId) return;
+
+                const Message = require("../models/Message").default;
+                const message = await Message.findById(data.messageId);
+
+                if (message && !message.deliveredAt) {
+                    message.deliveredAt = new Date();
+                    await message.save();
+
+                    console.log(`[Socket] Message ${message._id} marked delivered for recipient ${socket.userId}`);
+
+                    // Invalidate sender's conversation cache so they see the double tick next time they log in or fetch
+                    const conversationId = Message.getConversationId(data.senderId, socket.userId);
+                    await redis.del(CACHE_KEYS.MESSAGES(conversationId, data.senderId));
+                    console.log(`[Socket] Invalidated cache for sender ${data.senderId}`);
+
+                    // Notify original sender
+                    io.to(data.senderId).emit("message_delivered", {
+                        messageId: message._id,
+                        deliveredAt: message.deliveredAt
+                    });
+                }
+            } catch (error) {
+                console.error("[Socket] Error handling message_delivered:", error);
+            }
+        });
+
+        // WhatsApp-style: Message read acknowledgment
+        socket.on("message_read", async (data: { conversationId: string, senderId: string }) => {
+            try {
+                if (!socket.userId || !data.conversationId) return;
+
+                const Message = require("../models/Message").default;
+                const now = new Date();
+
+                // Update all unread messages in this conversation received by this user
+                await Message.updateMany(
+                    {
+                        conversationId: data.conversationId,
+                        receiver: socket.userId,
+                        $or: [
+                            { readAt: { $exists: false } },
+                            { readAt: null }
+                        ]
+                    },
+                    {
+                        $set: {
+                            readAt: now,
+                            read: true,
+                            deliveredAt: now // If it's read, it's definitely delivered
+                        }
+                    }
+                );
+
+                console.log(`[Socket] Marked all as read in ${data.conversationId} for ${socket.userId}`);
+
+                // Invalidate sender's conversation cache
+                await redis.del(CACHE_KEYS.MESSAGES(data.conversationId, data.senderId));
+                console.log(`[Socket] Invalidated cache for sender ${data.senderId} after READ`);
+
+                // Notify sender
+                io.to(data.senderId).emit("message_read", {
+                    conversationId: data.conversationId,
+                    readerId: socket.userId,
+                    readAt: now
+                });
+            } catch (error) {
+                console.error("[Socket] Error handling message_read:", error);
             }
         });
 

@@ -79,11 +79,11 @@ const userSchema = new Schema<IUserDocument>(
         },
         currentStreak: {
             type: Number,
-            default: 0,
+            default: 1,
         },
         longestStreak: {
             type: Number,
-            default: 0,
+            default: 1,
         },
         lastActiveDate: {
             type: Date,

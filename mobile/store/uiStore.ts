@@ -15,6 +15,8 @@ interface AlertOptions {
     type?: AlertType;
     onConfirm?: () => void | Promise<void>;
     confirmText?: string;
+    onConfirm2?: () => void | Promise<void>;
+    confirmText2?: string;
     cancelText?: string;
     showCancel?: boolean;
     loading?: boolean;

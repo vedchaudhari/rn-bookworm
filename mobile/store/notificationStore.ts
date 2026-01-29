@@ -53,112 +53,133 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             return;
         }
 
+        let disconnectTimer: any = null;
         const { socket: existingSocket } = get();
-        if (existingSocket) {
-            console.log(`🔌 Using existing socket [${existingSocket.id || 'not connected'}]`);
-            if (!existingSocket.connected) {
-                console.log('🔄 Reconnecting existing socket...');
-                existingSocket.connect();
-            }
+        let activeSocket = existingSocket;
 
+        if (!activeSocket) {
+            console.log('🔌 Initializing new socket connection...');
+            activeSocket = io(API_URL, {
+                transports: ['websocket'],
+                reconnection: true,
+                reconnectionAttempts: Infinity,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                timeout: 20000,
+                autoConnect: true,
+                forceNew: true,
+            });
+
+            activeSocket.on('connect', () => {
+                console.log('✅ Socket connected successfully!', activeSocket?.id);
+                if (disconnectTimer) {
+                    clearTimeout(disconnectTimer);
+                    disconnectTimer = null;
+                }
+                console.log('[Store] Authenticating socket with userId:', userId);
+                activeSocket?.emit('authenticate', userId);
+                set({ lastAuthenticatedUserId: userId } as any);
+                set({ isConnected: true });
+            });
+
+            activeSocket.on('connect_error', (error: Error) => {
+                console.error('❌ Socket connection error:', error.message);
+            });
+
+            activeSocket.on('disconnect', (reason: string) => {
+                console.log('⚠️  Socket disconnected. Reason:', reason);
+                if (reason === 'io client disconnect') {
+                    set({ isConnected: false });
+                    return;
+                }
+                if (disconnectTimer) clearTimeout(disconnectTimer);
+                disconnectTimer = setTimeout(() => {
+                    set({ isConnected: false });
+                    disconnectTimer = null;
+                }, 5000);
+            });
+
+            activeSocket.on('notification', (notification: Notification) => {
+                console.log('📬 New notification received:', notification);
+                set(state => {
+                    const combined = [notification, ...state.notifications];
+                    const deduped = Array.from(new Map(combined.map(n => [n._id, n])).values());
+                    return {
+                        notifications: deduped,
+                        unreadCount: state.unreadCount + 1,
+                    };
+                });
+            });
+
+            activeSocket.on('user_status', ({ userId, status, lastActive }: { userId: string; status: 'online' | 'offline'; lastActive: string }) => {
+                const { userStatuses } = get();
+                set({
+                    userStatuses: {
+                        ...userStatuses,
+                        [userId]: { status, lastActive }
+                    }
+                });
+            });
+
+            activeSocket.on('active_users', (userIds: string[]) => {
+                const { userStatuses } = get();
+                const newStatuses = { ...userStatuses };
+                userIds.forEach(id => {
+                    newStatuses[id] = { status: 'online', lastActive: new Date() };
+                });
+                set({ userStatuses: newStatuses });
+            });
+
+            activeSocket.on('typing_start', ({ senderId }: { senderId: string }) => {
+                console.log('[Store] Received typing_start from:', senderId);
+                set((state) => ({
+                    typingStatus: { ...state.typingStatus, [senderId]: true }
+                }));
+            });
+
+            activeSocket.on('typing_stop', ({ senderId }: { senderId: string }) => {
+                set((state) => ({
+                    typingStatus: { ...state.typingStatus, [senderId]: false }
+                }));
+            });
+
+            set({ socket: activeSocket });
+        } else {
+            console.log(`🔌 Using existing socket [${activeSocket.id || 'not connected'}]`);
+            if (!activeSocket.connected) {
+                console.log('🔄 Reconnecting existing socket...');
+                activeSocket.connect();
+            }
             console.log('[Store] Re-authenticating with userId:', userId);
-            existingSocket.emit('authenticate', userId);
+            activeSocket.emit('authenticate', userId);
             set({ lastAuthenticatedUserId: userId } as any);
-            return;
         }
 
-        let disconnectTimer: any = null;
-
-        console.log('🔌 Initializing new socket connection...');
-        const socket = io(API_URL, {
-            transports: ['websocket'],
-            reconnection: true,
-            reconnectionAttempts: Infinity,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            timeout: 20000,
-            autoConnect: true,
-            forceNew: true,
-        });
-
-        socket.on('connect', () => {
-            console.log('✅ Socket connected successfully!', socket.id);
-
-            if (disconnectTimer) {
-                clearTimeout(disconnectTimer);
-                disconnectTimer = null;
+        // Global delivery acknowledgement - always re-attach or ensure they are present
+        // (Removing existing ones first to prevent duplicates if connect is called multiple times)
+        activeSocket.off('new_message');
+        activeSocket.on('new_message', (message: any) => {
+            const senderId = typeof message.sender === 'object' ? message.sender._id : message.sender;
+            // If WE are the receiver, immediately tell server we got it
+            if (senderId !== userId) {
+                console.log('[Store] Globally acknowledging delivery of message:', message._id);
+                activeSocket?.emit('message_delivered', {
+                    messageId: message._id,
+                    senderId: senderId
+                });
             }
-            console.log('[Store] Authenticating socket with userId:', userId);
-            socket.emit('authenticate', userId);
-            set({ lastAuthenticatedUserId: userId } as any); // Track verified user
-            set({ isConnected: true });
         });
 
-        socket.on('connect_error', (error: Error) => {
-            console.error('❌ Socket connection error:', error.message);
-        });
-
-        socket.on('disconnect', (reason: string) => {
-            console.log('⚠️  Socket disconnected. Reason:', reason);
-
-            if (reason === 'io client disconnect') {
-                set({ isConnected: false });
-                return;
-            }
-
-            if (disconnectTimer) clearTimeout(disconnectTimer);
-            disconnectTimer = setTimeout(() => {
-                set({ isConnected: false });
-                disconnectTimer = null;
-            }, 5000);
-        });
-
-        socket.on('notification', (notification: Notification) => {
-            console.log('📬 New notification received:', notification);
-            set(state => {
-                const combined = [notification, ...state.notifications];
-                const deduped = Array.from(new Map(combined.map(n => [n._id, n])).values());
-
-                return {
-                    notifications: deduped,
-                    unreadCount: state.unreadCount + 1,
-                };
+        activeSocket.off('pending_delivery');
+        activeSocket.on('pending_delivery', (messages: { messageId: string, senderId: string }[]) => {
+            console.log(`[Store] Syncing ${messages.length} pending deliveries...`);
+            messages.forEach(m => {
+                activeSocket?.emit('message_delivered', {
+                    messageId: m.messageId,
+                    senderId: m.senderId
+                });
             });
         });
-
-        socket.on('user_status', ({ userId, status, lastActive }: { userId: string; status: 'online' | 'offline'; lastActive: string }) => {
-            const { userStatuses } = get();
-            set({
-                userStatuses: {
-                    ...userStatuses,
-                    [userId]: { status, lastActive }
-                }
-            });
-        });
-
-        socket.on('active_users', (userIds: string[]) => {
-            const { userStatuses } = get();
-            const newStatuses = { ...userStatuses };
-            userIds.forEach(id => {
-                newStatuses[id] = { status: 'online', lastActive: new Date() };
-            });
-            set({ userStatuses: newStatuses });
-        });
-
-        socket.on('typing_start', ({ senderId }: { senderId: string }) => {
-            console.log('[Store] Received typing_start from:', senderId);
-            set((state) => ({
-                typingStatus: { ...state.typingStatus, [senderId]: true }
-            }));
-        });
-
-        socket.on('typing_stop', ({ senderId }: { senderId: string }) => {
-            set((state) => ({
-                typingStatus: { ...state.typingStatus, [senderId]: false }
-            }));
-        });
-
-        set({ socket });
     },
 
     // Disconnect WebSocket

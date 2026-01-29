@@ -12,23 +12,72 @@ const router = express.Router();
 
 interface SendMessageBody {
     text?: string;
-    image?: string; // This should now always be a URL
+    image?: string;
+    video?: string;
+    videoThumbnail?: string;
+    fileSizeBytes?: number;
 }
 
-// Get presigned URL for chat image upload
+// Helper to sign all media in a message
+const signMessageMedia = async (msgObj: any) => {
+    if (msgObj.sender && typeof msgObj.sender === 'object') {
+        msgObj.sender.profileImage = await getSignedUrlForFile(msgObj.sender.profileImage);
+    }
+    if (msgObj.receiver && typeof msgObj.receiver === 'object') {
+        msgObj.receiver.profileImage = await getSignedUrlForFile(msgObj.receiver.profileImage);
+    }
+    if (msgObj.image) {
+        msgObj.image = await getSignedUrlForFile(msgObj.image);
+    }
+    if (msgObj.video) {
+        msgObj.video = await getSignedUrlForFile(msgObj.video);
+    }
+    if (msgObj.videoThumbnail) {
+        msgObj.videoThumbnail = await getSignedUrlForFile(msgObj.videoThumbnail);
+    }
+    return msgObj;
+};
+
+// Get presigned URL for chat media upload (images and videos)
 router.get("/presigned-url", protectRoute, async (req: Request, res: Response) => {
     try {
-        const { fileName, contentType, folder } = req.query;
+        const { fileName, contentType, fileSize } = req.query;
 
         if (!fileName || !contentType) {
             return res.status(400).json({ message: "fileName and contentType are required" });
         }
 
+        // Validate file type
+        const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        const validVideoTypes = ['video/mp4', 'video/quicktime', 'video/x-m4v'];
+        const isImage = validImageTypes.includes(contentType as string);
+        const isVideo = validVideoTypes.includes(contentType as string);
+
+        if (!isImage && !isVideo) {
+            return res.status(400).json({
+                message: "Invalid file type. Supported: JPEG, PNG, WebP, MP4, MOV"
+            });
+        }
+
+        // Validate file size
+        const maxImageSize = 5 * 1024 * 1024; // 5MB
+        const maxVideoSize = 10 * 1024 * 1024; // 10MB
+        const maxSize = isVideo ? maxVideoSize : maxImageSize;
+
+        if (fileSize && parseInt(fileSize as string) > maxSize) {
+            return res.status(400).json({
+                message: `File too large. Max size: ${maxSize / 1024 / 1024}MB`
+            });
+        }
+
+        // Determine folder based on type
+        const folder = isVideo ? 'videos' : 'chat';
+
         const data = await getPresignedPutUrl(
             fileName as string,
             contentType as string,
-            req.user!._id.toString(), // Add path isolation
-            (folder as string) || 'chat'
+            req.user!._id.toString(),
+            folder
         );
         res.json(data);
     } catch (error) {
@@ -41,7 +90,7 @@ router.get("/presigned-url", protectRoute, async (req: Request, res: Response) =
 router.post("/send/:receiverId", protectRoute, async (req: Request, res: Response) => {
     try {
         const { receiverId } = req.params;
-        const { text, image } = req.body as SendMessageBody;
+        const { text, image, video, videoThumbnail, fileSizeBytes } = req.body as SendMessageBody;
         const senderId = req.user!._id;
 
         // Validate receiverId format
@@ -52,8 +101,8 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
         // Sanitize and validate text
         const trimmedText = text ? text.trim() : '';
 
-        if (!trimmedText && !image) {
-            return res.status(400).json({ message: "Message text or image is required" });
+        if (!trimmedText && !image && !video) {
+            return res.status(400).json({ message: "Message text, image, or video is required" });
         }
 
         if (trimmedText && trimmedText.length > 1000) {
@@ -81,6 +130,9 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
             receiver: receiverObjectId,
             text: trimmedText,
             image,
+            video,
+            videoThumbnail,
+            fileSizeBytes,
             conversationId,
         });
 
@@ -88,10 +140,8 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
         await newMessage.populate("sender", "username profileImage");
         await newMessage.populate("receiver", "username profileImage");
 
-        // Sign the message image if it exists before emitting and returning
-        if (newMessage.image) {
-            newMessage.image = await getSignedUrlForFile(newMessage.image);
-        }
+        // Sign the media URLs if they exist before emitting and returning
+        await signMessageMedia(newMessage);
 
         // Emit real-time message via WebSocket
         const io: Server = req.app.get("io");
@@ -103,7 +153,7 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
         const sender = newMessage.sender as any;
         sendPushNotification(receiverId.toString(), {
             title: `New Message from ${sender?.username || 'Bookworm'}`,
-            body: trimmedText || "📷 Sent an image",
+            body: trimmedText || (newMessage.image ? "📷 Sent an image" : newMessage.video ? "🎥 Sent a video" : "Sent a message"),
             data: {
                 type: "MESSAGE",
                 senderId: senderId.toString(),
@@ -120,12 +170,7 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
         ]);
 
         const messageObj = newMessage.toObject();
-        if (messageObj.sender && typeof messageObj.sender === 'object') {
-            (messageObj.sender as any).profileImage = await getSignedUrlForFile((messageObj.sender as any).profileImage);
-        }
-        if (messageObj.receiver && typeof messageObj.receiver === 'object') {
-            (messageObj.receiver as any).profileImage = await getSignedUrlForFile((messageObj.receiver as any).profileImage);
-        }
+        await signMessageMedia(messageObj);
 
         res.status(201).json(messageObj);
     } catch (error) {
@@ -147,9 +192,11 @@ router.get("/conversation/:userId", protectRoute, async (req: Request, res: Resp
 
         // 1. Try Cache First for messages (only for page 1)
         if (page === 1) {
-            const cachedMessages = await redis.get(CACHE_KEYS.MESSAGES(conversationId, currentUserId.toString()));
-            if (cachedMessages) {
-                return res.json(cachedMessages);
+            const cachedData = await redis.get<any>(CACHE_KEYS.MESSAGES(conversationId, currentUserId.toString()));
+            if (cachedData && cachedData.messages) {
+                // Re-sign media as signatures expire
+                cachedData.messages = await Promise.all(cachedData.messages.map(signMessageMedia));
+                return res.json(cachedData);
             }
         }
 
@@ -165,14 +212,20 @@ router.get("/conversation/:userId", protectRoute, async (req: Request, res: Resp
 
         const totalMessages = await Message.countDocuments({ conversationId });
 
-        // Mark messages as read
+        // Mark messages as read with timestamps
         await Message.updateMany(
             {
                 conversationId,
                 receiver: currentUserId,
                 read: false,
             },
-            { $set: { read: true } }
+            {
+                $set: {
+                    read: true,
+                    readAt: new Date(),
+                    deliveredAt: new Date() // If read, it's delivered
+                }
+            }
         );
 
         // Invalidate conversation list cache to clear unread highlights/count
@@ -181,18 +234,7 @@ router.get("/conversation/:userId", protectRoute, async (req: Request, res: Resp
         const messagesWithSignedImages = await Promise.all(
             messages.map(async (msg) => {
                 const msgObj = msg.toObject();
-                if (msgObj.sender && typeof msgObj.sender === 'object') {
-                    (msgObj.sender as any).profileImage = await getSignedUrlForFile((msgObj.sender as any).profileImage);
-                }
-                if (msgObj.receiver && typeof msgObj.receiver === 'object') {
-                    (msgObj.receiver as any).profileImage = await getSignedUrlForFile((msgObj.receiver as any).profileImage);
-                }
-
-                // Sign message image
-                if (msgObj.image) {
-                    msgObj.image = await getSignedUrlForFile(msgObj.image);
-                }
-                return msgObj;
+                return await signMessageMedia(msgObj);
             })
         );
 
@@ -226,7 +268,7 @@ router.get("/conversations", protectRoute, async (req: Request, res: Response) =
             // Re-sign images from cache as signatures expire
             const signedConvs = await Promise.all(
                 cachedConversations.map(async (conv: any) => {
-                    if (conv.otherUser && conv.otherUser.profileImage) {
+                    if (conv.otherUser) {
                         conv.otherUser.profileImage = await getSignedUrlForFile(conv.otherUser.profileImage);
                     }
                     return conv;
@@ -293,7 +335,7 @@ router.get("/conversations", protectRoute, async (req: Request, res: Response) =
                         conversationId: conv._id,
                         otherUser: signedOtherUser,
                         lastMessage: {
-                            text: msg.text || (msg.image ? "Sent an image" : ""),
+                            text: msg.text || (msg.image ? "Sent an image" : msg.video ? "Sent a video" : ""),
                             createdAt: msg.createdAt,
                             senderId: msg.sender,
                         },
@@ -356,7 +398,13 @@ router.put("/mark-read/:userId", protectRoute, async (req: Request, res: Respons
                 receiver: currentUserId,
                 read: false,
             },
-            { $set: { read: true } }
+            {
+                $set: {
+                    read: true,
+                    readAt: new Date(),
+                    deliveredAt: new Date() // If it's read, it's definitely delivered
+                }
+            }
         );
 
         // Invalidate conversation list cache to clear unread highlights/count
@@ -483,6 +531,17 @@ router.delete("/delete-everyone/:messageId", protectRoute, async (req: Request, 
 
         message.text = "This message was deleted";
         message.image = undefined;
+        const { deleteFileFromS3 } = require("../lib/s3");
+
+        // Purge media from S3 before overwriting metadata
+        if (message.image) await deleteFileFromS3(message.image);
+        if (message.video) await deleteFileFromS3(message.video);
+        if (message.videoThumbnail) await deleteFileFromS3(message.videoThumbnail);
+
+        message.text = "This message was deleted";
+        message.image = undefined;
+        message.video = undefined;
+        message.videoThumbnail = undefined;
         message.isDeleted = true;
         await message.save();
 

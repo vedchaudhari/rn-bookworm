@@ -5,6 +5,9 @@ export interface IMessage {
     receiver: mongoose.Types.ObjectId;
     text?: string;
     image?: string;
+    video?: string;
+    videoThumbnail?: string;
+    fileSizeBytes?: number;
     read: boolean;
     conversationId: string;
     // New fields for management
@@ -12,6 +15,8 @@ export interface IMessage {
     editedAt?: Date;
     isDeleted: boolean; // Delete for everyone
     deletedFor: mongoose.Types.ObjectId[]; // List of user IDs who deleted for themselves
+    deliveredAt?: Date;
+    readAt?: Date;
 }
 
 export interface IMessageDocument extends IMessage, Document {
@@ -42,7 +47,19 @@ const messageSchema = new Schema<IMessageDocument>(
             maxlength: 1000,
         },
         image: {
-            type: String, // Base64 or URL
+            type: String, // S3 URL
+            required: false,
+        },
+        video: {
+            type: String, // S3 URL
+            required: false,
+        },
+        videoThumbnail: {
+            type: String, // S3 URL for video thumbnail
+            required: false,
+        },
+        fileSizeBytes: {
+            type: Number,
             required: false,
         },
         read: {
@@ -71,6 +88,12 @@ const messageSchema = new Schema<IMessageDocument>(
                 ref: "User",
             },
         ],
+        deliveredAt: {
+            type: Date,
+        },
+        readAt: {
+            type: Date,
+        },
     },
     { timestamps: true }
 );

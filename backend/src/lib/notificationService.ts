@@ -41,6 +41,9 @@ export const createNotification = async ({ user, type, data }: CreateNotificatio
                     case "ACHIEVEMENT":
                         message = `Achievement Unlocked: ${data.achievementName}`;
                         break;
+                    case "NEW_POST":
+                        message = `${data.author} just posted "${data.bookTitle}"`;
+                        break;
                 }
 
                 io.to(user.toString()).emit("notification", {
@@ -68,6 +71,9 @@ export const createNotification = async ({ user, type, data }: CreateNotificatio
                     break;
                 case "ACHIEVEMENT":
                     template = NOTIF_TEMPLATES.ACHIEVEMENT(data.achievementName || "New Milestone");
+                    break;
+                case "NEW_POST":
+                    template = NOTIF_TEMPLATES.NEW_POST(data.author, data.bookTitle);
                     break;
             }
 

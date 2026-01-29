@@ -25,7 +25,8 @@ interface User {
     email: string;
     bio?: string;
     profileImage?: string;
-    streakDays?: number;
+    currentStreak?: number;
+    longestStreak?: number;
 }
 
 interface Book {
@@ -346,7 +347,7 @@ export default function Profile() {
                         >
                             <StatCard
                                 label="Streak Days"
-                                value={currentUser?.streakDays || 12}
+                                value={currentUser?.currentStreak || 0}
                                 icon="flame"
                                 color={COLORS.accent}
                                 style={styles.statCard}

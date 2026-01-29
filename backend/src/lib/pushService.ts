@@ -76,5 +76,9 @@ export const NOTIF_TEMPLATES = {
         title: '🏆 Trophy Unlocked!',
         body: `Congratulations! You just earned the "${name}" achievement!`,
     }),
+    NEW_POST: (username: string, bookTitle: string) => ({
+        title: '📚 New Post Alert!',
+        body: `${username} just added "${bookTitle}" to their bookshelf!`,
+    }),
 };
 

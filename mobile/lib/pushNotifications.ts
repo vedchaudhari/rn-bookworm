@@ -107,6 +107,11 @@ export function setupPushNotificationListeners(router: any) {
                         username: String(data.senderName || 'Chat')
                     }
                 });
+            } else if (data?.type === 'NEW_POST' && data.bookId) {
+                router.push({
+                    pathname: '/book/[id]',
+                    params: { id: String(data.bookId) }
+                });
             } else if (data?.type === 'LIKE' || data?.type === 'COMMENT' || data?.type === 'FOLLOW') {
                 router.push('/(tabs)/notifications');
             }

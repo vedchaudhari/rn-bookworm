@@ -44,6 +44,25 @@ export default function GlobalAlert() {
         hideAlert();
     };
 
+    const handleConfirm2 = async () => {
+        if (!alert) return;
+
+        if (alert.onConfirm2) {
+            const result = alert.onConfirm2();
+            if (result instanceof Promise) {
+                setAlertLoading(true);
+                try {
+                    await result;
+                } catch (error) {
+                    console.error('Alert confirm2 error:', error);
+                } finally {
+                    setAlertLoading(false);
+                }
+            }
+        }
+        hideAlert();
+    };
+
     const handleCancel = () => {
         if (isAlertLoading) return;
         hideAlert();
@@ -89,6 +108,20 @@ export default function GlobalAlert() {
                                     <Text style={styles.confirmButtonText}>{alert.confirmText || 'OK'}</Text>
                                 )}
                             </TouchableOpacity>
+
+                            {alert.confirmText2 && (
+                                <TouchableOpacity
+                                    style={[styles.button, styles.confirmButton2, isAlertLoading && { opacity: 0.9 }]}
+                                    onPress={handleConfirm2}
+                                    disabled={isAlertLoading}
+                                >
+                                    {isAlertLoading ? (
+                                        <ActivityIndicator color={COLORS.error} size="small" />
+                                    ) : (
+                                        <Text style={styles.confirmButtonText2}>{alert.confirmText2}</Text>
+                                    )}
+                                </TouchableOpacity>
+                            )}
                         </View>
                     </GlassCard>
                 </Animated.View>
@@ -158,6 +191,11 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 4,
     },
+    confirmButton2: {
+        backgroundColor: 'rgba(255, 59, 48, 0.1)',
+        borderWidth: 1,
+        borderColor: COLORS.error,
+    },
     cancelButtonText: {
         color: COLORS.textSecondary,
         fontWeight: '600',
@@ -165,6 +203,11 @@ const styles = StyleSheet.create({
     },
     confirmButtonText: {
         color: COLORS.background,
+        fontWeight: '700',
+        fontSize: 15,
+    },
+    confirmButtonText2: {
+        color: COLORS.error,
         fontWeight: '700',
         fontSize: 15,
     },

@@ -162,7 +162,7 @@ export const getPresignedPutUrl = async (
     if (!bucketName) throw new Error('AWS_S3_BUCKET_NAME is not defined');
 
     // 1. Validate Folder
-    const allowedFolders = ['profiles', 'covers', 'chat', 'manuscripts', 'drafts'];
+    const allowedFolders = ['profiles', 'covers', 'chat', 'manuscripts', 'drafts', 'videos'];
     if (!allowedFolders.includes(folder)) {
         throw new Error(`Invalid upload folder: ${folder}`);
     }
@@ -171,7 +171,8 @@ export const getPresignedPutUrl = async (
     const validMimes: Record<string, string[]> = {
         profiles: ['image/jpeg', 'image/png', 'image/webp'],
         covers: ['image/jpeg', 'image/png', 'image/webp'],
-        chat: ['image/jpeg', 'image/png', 'image/webp', 'video/mp4'],
+        chat: ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime', 'video/x-m4v'],
+        videos: ['video/mp4', 'video/quicktime', 'video/x-m4v'],
         manuscripts: ['application/pdf', 'text/plain'],
         drafts: ['application/pdf', 'text/plain']
     };

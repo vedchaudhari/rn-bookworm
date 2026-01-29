@@ -8,6 +8,9 @@ export interface Message {
     receiver: string;
     text?: string;
     image?: string;
+    video?: string;
+    videoThumbnail?: string;
+    fileSizeBytes?: number;
     width?: number;
     height?: number;
     createdAt: string;
@@ -16,6 +19,8 @@ export interface Message {
     editedAt?: string;
     isDeleted?: boolean;
     read?: boolean;
+    deliveredAt?: string;
+    readAt?: string;
     deletedFor?: string[];
     [key: string]: any;
 }
@@ -39,7 +44,20 @@ interface MessageState {
     activeConversation: string | null;
     fetchConversations: (token: string) => Promise<{ success: boolean; error?: string }>;
     fetchMessages: (userId: string, token: string, page?: number) => Promise<{ success: boolean; hasMore?: boolean; error?: string }>;
-    sendMessage: (receiverId: string, text: string, image: string | undefined, token: string, localImage?: string, width?: number, height?: number) => Promise<{ success: boolean; message?: Message; error?: string }>;
+    sendMessage: (
+        receiverId: string,
+        text: string,
+        image: string | undefined,
+        video: string | undefined,
+        videoThumbnail: string | undefined,
+        token: string,
+        localImage?: string,
+        localVideo?: string,
+        localThumbnail?: string,
+        width?: number,
+        height?: number,
+        fileSizeBytes?: number
+    ) => Promise<{ success: boolean; message?: Message; error?: string }>;
     addReceivedMessage: (message: Message, currentUserId: string) => void;
     fetchUnreadCount: (token: string) => Promise<{ success: boolean; error?: string }>;
     markAsRead: (userId: string, token: string) => Promise<{ success: boolean; error?: string }>;
@@ -50,7 +68,8 @@ interface MessageState {
     clearChatHistory: (otherUserId: string, token: string) => Promise<{ success: boolean; error?: string }>;
     updateLocalEditedMessage: (data: { messageId: string, text: string, editedAt: string }) => void;
     updateLocalDeletedMessage: (data: { messageId: string, conversationId: string }) => void;
-    updateLocalMessagesRead: (data: { conversationId: string, readerId: string }) => void;
+    updateLocalMessagesRead: (data: { conversationId: string, readerId: string, readAt: string }) => void;
+    updateLocalMessageDelivered: (data: { messageId: string, deliveredAt: string }) => void;
     reset: () => void;
 }
 
@@ -148,7 +167,20 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     },
 
     // Send message with Optimistic Update
-    sendMessage: async (receiverId: string, text: string, image: string | undefined, token: string, localImage?: string, width?: number, height?: number) => {
+    sendMessage: async (
+        receiverId: string,
+        text: string,
+        image: string | undefined,
+        video: string | undefined,
+        videoThumbnail: string | undefined,
+        token: string,
+        localImage?: string,
+        localVideo?: string,
+        localThumbnail?: string,
+        width?: number,
+        height?: number,
+        fileSizeBytes?: number
+    ) => {
         const { messages } = get();
         const tempId = Date.now().toString();
 
@@ -158,8 +190,11 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             receiver: receiverId,
             text: text || "",
             image: localImage || image,
+            video: localVideo || video,
+            videoThumbnail: localThumbnail || videoThumbnail,
             width,
             height,
+            fileSizeBytes,
             createdAt: new Date().toISOString(),
             pending: true,
         };
@@ -180,7 +215,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             updatedConversations[existingConvIndex] = {
                 ...conv,
                 lastMessage: {
-                    text: text || "Sent an image",
+                    text: text || (image ? "Sent an image" : video ? "Sent a video" : ""),
                     createdAt: new Date().toISOString(),
                     senderId: 'me'
                 }
@@ -197,7 +232,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ text, image }),
+                body: JSON.stringify({ text, image, video, videoThumbnail, fileSizeBytes }),
             });
 
             const data = await response.json();
@@ -298,7 +333,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             updatedConversations[existingConvIndex] = {
                 ...conv,
                 lastMessage: {
-                    text: message.text || (message.image ? "Sent an image" : ""),
+                    text: message.text || (message.image ? "Sent an image" : message.video ? "Sent a video" : ""),
                     createdAt: message.createdAt,
                     senderId: senderId
                 },
@@ -315,7 +350,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                 _id: message.conversationId || `conv_${Date.now()}`,
                 otherUser: isSelf ? receiverId : message.sender, // Store the OTHER user's info
                 lastMessage: {
-                    text: message.text || (message.image ? "Sent an image" : ""),
+                    text: message.text || (message.image ? "Sent an image" : message.video ? "Sent a video" : ""),
                     createdAt: message.createdAt,
                     senderId: senderId
                 },
@@ -500,7 +535,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     },
 
     // Socket: Update messages when read by recipient
-    updateLocalMessagesRead: (data: { conversationId: string, readerId: string }) => {
+    updateLocalMessagesRead: (data: { conversationId: string, readerId: string, readAt: string }) => {
         const { messages } = get();
         const otherUserId = data.readerId;
 
@@ -508,12 +543,26 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             const updated = messages[otherUserId].map(m => {
                 const senderId = typeof m.sender === 'object' ? m.sender._id : m.sender;
                 // If the other user (readerId) read them, it means any message they received (where WE are sender) is now read
-                if (senderId === 'me') {
-                    return { ...m, read: true };
+                if (senderId === 'me' || senderId === (get() as any).currentUserId) { // Handle both cases
+                    return { ...m, read: true, readAt: data.readAt };
                 }
                 return m;
             });
             set({ messages: { ...messages, [otherUserId]: updated } });
+        }
+    },
+
+    // Socket: Update message when delivered to recipient
+    updateLocalMessageDelivered: (data: { messageId: string, deliveredAt: string }) => {
+        const { messages } = get();
+        for (const userId in messages) {
+            const index = messages[userId].findIndex(m => m._id === data.messageId);
+            if (index !== -1) {
+                const updated = [...messages[userId]];
+                updated[index] = { ...updated[index], deliveredAt: data.deliveredAt };
+                set({ messages: { ...messages, [userId]: updated } });
+                break;
+            }
         }
     },
 

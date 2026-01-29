@@ -8,7 +8,8 @@ export type NotificationType =
     | "GOAL_REMINDER"
     | "GOAL_COMPLETED"
     | "FOLLOW_REQUEST"
-    | "FOLLOW_ACCEPTED";
+    | "FOLLOW_ACCEPTED"
+    | "NEW_POST";
 
 export interface INotification {
     user: mongoose.Types.ObjectId;
@@ -33,7 +34,7 @@ const notificationSchema = new Schema<INotificationDocument>(
         type: {
             type: String,
             required: true,
-            enum: ["LIKE", "COMMENT", "FOLLOW", "ACHIEVEMENT", "GOAL_REMINDER", "GOAL_COMPLETED", "FOLLOW_REQUEST", "FOLLOW_ACCEPTED"],
+            enum: ["LIKE", "COMMENT", "FOLLOW", "ACHIEVEMENT", "GOAL_REMINDER", "GOAL_COMPLETED", "FOLLOW_REQUEST", "FOLLOW_ACCEPTED", "NEW_POST"],
         },
         data: {
             type: Schema.Types.Mixed,

@@ -115,6 +115,37 @@ router.post("/", protectRoute, asyncHandler(async (req: Request, res: Response) 
     if (bookCount === 25) await checkAchievements(req.user!._id, "BOOK_LOVER_25");
     if (bookCount === 50) await checkAchievements(req.user!._id, "BOOK_LOVER_50");
 
+    // Notify followers about the new post (only if public)
+    if (visibility !== 'private') {
+        try {
+            const { createNotification } = await import("../lib/notificationService");
+            const followers = await Follow.find({
+                following: req.user!._id,
+                status: 'accepted'
+            }).select('follower');
+
+            if (followers.length > 0) {
+                await Promise.all(
+                    followers.map(f =>
+                        createNotification({
+                            user: f.follower,
+                            type: "NEW_POST",
+                            data: {
+                                bookId: newBook._id,
+                                bookTitle: newBook.title,
+                                author: req.user!.username,
+                            }
+                        })
+                    )
+                );
+                console.log(`[Notification] Notified ${followers.length} followers about new book: ${title}`);
+            }
+        } catch (notifErr) {
+            console.error('[Notification] Error notifying followers:', notifErr);
+            // Don't fail the book creation if notifications fail
+        }
+    }
+
     // Clear Global Feed Cache
     try {
         const keys = await redis.keys('feed:global:*');

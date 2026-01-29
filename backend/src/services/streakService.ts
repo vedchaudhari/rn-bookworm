@@ -35,11 +35,11 @@ export class StreakService {
         if (!streak) {
             streak = await UserStreak.create({
                 userId: toObjectId(userId),
-                currentStreak: 0,
+                currentStreak: 1,
                 currentStreakStartDate: new Date(),
                 lastCheckInDate: new Date(0), // Epoch start (never checked in)
                 lastCheckInTimestamp: new Date(0),
-                longestStreak: 0,
+                longestStreak: 1,
                 longestStreakStartDate: new Date(),
                 totalCheckIns: 0,
                 streakRestoresUsed: 0,

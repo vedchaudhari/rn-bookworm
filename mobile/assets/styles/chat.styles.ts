@@ -130,6 +130,28 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.surfaceHighlight, // Stable placeholder color
         // Dynamic width/height will be applied inline by ChatImage component
     },
+    sentVideoContainer: {
+        width: 240,
+        height: 180,
+        borderRadius: BORDER_RADIUS.xl + 2,
+        overflow: 'hidden',
+        backgroundColor: COLORS.surfaceHighlight,
+        position: 'relative',
+    },
+    sentVideo: {
+        width: '100%',
+        height: '100%',
+    },
+    sentVideoThumbnail: {
+        width: '100%',
+        height: '100%',
+    },
+    playButtonOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     pendingIndicator: {
         marginLeft: SPACING.xs,
         width: 16,

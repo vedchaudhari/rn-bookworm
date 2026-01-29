@@ -1,11 +1,16 @@
-import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform, Alert, StyleSheet, StatusBar, Dimensions } from 'react-native';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, useSharedValue } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, withSpring, runOnJS, useAnimatedKeyboard } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import * as VideoThumbnails from 'expo-video-thumbnails';
+import * as FileSystem from 'expo-file-system';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+
 import COLORS from '../constants/colors';
 import { useMessageStore, Message } from '../store/messageStore';
 import { useAuthStore } from '../store/authContext';
@@ -16,6 +21,127 @@ import { useUIStore } from '../store/uiStore';
 import styles from '../assets/styles/chat.styles';
 
 
+
+// Premium Media Viewer Component
+interface MediaViewerProps {
+    visible: boolean;
+    onClose: () => void;
+    media: { uri: string, type: 'image' | 'video' } | null;
+    onPlayingChange?: (playing: boolean) => void;
+}
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, media, onPlayingChange }) => {
+    const scale = useSharedValue(1);
+    const opacity = useSharedValue(0);
+    const translateX = useSharedValue(0);
+    const translateY = useSharedValue(0);
+    const originX = useSharedValue(0);
+    const originY = useSharedValue(0);
+
+    const resetStates = useCallback(() => {
+        scale.value = withTiming(1);
+        translateX.value = withTiming(0);
+        translateY.value = withTiming(0);
+    }, []);
+
+    useEffect(() => {
+        if (visible) {
+            opacity.value = withTiming(1, { duration: 300 });
+            resetStates();
+        } else {
+            opacity.value = withTiming(0, { duration: 250 });
+        }
+    }, [visible]);
+
+    const savedScale = useSharedValue(1);
+
+    // Pinch to zoom (Images only)
+    const pinchGesture = Gesture.Pinch()
+        .onUpdate((e) => {
+            scale.value = savedScale.value * e.scale;
+        })
+        .onEnd(() => {
+            if (scale.value < 1) {
+                scale.value = withTiming(1);
+                savedScale.value = 1;
+            } else {
+                savedScale.value = scale.value;
+            }
+        });
+
+    const panGesture = Gesture.Pan()
+        .onUpdate((e) => {
+            if (scale.value <= 1.05) { // Swipe to close only when not zoomed
+                translateX.value = e.translationX;
+                translateY.value = e.translationY;
+
+                // Scale down slightly as we swipe for a "pop-out" effect
+                const dragProgress = Math.min(Math.abs(e.translationY) / 600, 0.5);
+                scale.value = 1 - dragProgress;
+                opacity.value = 1 - Math.abs(e.translationY) / 500;
+            }
+        })
+        .onEnd((e) => {
+            if (scale.value < 1 && (Math.abs(e.translationY) > 150 || Math.abs(e.velocityY) > 1000)) {
+                opacity.value = withTiming(0, { duration: 200 }, () => {
+                    runOnJS(onClose)();
+                });
+                translateY.value = withTiming(e.translationY > 0 ? SCREEN_HEIGHT : -SCREEN_HEIGHT);
+            } else {
+                translateX.value = withTiming(0);
+                translateY.value = withTiming(0);
+                opacity.value = withTiming(1);
+                scale.value = withTiming(1);
+                savedScale.value = 1;
+            }
+        });
+
+    const combinedGestures = media?.type === 'image'
+        ? Gesture.Race(pinchGesture, panGesture)
+        : panGesture;
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        opacity: opacity.value,
+        transform: [
+            { translateX: translateX.value },
+            { translateY: translateY.value },
+            { scale: scale.value }
+        ]
+    }));
+
+    if (!media) return null;
+
+    return (
+        <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+            <GestureHandlerRootView style={{ flex: 1, backgroundColor: 'black' }}>
+                <StatusBar hidden={visible} />
+                <GestureDetector gesture={combinedGestures}>
+                    <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+                        <View style={{ position: 'absolute', top: 50, right: 20, zIndex: 10 }}>
+                            <TouchableOpacity onPress={onClose} style={{ padding: 10, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 25 }}>
+                                <Ionicons name="close" size={28} color="white" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                            {media.type === 'image' ? (
+                                <Image
+                                    source={{ uri: media.uri }}
+                                    style={{ width: SCREEN_WIDTH, height: SCREEN_HEIGHT }}
+                                    contentFit="contain"
+                                />
+                            ) : (
+                                <FullscreenVideo uri={media.uri} onPlayingChange={onPlayingChange} />
+                            )}
+                        </View>
+                    </Animated.View>
+                </GestureDetector>
+            </GestureHandlerRootView>
+        </Modal>
+    );
+};
 
 // ChatImage Component for dynamic sizing
 interface ChatImageProps {
@@ -93,6 +219,132 @@ const ChatImage: React.FC<ChatImageProps> = React.memo(({ uri, messageId, initia
     );
 });
 
+// Simple Video Preview for Chat bubbles (Static)
+interface VideoPreviewProps {
+    thumbnail?: string;
+    style?: any;
+    isPlaying?: boolean;
+}
+
+const VideoPreview: React.FC<VideoPreviewProps> = React.memo(({ thumbnail, style, isPlaying }) => (
+    <View style={[styles.sentVideoContainer, style, { backgroundColor: '#000', overflow: 'hidden' }]}>
+        {thumbnail && (
+            <Image
+                source={{ uri: thumbnail }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+            />
+        )}
+        <View style={styles.playButtonOverlay} pointerEvents="none">
+            <Ionicons name={isPlaying ? "pause" : "play"} size={40} color="white" />
+        </View>
+    </View>
+));
+
+const StatusTicks = React.memo(({ deliveredAt, readAt, pending }: { deliveredAt?: string, readAt?: string, pending?: boolean }) => {
+    const isRead = !!readAt;
+    const isDelivered = !!deliveredAt || !!readAt;
+
+    const blueOpacity = useSharedValue(isRead ? 1 : 0);
+    const secondTickScale = useSharedValue(isDelivered ? 1 : 0);
+    const secondTickTranslateX = useSharedValue(isDelivered ? 0 : -8);
+
+    useEffect(() => {
+        if (isRead) {
+            blueOpacity.value = withTiming(1, { duration: 450 });
+        }
+        if (isDelivered) {
+            secondTickScale.value = withSpring(1, { damping: 15, stiffness: 120 });
+            secondTickTranslateX.value = withSpring(0, { damping: 15, stiffness: 120 });
+        }
+    }, [isRead, isDelivered]);
+
+    const blueTickStyle = useAnimatedStyle(() => ({
+        opacity: blueOpacity.value,
+        position: 'absolute',
+        right: 0,
+        top: 0,
+    }));
+
+    const secondTickStyle = useAnimatedStyle(() => ({
+        transform: [
+            { scale: secondTickScale.value },
+            { translateX: secondTickTranslateX.value }
+        ],
+        opacity: secondTickScale.value,
+        marginLeft: -10,
+    }));
+
+    if (pending) {
+        return (
+            <ActivityIndicator
+                size="small"
+                color="rgba(255,255,255,0.7)"
+                style={{ transform: [{ scale: 0.6 }] }}
+            />
+        );
+    }
+
+    return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', height: 16 }}>
+            {/* First Tick */}
+            <View style={{ width: 14 }}>
+                <Ionicons name="checkmark" size={16} color="rgba(255,255,255,0.7)" />
+                <Animated.View style={blueTickStyle}>
+                    <Ionicons name="checkmark" size={16} color="#34B7F1" />
+                </Animated.View>
+            </View>
+
+            {/* Second Tick */}
+            <Animated.View style={secondTickStyle}>
+                <View style={{ width: 14 }}>
+                    <Ionicons name="checkmark" size={16} color="rgba(255,255,255,0.7)" />
+                    <Animated.View style={blueTickStyle}>
+                        <Ionicons name="checkmark" size={16} color="#34B7F1" />
+                    </Animated.View>
+                </View>
+            </Animated.View>
+        </View>
+    );
+});
+
+// Re-defining for clear usage in modal/preview (Using Expo-Video)
+const FullscreenVideo: React.FC<{ uri: string, autoPlay?: boolean, onPlayingChange?: (playing: boolean) => void }> = ({ uri, autoPlay = true, onPlayingChange }) => {
+    const player = useVideoPlayer({ uri }, (player) => {
+        player.loop = false;
+        if (autoPlay) player.play();
+    });
+
+    useEffect(() => {
+        if (!onPlayingChange) return;
+        const sub = player.addListener('playingChange', (event) => {
+            onPlayingChange(event.isPlaying);
+        });
+        return () => sub.remove();
+    }, [player, onPlayingChange]);
+
+    return (
+        <VideoView
+            player={player}
+            style={{ flex: 1, width: '100%', height: '100%' }}
+            contentFit="contain"
+            nativeControls={true}
+        />
+    );
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
 // MessageItem Component for performance
 interface MessageItemProps {
     item: Message;
@@ -100,12 +352,16 @@ interface MessageItemProps {
     currentUserId: string;
     displayAvatar: string;
     onLongPress: (item: Message) => void;
+    onShowViewer: (uri: string, type: 'image' | 'video') => void;
     showAvatar: boolean;
+    isGlobalVideoPlaying?: boolean;
+    activeVideoUri?: string | null;
 }
 
-const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onLongPress, showAvatar }: MessageItemProps) => {
+const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onLongPress, onShowViewer, showAvatar, isGlobalVideoPlaying, activeVideoUri }: MessageItemProps) => {
     const senderId = typeof item.sender === 'object' ? item.sender._id : item.sender;
     const isMe = senderId === currentUserId || senderId === 'me';
+    const isThisVideoPlaying = !!(item.video && activeVideoUri === item.video && isGlobalVideoPlaying);
 
     return (
         <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage, { width: '100%' }]}>
@@ -122,11 +378,15 @@ const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onL
             )}
             <TouchableOpacity
                 onLongPress={() => onLongPress(item)}
+                onPress={() => {
+                    if (item.image) onShowViewer(item.image, 'image');
+                    else if (item.video) onShowViewer(item.video, 'video');
+                }}
                 activeOpacity={0.8}
                 style={[
                     styles.messageBubble,
                     isMe ? styles.myBubble : styles.theirBubble,
-                    item.image && styles.imageBubble,
+                    (item.image || item.video) && styles.imageBubble,
                     item.isDeleted && styles.deletedBubble
                 ]}
             >
@@ -147,6 +407,12 @@ const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onL
                                 initialHeight={item.height}
                             />
                         )}
+                        {item.video && (
+                            <VideoPreview
+                                thumbnail={item.videoThumbnail}
+                                isPlaying={isThisVideoPlaying}
+                            />
+                        )}
                         {item.text && <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText]}>{item.text}</Text>}
                     </>
                 )}
@@ -160,19 +426,11 @@ const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onL
                     </Text>
                     {isMe && !item.isDeleted && (
                         <View style={styles.pendingIndicator}>
-                            {item.pending ? (
-                                <ActivityIndicator
-                                    size="small"
-                                    color="rgba(255,255,255,0.7)"
-                                    style={{ transform: [{ scale: 0.6 }] }}
-                                />
-                            ) : (
-                                <Ionicons
-                                    name="checkmark-done"
-                                    size={12}
-                                    color={item.read ? COLORS.secondary : "rgba(255,255,255,0.7)"}
-                                />
-                            )}
+                            <StatusTicks
+                                pending={item.pending}
+                                deliveredAt={item.deliveredAt}
+                                readAt={item.readAt}
+                            />
                         </View>
                     )}
                 </View>
@@ -187,7 +445,9 @@ const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onL
         prevProps.item.isEdited === nextProps.item.isEdited &&
         prevProps.item.read === nextProps.item.read &&
         prevProps.index === nextProps.index &&
-        prevProps.showAvatar === nextProps.showAvatar
+        prevProps.showAvatar === nextProps.showAvatar &&
+        prevProps.isGlobalVideoPlaying === nextProps.isGlobalVideoPlaying &&
+        prevProps.activeVideoUri === nextProps.activeVideoUri
     );
 });
 
@@ -202,10 +462,17 @@ export default function ChatScreen() {
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [selectedImageDims, setSelectedImageDims] = useState<{ width: number, height: number } | null>(null);
+    const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+    const [selectedVideoThumbnail, setSelectedVideoThumbnail] = useState<string | null>(null);
+    const [selectedVideoSize, setSelectedVideoSize] = useState<number | null>(null);
     const [showPreview, setShowPreview] = useState(false);
+    const [activeVideoUri, setActiveVideoUri] = useState<string | null>(null);
+    const [isGlobalVideoPlaying, setIsGlobalVideoPlaying] = useState(false);
+    const [viewerVisible, setViewerVisible] = useState(false);
+    const [viewerMedia, setViewerMedia] = useState<{ uri: string, type: 'image' | 'video' } | null>(null);
     const flatListRef = useRef<FlatList>(null);
 
-    const { messages, fetchMessages, sendMessage, markAsRead, addReceivedMessage, setActiveConversation, editMessage, deleteMessageForMe, deleteMessageForEveryone, updateLocalEditedMessage, updateLocalDeletedMessage, updateLocalMessagesRead, clearChatHistory } = useMessageStore();
+    const { messages, fetchMessages, sendMessage, markAsRead, addReceivedMessage, activeConversation, setActiveConversation, editMessage, deleteMessageForMe, deleteMessageForEveryone, updateLocalEditedMessage, updateLocalDeletedMessage, updateLocalMessagesRead, updateLocalMessageDelivered, clearChatHistory } = useMessageStore();
     const { token, user } = useAuthStore();
     const { showAlert } = useUIStore();
     const { socket, userStatuses, typingStatus, sendTypingStart, sendTypingStop, isConnected } = useNotificationStore();
@@ -231,6 +498,28 @@ export default function ChatScreen() {
     const displayStatus = getDisplayStatus();
     const pulseOpacity = useSharedValue(0.4);
     const isTyping = typingStatus[userId!];
+    const keyboard = useAnimatedKeyboard();
+
+    const animatedInputStyle = useAnimatedStyle(() => {
+        // Only apply offset if keyboard is actually showing
+        const offset = keyboard.height.value > 0 ? 10 : 0;
+        return {
+            transform: [{ translateY: -keyboard.height.value - offset }],
+        };
+    });
+
+    const animatedListStyle = useAnimatedStyle(() => {
+        return {
+            marginBottom: keyboard.height.value,
+        };
+    });
+
+    const handleShowViewer = useCallback((uri: string, type: 'image' | 'video') => {
+        setViewerMedia({ uri, type });
+        setActiveVideoUri(type === 'video' ? uri : null);
+        setIsGlobalVideoPlaying(false);
+        setViewerVisible(true);
+    }, []);
 
     useEffect(() => {
         if (isOnline) {
@@ -246,6 +535,7 @@ export default function ChatScreen() {
             socket.on('message_edited', handleMessageEdited);
             socket.on('message_deleted', handleMessageDeleted);
             socket.on('messages_read', handleMessagesRead);
+            socket.on('message_delivered', handleMessageDelivered);
         }
         return () => {
             setActiveConversation(null);
@@ -254,6 +544,7 @@ export default function ChatScreen() {
                 socket.off('message_edited', handleMessageEdited);
                 socket.off('message_deleted', handleMessageDeleted);
                 socket.off('messages_read', handleMessagesRead);
+                socket.off('message_delivered', handleMessageDelivered);
             }
             // Clean up typing timeout to prevent memory leaks
             if (typingTimeoutRef.current) {
@@ -271,6 +562,7 @@ export default function ChatScreen() {
             if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
                 loadMessages();
                 markAsRead(userId!, token!);
+                if (socket) socket.emit('message_read', { conversationId: getConversationId(user?._id || user?.id || '', userId!), senderId: userId! });
             }
             appState.current = nextAppState;
         });
@@ -280,6 +572,17 @@ export default function ChatScreen() {
     const handleNewMessage = (message: Message) => {
         const currentUserId = user?._id || user?.id;
         const senderId = typeof message.sender === 'object' ? message.sender._id : message.sender;
+
+        // Auto-acknowledge read if we are looking at THIS conversation
+        if (senderId === userId && currentUserId && socket) {
+            if (activeConversation === senderId) {
+                socket.emit('message_read', {
+                    conversationId: message.conversationId,
+                    senderId: senderId
+                });
+            }
+        }
+
         if (senderId === userId && currentUserId) {
             addReceivedMessage(message, currentUserId);
             markAsRead(userId!, token!);
@@ -306,71 +609,189 @@ export default function ChatScreen() {
         }
     };
 
+    const handleMessageDelivered = (data: { messageId: string, deliveredAt: string }) => {
+        updateLocalMessageDelivered(data);
+    };
+
     const animatedStatusStyle = useAnimatedStyle(() => ({ opacity: pulseOpacity.value }));
     const loadMessages = async () => { await fetchMessages(userId!, token!); };
 
-    const handlePickImage = async () => {
+    const handlePickMedia = () => {
+        Alert.alert(
+            'Share Media',
+            'Choose what to share',
+            [
+                { text: 'Image', onPress: () => handlePickImage(false) },
+                { text: 'Video', onPress: handlePickVideo },
+                { text: 'Cancel', style: 'cancel' }
+            ],
+            { cancelable: true }
+        );
+    };
+
+    const handlePickImage = async (allowEditing: boolean = false) => {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: 'images',
-                allowsEditing: true,
-                aspect: [1, 1],
+                mediaTypes: ['images'],
+                allowsEditing: allowEditing,
+                aspect: [1, 1], // Square crop if enabled
                 quality: 0.8,
-                base64: false // NO BASE64
+                base64: false
             });
 
             if (!result.canceled && result.assets[0].uri) {
-                setSelectedImage(result.assets[0].uri);
-                setSelectedImageDims({ width: result.assets[0].width, height: result.assets[0].height });
+                const asset = result.assets[0];
+                setSelectedImage(asset.uri);
+                setSelectedImageDims({ width: asset.width, height: asset.height });
+
                 setShowPreview(true);
             }
         } catch (error) { showAlert({ title: 'Error', message: 'Failed to pick image', type: 'error' }); }
     };
 
-    const handleConfirmSendImage = async () => {
-        if (!selectedImage || sending) return;
+    const handleShowCropOption = () => {
+        Alert.alert(
+            'Edit Image',
+            'Choose an action',
+            [
+                { text: 'Crop (1:1)', onPress: () => handlePickImage(true) },
+                { text: 'Cancel', style: 'cancel' }
+            ]
+        );
+    };
+
+    const handlePickVideo = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['videos'],
+                allowsEditing: false,
+                quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets[0].uri) {
+                const videoData = result.assets[0];
+
+                // MIME type safety - ensuring correct types for backend
+                const uri = videoData.uri.toLowerCase();
+                if (!uri.endsWith('.mp4') && !uri.endsWith('.mov') && !uri.endsWith('.m4v') && !uri.endsWith('.qt')) {
+                    showAlert({ title: 'Unsupported', message: 'Only MP4 and MOV videos are supported.', type: 'error' });
+                    return;
+                }
+
+                // Check file size (max 10MB)
+                const fileSize = videoData.fileSize || 0;
+                if (fileSize > 10 * 1024 * 1024) {
+                    showAlert({
+                        title: 'File Too Large',
+                        message: 'Videos must be less than 10MB',
+                        type: 'error'
+                    });
+                    return;
+                }
+
+                setSending(true);
+                try {
+                    // Generate thumbnail
+                    const { uri: thumbnailUri } = await VideoThumbnails.getThumbnailAsync(
+                        videoData.uri,
+                        { time: 1000 }
+                    );
+
+                    setSelectedVideo(videoData.uri);
+                    setSelectedVideoThumbnail(thumbnailUri);
+                    setSelectedVideoSize(fileSize);
+                    setSelectedImageDims({ width: videoData.width || 480, height: videoData.height || 270 });
+                    setShowPreview(true);
+                } catch (e) {
+                    console.error("Thumbnail error:", e);
+                    showAlert({ title: 'Error', message: 'Failed to process video', type: 'error' });
+                } finally {
+                    setSending(false);
+                }
+            }
+        } catch (error) {
+            showAlert({ title: 'Error', message: 'Failed to pick video', type: 'error' });
+        }
+    };
+
+    const handleConfirmSendMedia = async () => {
+        if ((!selectedImage && !selectedVideo) || sending) return;
         setSending(true);
 
         try {
-            const imageUri = selectedImage;
-            const fileName = imageUri.split('/').pop() || 'image.jpg';
-            const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+            let finalImageUrl: string | undefined;
+            let finalVideoUrl: string | undefined;
+            let finalThumbnailUrl: string | undefined;
 
-            // Map common extensions to specific mime types
-            let contentType = 'image/jpeg';
-            if (fileExtension === 'png') contentType = 'image/png';
-            else if (fileExtension === 'webp') contentType = 'image/webp';
+            // 1. Handle Image Upload
+            if (selectedImage) {
+                const imageUri = selectedImage;
+                const fileName = imageUri.split('/').pop() || 'image.jpg';
+                const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+                let contentType = 'image/jpeg';
+                if (fileExtension === 'png') contentType = 'image/png';
+                else if (fileExtension === 'webp') contentType = 'image/webp';
 
+                const { uploadUrl, finalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
+                    '/api/messages/presigned-url',
+                    { fileName, contentType }
+                );
 
-            // 1. Get Presigned URL
-            const { uploadUrl, finalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
-                '/api/messages/presigned-url',
-                { fileName, contentType }
-            );
+                const blobResponse = await fetch(imageUri);
+                const blob = await blobResponse.blob();
+                const uploadResponse = await fetch(uploadUrl, { method: 'PUT', body: blob, headers: { 'Content-Type': contentType } });
+                if (!uploadResponse.ok) throw new Error('Image upload failed');
+                finalImageUrl = finalUrl;
+            }
 
-            // 2. Upload to S3
-            // Convert file URI to blob for upload
-            const blobResponse = await fetch(imageUri);
-            const blob = await blobResponse.blob();
+            // 2. Handle Video Upload
+            if (selectedVideo) {
+                const videoUri = selectedVideo;
+                const videoName = videoUri.split('/').pop() || 'video.mp4';
+                const videoExt = videoName.split('.').pop()?.toLowerCase() || 'mp4';
+                const videoContentType = videoExt === 'mov' || videoExt === 'qt' ? 'video/quicktime' : 'video/mp4';
 
-            const uploadResponse = await fetch(uploadUrl, {
-                method: 'PUT',
-                body: blob,
-                headers: { 'Content-Type': contentType }
-            });
+                // Upload Video
+                const { uploadUrl: vUploadUrl, finalUrl: vFinalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
+                    '/api/messages/presigned-url',
+                    { fileName: videoName, contentType: videoContentType }
+                );
 
-            if (!uploadResponse.ok) throw new Error('S3 upload failed');
+                const vBlobResponse = await fetch(videoUri);
+                const vBlob = await vBlobResponse.blob();
+                const vUploadResponse = await fetch(vUploadUrl, { method: 'PUT', body: vBlob, headers: { 'Content-Type': videoContentType } });
+                if (!vUploadResponse.ok) throw new Error('Video upload failed');
+                finalVideoUrl = vFinalUrl;
 
-            // 3. Send Message with final URL
+                // Upload Thumbnail if exists
+                if (selectedVideoThumbnail) {
+                    const thumbUri = selectedVideoThumbnail;
+                    const thumbName = `thumb_${videoName.split('.')[0]}.jpg`;
+                    const { uploadUrl: tUploadUrl, finalUrl: tFinalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
+                        '/api/messages/presigned-url',
+                        { fileName: thumbName, contentType: 'image/jpeg' }
+                    );
+
+                    const tBlobResponse = await fetch(thumbUri);
+                    const tBlob = await tBlobResponse.blob();
+                    const tUploadResponse = await fetch(tUploadUrl, { method: 'PUT', body: tBlob, headers: { 'Content-Type': 'image/jpeg' } });
+                    if (tUploadResponse.ok) finalThumbnailUrl = tFinalUrl;
+                }
+            }
+
+            // 3. Send Message
             setShowPreview(false);
-            const localUri = selectedImage;
+            const localImg = selectedImage || undefined;
+            const localVid = selectedVideo || undefined;
+            const localThumb = selectedVideoThumbnail || undefined;
             const dims = selectedImageDims;
-            setSelectedImage(null);
-            setSelectedImageDims(null);
-            await createAndSendMessage(undefined, finalUrl, localUri, dims?.width, dims?.height);
+            const size = selectedVideoSize || undefined;
+
+            handleClearPreview();
+            await createAndSendMessage(undefined, finalImageUrl, finalVideoUrl, finalThumbnailUrl, localImg, localVid, localThumb, dims?.width, dims?.height, size);
         } catch (error: any) {
             console.error('Upload error:', error);
-            showAlert({ title: 'Error', message: 'Failed to upload image. Please try again.', type: 'error' });
+            showAlert({ title: 'Error', message: 'Failed to upload media. Please try again.', type: 'error' });
         } finally {
             setSending(false);
         }
@@ -391,7 +812,52 @@ export default function ChatScreen() {
 
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         sendTypingStop(userId!);
-        await createAndSendMessage(messageText.trim(), undefined);
+        await createAndSendMessage(messageText.trim(), undefined, undefined, undefined);
+    };
+
+    const handleClearPreview = () => {
+        setSelectedImage(null);
+        setSelectedImageDims(null);
+        setSelectedVideo(null);
+        setSelectedVideoThumbnail(null);
+        setSelectedVideoSize(null);
+        setShowPreview(false);
+    };
+
+    const createAndSendMessage = async (
+        text: string | undefined,
+        image: string | undefined,
+        video?: string | undefined,
+        videoThumbnail?: string | undefined,
+        localImage?: string,
+        localVideo?: string,
+        localThumbnail?: string,
+        width?: number,
+        height?: number,
+        fileSizeBytes?: number
+    ) => {
+        setSending(true);
+        if (text) setMessageText('');
+
+        // Immediate scroll to bottom for improved UX
+        setTimeout(() => { flatListRef.current?.scrollToOffset({ offset: 0, animated: true }); }, 0);
+
+        const result = await sendMessage(
+            userId!,
+            text || '',
+            image,
+            video,
+            videoThumbnail,
+            token!,
+            localImage,
+            localVideo,
+            localThumbnail,
+            width,
+            height,
+            fileSizeBytes
+        );
+        setSending(false);
+        if (!result.success) showAlert({ title: 'Error', message: 'Failed to send message', type: 'error' });
     };
 
     const handleLongPress = useCallback((item: Message) => {
@@ -401,16 +867,27 @@ export default function ChatScreen() {
 
         if (item.isDeleted) return;
 
-        showAlert({
-            title: 'Message Options',
-            message: 'What would you like to do with this message?',
-            showCancel: true,
-            confirmText: isMe ? 'Delete for Everyone' : 'Delete for Me',
-            onConfirm: () => {
-                if (isMe) deleteMessageForEveryone(item._id, token!);
-                else deleteMessageForMe(item._id, token!);
-            }
-        });
+        if (isMe) {
+            showAlert({
+                title: 'Delete Message',
+                message: 'Do you want to delete this message for yourself or for everyone?',
+                showCancel: true,
+                confirmText: 'Delete for Me',
+                onConfirm: () => { deleteMessageForMe(item._id, token!); },
+                confirmText2: 'Delete for Everyone',
+                onConfirm2: () => { deleteMessageForEveryone(item._id, token!); },
+                type: 'warning'
+            });
+        } else {
+            showAlert({
+                title: 'Delete Message',
+                message: 'Are you sure you want to delete this message for yourself?',
+                showCancel: true,
+                confirmText: 'Delete for Me',
+                onConfirm: () => { deleteMessageForMe(item._id, token!); },
+                type: 'warning'
+            });
+        }
     }, [user, token, showAlert]);
 
     const handleTextChange = (text: string) => {
@@ -426,18 +903,6 @@ export default function ChatScreen() {
         if (!typingTimeoutRef.current) sendTypingStart(userId!);
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => { sendTypingStop(userId!); typingTimeoutRef.current = null; }, 2000);
-    };
-
-    const createAndSendMessage = async (text: string | undefined, image: string | undefined, localImage?: string, width?: number, height?: number) => {
-        setSending(true);
-        if (text) setMessageText('');
-
-        // Immediate scroll to bottom for improved UX
-        setTimeout(() => { flatListRef.current?.scrollToOffset({ offset: 0, animated: true }); }, 0);
-
-        const result = await sendMessage(userId!, text || '', image, token!, localImage, width, height);
-        setSending(false);
-        if (!result.success) showAlert({ title: 'Error', message: 'Failed to send message', type: 'error' });
     };
 
     const renderMessage = useCallback(({ item, index }: ListRenderItemInfo<Message>) => {
@@ -484,7 +949,10 @@ export default function ChatScreen() {
                 currentUserId={currentUserId}
                 displayAvatar={displayAvatar}
                 onLongPress={handleLongPress}
+                onShowViewer={handleShowViewer}
                 showAvatar={showAvatar}
+                isGlobalVideoPlaying={isGlobalVideoPlaying}
+                activeVideoUri={activeVideoUri}
             />
         );
     }, [user, displayAvatar, handleLongPress, conversationMessages]);
@@ -495,11 +963,7 @@ export default function ChatScreen() {
         <SafeScreen top={true} bottom={false}>
             <Stack.Screen options={{ headerShown: false }} />
 
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-            >
+            <View style={{ flex: 1 }}>
                 <View style={styles.container}>
                     {/* Custom Header */}
                     <View style={[styles.headerRow, { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border }]}>
@@ -541,35 +1005,37 @@ export default function ChatScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    <FlatList
-                        ref={flatListRef}
-                        data={conversationMessages}
-                        renderItem={renderMessage}
-                        keyExtractor={(item) => item._id}
-                        contentContainerStyle={[styles.messagesList, { paddingBottom: 16, paddingTop: 16 }]}
-                        inverted
-                        showsVerticalScrollIndicator={false}
-                        keyboardShouldPersistTaps="handled"
-                        removeClippedSubviews={Platform.OS === 'android'}
-                        initialNumToRender={20}
-                        maxToRenderPerBatch={10}
-                        windowSize={15}
-                        updateCellsBatchingPeriod={50}
-                        onEndReachedThreshold={0.5}
-                        scrollEventThrottle={16}
-                        ListEmptyComponent={
-                            <View style={styles.emptyContainer}>
-                                <View style={styles.emptyIconCircle}>
-                                    <Ionicons name="chatbubbles-outline" size={32} color={COLORS.primary} />
+                    <Animated.View style={[{ flex: 1 }, animatedListStyle]}>
+                        <FlatList
+                            ref={flatListRef}
+                            data={conversationMessages}
+                            renderItem={renderMessage}
+                            keyExtractor={(item) => item._id}
+                            contentContainerStyle={[styles.messagesList, { paddingBottom: 16, paddingTop: 16 }]}
+                            inverted
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            removeClippedSubviews={Platform.OS === 'android'}
+                            initialNumToRender={20}
+                            maxToRenderPerBatch={10}
+                            windowSize={15}
+                            updateCellsBatchingPeriod={50}
+                            onEndReachedThreshold={0.5}
+                            scrollEventThrottle={16}
+                            ListEmptyComponent={
+                                <View style={styles.emptyContainer}>
+                                    <View style={styles.emptyIconCircle}>
+                                        <Ionicons name="chatbubbles-outline" size={32} color={COLORS.primary} />
+                                    </View>
+                                    <Text style={styles.emptyText}>Start a literary conversation with {username}</Text>
                                 </View>
-                                <Text style={styles.emptyText}>Start a literary conversation with {username}</Text>
-                            </View>
-                        }
-                    />
+                            }
+                        />
+                    </Animated.View>
 
-                    <View style={[styles.inputWrapper, { paddingBottom: insets.bottom || 16 }]}>
+                    <Animated.View style={[styles.inputWrapper, { paddingBottom: insets.bottom || 16 }, animatedInputStyle]}>
                         <View style={styles.inputContainer}>
-                            <TouchableOpacity onPress={handlePickImage} style={styles.iconButton}>
+                            <TouchableOpacity onPress={handlePickMedia} style={styles.iconButton}>
                                 <Ionicons name="add" size={24} color={COLORS.primary} />
                             </TouchableOpacity>
                             <TextInput
@@ -589,31 +1055,51 @@ export default function ChatScreen() {
                                 {sending ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="send" size={18} color="#fff" />}
                             </TouchableOpacity>
                         </View>
-                    </View>
-                </View>
-            </KeyboardAvoidingView>
+                    </Animated.View>
+                </View >
+            </View >
 
-            <Modal visible={showPreview} transparent animationType="fade" onRequestClose={() => setShowPreview(false)}>
+            <Modal visible={showPreview} transparent animationType="fade" onRequestClose={handleClearPreview}>
                 <View style={styles.previewOverlay}>
                     <View style={styles.previewHeader}>
-                        <TouchableOpacity onPress={() => setShowPreview(false)} style={styles.closeButton}>
+                        <TouchableOpacity onPress={handleClearPreview} style={styles.closeButton}>
                             <Ionicons name="close" size={28} color="#fff" />
                         </TouchableOpacity>
+
+                        {selectedImage && (
+                            <TouchableOpacity onPress={handleShowCropOption} style={[styles.closeButton, { marginLeft: 'auto' }]}>
+                                <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     <View style={styles.previewImageContainer}>
                         <View style={styles.previewImageWrapper}>
-                            {selectedImage && <Image source={{ uri: selectedImage }} style={styles.previewImage} contentFit="contain" />}
+                            {selectedVideo ? (
+                                <FullscreenVideo uri={selectedVideo} />
+                            ) : selectedImage ? (
+                                <Image source={{ uri: selectedImage }} style={styles.previewImage} contentFit="contain" />
+                            ) : null}
                         </View>
                     </View>
 
                     <View style={styles.previewFooter}>
-                        <TouchableOpacity onPress={handleConfirmSendImage} style={styles.previewSendButton} disabled={sending}>
+                        <TouchableOpacity onPress={handleConfirmSendMedia} style={styles.previewSendButton} disabled={sending}>
                             {sending ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="send" size={24} color="#fff" />}
                         </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
-        </SafeScreen>
+            <PremiumMediaViewer
+                visible={viewerVisible}
+                onClose={() => {
+                    setViewerVisible(false);
+                    setIsGlobalVideoPlaying(false);
+                    setActiveVideoUri(null);
+                }}
+                media={viewerMedia}
+                onPlayingChange={setIsGlobalVideoPlaying}
+            />
+        </SafeScreen >
     );
 }
