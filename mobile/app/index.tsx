@@ -4,7 +4,7 @@ import { View, ActivityIndicator } from "react-native";
 import COLORS from "../constants/colors";
 
 export default function Index() {
-    const { user, token, isCheckingAuth } = useAuthStore();
+    const { user, token, isCheckingAuth, hasCompletedOnboarding } = useAuthStore();
 
     if (isCheckingAuth) {
         return (
@@ -12,6 +12,10 @@ export default function Index() {
                 <ActivityIndicator size="large" color={COLORS.primary} />
             </View>
         );
+    }
+
+    if (!hasCompletedOnboarding) {
+        return <Redirect href="/onboarding" />;
     }
 
     if (user && token) {

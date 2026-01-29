@@ -33,16 +33,8 @@ export default function RootLayout() {
         "JetBrainsMono-Medium": require("../assets/fonts/JetBrainsMono-Medium.ttf"),
     });
 
-    useEffect(() => {
-        // PRODUCTION-GRADE READY CHECK:
-        // Splash screen remains until:
-        // 1. Fonts are loaded
-        // 2. Auth state is fully hydrated (token + user)
-        // 3. Onboarding status is loaded
-        if (fontsLoaded && !isCheckingAuth && !isAuthLoading) {
-            SplashScreen.hideAsync();
-        }
-    }, [fontsLoaded, isCheckingAuth, isAuthLoading]);
+    // Splash screen hide is now handled by the Snap Redirector below
+    // to ensure we only show the UI once the navigation is final.
 
     useEffect(() => {
         checkAuth();
@@ -154,13 +146,36 @@ export default function RootLayout() {
         };
     }, [user?._id, user?.id, token, isCheckingAuth]);
 
-    // Determine authentication status
-    const isAuthenticated = !!(user && token);
     const router = useRouter();
+    const isAuthenticated = !!(user && token);
 
-    // Imperative redirection is REMOVED to prevent flicker and logout exit.
-    // Navigation is now handled declaratively by the Stack rendering logic below.
-    // Expo Router will automatically navigate to the first available screen in the stack.
+    // Snap Redirector:
+    // This ensures the navigator actually JUMPS to the correct stack
+    // when the state changes (login, logout, onboarding finish).
+    useEffect(() => {
+        if (!isAuthLoading && !isCheckingAuth && fontsLoaded) {
+            const timer = setTimeout(() => {
+                let target = '/(tabs)';
+                if (!hasCompletedOnboarding) {
+                    target = '/onboarding';
+                } else if (!isAuthenticated) {
+                    target = '/(auth)';
+                }
+
+                console.log(`ℹ️ [Nav] Redirecting to ${target}`);
+                router.replace(target as any);
+
+                // PRODUCTION-GRADE SMOOTHING:
+                // We hide the splash screen only AFTER the replacement command
+                // has been issued. We add a small 100ms buffer to allow the
+                // navigator to mount the new screen tree and avoid a "white flash".
+                setTimeout(() => {
+                    SplashScreen.hideAsync();
+                }, 100);
+            }, 10);
+            return () => clearTimeout(timer);
+        }
+    }, [isAuthenticated, hasCompletedOnboarding, isAuthLoading, isCheckingAuth, fontsLoaded]);
 
     // ====================================================================
     // AUTH GATE: Prevent navigation rendering until auth state is resolved
