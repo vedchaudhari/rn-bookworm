@@ -34,6 +34,7 @@ export const sendPushNotification = async (userId: string, options: PushOptions)
             title: options.title,
             body: options.body,
             data: options.data,
+            channelId: 'default', // Essential for Android to show notification properly
         };
 
         const chunks = expo.chunkPushNotifications([message]);

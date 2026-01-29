@@ -48,7 +48,8 @@ export async function registerForPushNotificationsAsync(token: string) {
             projectId,
         })).data;
 
-        console.log('ℹ [Push] Token received:', expoToken);
+        console.log('ℹ️ [Push] Token received:', expoToken);
+        console.log('ℹ️ [Push] Project ID used:', projectId);
 
         // Sync with backend
         const response = await fetch(`${API_URL}/api/notifications/register-token`, {
