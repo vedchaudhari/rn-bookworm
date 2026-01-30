@@ -1,4 +1,3 @@
-import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform, Alert, StyleSheet, StatusBar, Dimensions } from 'react-native';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, withSpring, runOnJS, useAnimatedKeyboard } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,11 +6,14 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform, Alert, StyleSheet, StatusBar, Dimensions, Keyboard, LayoutAnimation, UIManager } from 'react-native';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import * as FileSystem from 'expo-file-system';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import COLORS from '../constants/colors';
+import { SPACING } from '../constants/styleConstants';
 import { useMessageStore, Message } from '../store/messageStore';
 import { useAuthStore } from '../store/authContext';
 import { useNotificationStore } from '../store/notificationStore';
@@ -19,6 +21,7 @@ import { apiClient } from '../lib/apiClient';
 import SafeScreen from '../components/SafeScreen';
 import { useUIStore } from '../store/uiStore';
 import styles from '../assets/styles/chat.styles';
+import ChatHeader from '../components/ChatHeader';
 
 
 
@@ -152,7 +155,7 @@ interface ChatImageProps {
 }
 
 const ChatImage: React.FC<ChatImageProps> = React.memo(({ uri, messageId, initialWidth, initialHeight }) => {
-    // Calculate initial dimensions if available
+    // ... logic remains same ...
     const getInitialDims = () => {
         if (initialWidth && initialHeight) {
             const aspectRatio = initialWidth / initialHeight;
@@ -160,17 +163,13 @@ const ChatImage: React.FC<ChatImageProps> = React.memo(({ uri, messageId, initia
             const maxHeight = 320;
             const minWidth = 160;
             const minHeight = 120;
-
             let finalWidth = initialWidth;
             let finalHeight = initialHeight;
-
             if (aspectRatio > 1.5) { finalWidth = maxWidth; finalHeight = maxWidth / aspectRatio; }
             else if (aspectRatio < 0.75) { finalHeight = Math.min(maxHeight, initialHeight); finalWidth = finalHeight * aspectRatio; }
             else { finalWidth = Math.min(maxWidth, initialWidth); finalHeight = finalWidth / aspectRatio; }
-
             if (finalWidth < minWidth) { finalWidth = minWidth; finalHeight = finalWidth / aspectRatio; }
             if (finalHeight < minHeight) { finalHeight = minHeight; finalWidth = finalHeight * aspectRatio; }
-
             return { width: Math.round(finalWidth), height: Math.round(finalHeight) };
         }
         return { width: 240, height: 180 };
@@ -179,28 +178,21 @@ const ChatImage: React.FC<ChatImageProps> = React.memo(({ uri, messageId, initia
     const [dimensions, setDimensions] = useState(getInitialDims());
 
     const handleLoad = (event: any) => {
-        // If we already have dimensions from props, trust them to avoid layout shift
         if (initialWidth && initialHeight) return;
-
         const { width, height } = event.source;
         if (!width || !height) return;
-
         const aspectRatio = width / height;
         const maxWidth = 240;
         const maxHeight = 320;
         const minWidth = 160;
         const minHeight = 120;
-
         let finalWidth = width;
         let finalHeight = height;
-
         if (aspectRatio > 1.5) { finalWidth = maxWidth; finalHeight = maxWidth / aspectRatio; }
         else if (aspectRatio < 0.75) { finalHeight = Math.min(maxHeight, height); finalWidth = finalHeight * aspectRatio; }
         else { finalWidth = Math.min(maxWidth, width); finalHeight = finalWidth / aspectRatio; }
-
         if (finalWidth < minWidth) { finalWidth = minWidth; finalHeight = finalWidth / aspectRatio; }
         if (finalHeight < minHeight) { finalHeight = minHeight; finalWidth = finalHeight * aspectRatio; }
-
         setDimensions({
             width: Math.round(finalWidth),
             height: Math.round(finalHeight)
@@ -208,16 +200,18 @@ const ChatImage: React.FC<ChatImageProps> = React.memo(({ uri, messageId, initia
     };
 
     return (
-        <Image
-            source={{ uri }}
-            style={[styles.sentImage, dimensions]}
-            contentFit="cover"
-            cachePolicy="disk"
-            transition={200}
-            onLoad={handleLoad}
-        />
+        <View style={[styles.sentImage, dimensions, { overflow: 'hidden' }]}>
+            <Image
+                source={{ uri }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                cachePolicy="disk"
+                transition={200}
+                onLoad={handleLoad}
+            />
+        </View>
     );
-});
+}, (prev, next) => prev.uri === next.uri && prev.messageId === next.messageId);
 
 // Simple Video Preview for Chat bubbles (Static)
 interface VideoPreviewProps {
@@ -474,10 +468,10 @@ export default function ChatScreen() {
 
     const { messages, fetchMessages, sendMessage, markAsRead, addReceivedMessage, activeConversation, setActiveConversation, editMessage, deleteMessageForMe, deleteMessageForEveryone, updateLocalEditedMessage, updateLocalDeletedMessage, updateLocalMessagesRead, updateLocalMessageDelivered, clearChatHistory } = useMessageStore();
     const { token, user } = useAuthStore();
-    const { showAlert } = useUIStore();
+    const { showAlert, setActiveScreen, setActiveChatId } = useUIStore();
     const { socket, userStatuses, typingStatus, sendTypingStart, sendTypingStop, isConnected } = useNotificationStore();
     const typingTimeoutRef = useRef<any>(null);
-
+    const [isInputActive, setIsInputActive] = useState(false);
     const isSelf = user?._id === userId || user?.id === userId;
 
     const conversationMessages = (messages[userId!] || []) as Message[];
@@ -498,21 +492,16 @@ export default function ChatScreen() {
     const displayStatus = getDisplayStatus();
     const pulseOpacity = useSharedValue(0.4);
     const isTyping = typingStatus[userId!];
-    const keyboard = useAnimatedKeyboard();
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
 
-    const animatedInputStyle = useAnimatedStyle(() => {
-        // Only apply offset if keyboard is actually showing
-        const offset = keyboard.height.value > 0 ? 10 : 0;
-        return {
-            transform: [{ translateY: -keyboard.height.value - offset }],
-        };
-    });
-
-    const animatedListStyle = useAnimatedStyle(() => {
-        return {
-            marginBottom: keyboard.height.value,
-        };
-    });
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
+    useEffect(() => {
+        const showSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardVisible(true));
+        const hideSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardVisible(false));
+        return () => { showSub.remove(); hideSub.remove(); };
+    }, []);
 
     const handleShowViewer = useCallback((uri: string, type: 'image' | 'video') => {
         setViewerMedia({ uri, type });
@@ -536,11 +525,12 @@ export default function ChatScreen() {
     }, [user]);
 
     useEffect(() => {
-        // We set the active conversation in the store, but we also need to track it locally specifically for this screen's focus
-        setActiveConversation(userId!);
+        setActiveScreen('chat');
+        if (userId) setActiveChatId(String(userId));
 
         return () => {
-            setActiveConversation(null);
+            setActiveScreen(null);
+            setActiveChatId(null);
         };
     }, [userId]);
 
@@ -899,6 +889,19 @@ export default function ChatScreen() {
         if (!result.success) showAlert({ title: 'Error', message: 'Failed to send message', type: 'error' });
     };
 
+    const handleClearChat = useCallback(() => {
+        showAlert({
+            title: 'Clear Chat',
+            message: 'Are you sure you want to clear your local chat history? This cannot be undone.',
+            showCancel: true,
+            confirmText: 'Clear',
+            type: 'warning',
+            onConfirm: async () => {
+                await clearChatHistory(userId!, token!);
+            }
+        });
+    }, [userId, token, clearChatHistory, showAlert]);
+
     const handleLongPress = useCallback((item: Message) => {
         const currentUserId = user?._id || user?.id;
         const senderId = typeof item.sender === 'object' ? item.sender._id : item.sender;
@@ -998,53 +1001,41 @@ export default function ChatScreen() {
 
     const insets = useSafeAreaInsets();
 
+    // Get smooth 60fps keyboard height value
+    const keyboard = useAnimatedKeyboard();
+
+    const animatedContainerStyle = useAnimatedStyle(() => {
+        const basePadding = Math.max(insets.bottom, 16);
+        const targetPadding = Math.max(keyboard.height.value + 16, basePadding);
+
+        return {
+            paddingBottom: targetPadding,
+        };
+    });
+
+
     return (
         <SafeScreen top={true} bottom={false}>
             <Stack.Screen options={{ headerShown: false }} />
 
-            <View style={{ flex: 1 }}>
-                <View style={styles.container}>
-                    {/* Custom Header */}
-                    <View style={[styles.headerRow, { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border }]}>
-                        <TouchableOpacity onPress={() => router.back()} style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}>
-                            <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
-                        </TouchableOpacity>
+            {/* Replaced KeyboardAvoidingView with Smooth Reanimated View */}
+            <ChatHeader
+                username={username}
+                displayAvatar={displayAvatar}
+                isOnline={isOnline}
+                isSelf={isSelf}
+                isTyping={!!isTyping}
+                displayStatus={displayStatus}
+                animatedStatusStyle={animatedStatusStyle}
+                onClearChat={handleClearChat}
+            />
 
-                        <View style={styles.avatarContainer}>
-                            <Image source={{ uri: displayAvatar }} style={styles.headerAvatar} />
-                            {isOnline && <Animated.View style={[styles.statusDot, animatedStatusStyle]} />}
-                        </View>
+            {/* Smooth Reanimated View for Keyboard */}
+            <Animated.View style={[{ flex: 1 }, animatedContainerStyle]}>
+                <View style={[styles.container, { paddingTop: 0 }]}>
 
-                        <View style={[styles.headerInfo, { flex: 1, marginLeft: 12 }]}>
-                            <Text style={styles.headerName}>{isSelf ? 'Saved Messages' : username}</Text>
-                            {isTyping && !isSelf ? (
-                                <Text style={[styles.headerStatus, { color: COLORS.primary, textTransform: 'none' }]}>Typing...</Text>
-                            ) : (
-                                <Text style={styles.headerStatus}>{displayStatus}</Text>
-                            )}
-                        </View>
-
-                        <TouchableOpacity
-                            onPress={() => {
-                                showAlert({
-                                    title: 'Clear Chat',
-                                    message: 'Are you sure you want to clear your local chat history? This cannot be undone.',
-                                    showCancel: true,
-                                    confirmText: 'Clear',
-                                    type: 'warning',
-                                    onConfirm: async () => {
-                                        await clearChatHistory(userId!, token!);
-                                    }
-
-                                });
-                            }}
-                            style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}
-                        >
-                            <Ionicons name="trash-outline" size={20} color={COLORS.textMuted} />
-                        </TouchableOpacity>
-                    </View>
-
-                    <Animated.View style={[{ flex: 1 }, animatedListStyle]}>
+                    {/* Messages List */}
+                    <View style={{ flex: 1 }}>
                         <FlatList
                             ref={flatListRef}
                             data={conversationMessages}
@@ -1053,7 +1044,8 @@ export default function ChatScreen() {
                             contentContainerStyle={[styles.messagesList, { paddingBottom: 16, paddingTop: 16 }]}
                             inverted
                             showsVerticalScrollIndicator={false}
-                            keyboardShouldPersistTaps="handled"
+                            keyboardShouldPersistTaps="handled" // Essential for smooth dismiss
+                            keyboardDismissMode="interactive" // Allows user to drag keyboard down
                             removeClippedSubviews={Platform.OS === 'android'}
                             initialNumToRender={20}
                             maxToRenderPerBatch={10}
@@ -1070,9 +1062,10 @@ export default function ChatScreen() {
                                 </View>
                             }
                         />
-                    </Animated.View>
+                    </View>
 
-                    <Animated.View style={[styles.inputWrapper, { paddingBottom: insets.bottom || 16 }, animatedInputStyle]}>
+                    {/* Input Wrapper - No longer needs dynamic padding props, outer container handles it */}
+                    <View style={[styles.inputWrapper, { paddingTop: 12, paddingBottom: 0 }]}>
                         <View style={styles.inputContainer}>
                             <TouchableOpacity onPress={handlePickMedia} style={styles.iconButton}>
                                 <Ionicons name="add" size={24} color={COLORS.primary} />
@@ -1083,6 +1076,8 @@ export default function ChatScreen() {
                                 placeholderTextColor={COLORS.textMuted}
                                 value={messageText}
                                 onChangeText={handleTextChange}
+                                onFocus={() => setIsInputActive(true)}
+                                onBlur={() => setIsInputActive(false)}
                                 multiline
                                 maxLength={1000}
                             />
@@ -1094,9 +1089,9 @@ export default function ChatScreen() {
                                 {sending ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="send" size={18} color="#fff" />}
                             </TouchableOpacity>
                         </View>
-                    </Animated.View>
+                    </View>
                 </View >
-            </View >
+            </Animated.View>
 
             <Modal visible={showPreview} transparent animationType="fade" onRequestClose={handleClearPreview}>
                 <View style={styles.previewOverlay}>

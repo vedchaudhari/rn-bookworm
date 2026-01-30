@@ -64,7 +64,12 @@ export async function addInkDrops(
         timestamp: new Date()
     } as any);
 
-    await user.save();
+    try {
+        await user.save();
+    } catch (error: any) {
+        console.error(`[InkDrops] Failed to save user ${userId} after awarding ${amount} (${source}):`, error);
+        throw error;
+    }
 
     return newBalance;
 }

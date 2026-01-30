@@ -7,9 +7,9 @@ import {
     FlatList,
     RefreshControl,
     TouchableOpacity,
-    Image,
     ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter, Stack } from 'expo-router';
 import SafeScreen from '../../components/SafeScreen';
 import GlassCard from '../../components/GlassCard';
@@ -89,7 +89,7 @@ export default function LeaderboardScreen() {
                 onPress={() => {
                     // Navigate to user profile
                     console.log('Navigate to profile:', item.userId);
-                    // router.push(`/profile/${item.userId}`);
+                    router.push({ pathname: '/user-profile', params: { userId: item.userId } } as any);
                 }}
                 accessibilityLabel={`Rank ${item.rank}: ${item.username}, ${item.streakCount} day streak${isCurrentUser ? ', you' : ''}`}
                 accessibilityRole="button"
@@ -112,7 +112,8 @@ export default function LeaderboardScreen() {
                         <Image
                             source={{ uri: item.profileImage }}
                             style={styles.avatar}
-                            accessibilityIgnoresInvertColors
+                            contentFit="cover"
+                            transition={200}
                         />
                     ) : (
                         <View style={styles.avatarPlaceholder}>

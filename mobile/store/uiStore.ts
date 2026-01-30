@@ -7,6 +7,8 @@ export interface ToastOptions {
     type?: AlertType | 'message';
     title?: string;
     duration?: number;
+    relatedScreen?: string;
+    relatedChatId?: string;
 }
 
 interface AlertOptions {
@@ -26,21 +28,43 @@ interface UIState {
     alert: AlertOptions | null;
     toast: ToastOptions | null;
     isAlertLoading: boolean;
+    activeScreen: string | null;
+    activeChatId: string | null;
     showAlert: (options: AlertOptions) => void;
     hideAlert: () => void;
     setAlertLoading: (loading: boolean) => void;
+    setActiveScreen: (screen: string | null) => void;
+    setActiveChatId: (chatId: string | null) => void;
     showToast: (options: ToastOptions) => void;
     hideToast: () => void;
 }
 
-export const useUIStore = create<UIState>((set) => ({
+export const useUIStore = create<UIState>((set, get) => ({
     alert: null,
     toast: null,
     isAlertLoading: false,
+    activeScreen: null,
+    activeChatId: null,
     showAlert: (options) => set({ alert: options, isAlertLoading: false }),
     hideAlert: () => set({ alert: null, isAlertLoading: false }),
     setAlertLoading: (loading) => set({ isAlertLoading: loading }),
+    setActiveScreen: (screen) => set({ activeScreen: screen }),
+    setActiveChatId: (chatId) => set({ activeChatId: chatId }),
     showToast: (options) => {
+        const { activeScreen, activeChatId } = get();
+        const { relatedScreen, relatedChatId } = options;
+
+        // Suppress toast ONLY if user is on same screen AND same chat (if chat-related)
+        if (
+            relatedScreen &&
+            relatedScreen === activeScreen &&
+            (!relatedChatId || relatedChatId === activeChatId)
+        ) {
+            console.log('[Toast] Suppressed - user is viewing this screen/chat:', { relatedScreen, relatedChatId });
+            return;
+        }
+
+        // Otherwise show toast normally
         set({ toast: options });
         // Auto-hide after duration
         setTimeout(() => {

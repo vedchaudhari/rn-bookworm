@@ -4,19 +4,21 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { API_URL } from '../constants/api';
 import { useMessageStore } from '../store/messageStore';
+import { useAuthStore } from '../store/authContext';
+import { useUIStore } from '../store/uiStore';
 
 // Configure how notifications are handled when the app is foregrounded
-if (Constants.executionEnvironment !== 'storeClient') {
-    Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-            shouldShowAlert: false,
-            shouldPlaySound: false,
-            shouldSetBadge: true,
-            shouldShowBanner: false,
-            shouldShowList: true,
-        }),
-    });
-}
+// We set this globally to ensure foreground notifications don't show system alerts
+// but we still process them in our listeners.
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+        shouldShowAlert: false,
+        shouldPlaySound: false,
+        shouldSetBadge: true,
+        shouldShowBanner: false,
+        shouldShowList: true,
+    }),
+});
 
 export async function registerForPushNotificationsAsync(token: string) {
     if (Constants.executionEnvironment === 'storeClient') {
@@ -94,7 +96,32 @@ export function setupPushNotificationListeners(router: any) {
     try {
         // Standard listeners for real push notifications
         const notificationListener = Notifications.addNotificationReceivedListener(notification => {
-            console.log('[Push] Notification received in foreground:', notification);
+            const data = notification.request.content.data;
+            console.log('[Push] Notification received in foreground:', data);
+
+            // If we receive a message in foreground, we should sync our store
+            // especially if the socket might be lagging or disconnected
+            if (data?.type === 'MESSAGE' && data.senderId) {
+                const activeConversation = useMessageStore.getState().activeConversation;
+                const token = useAuthStore.getState().token;
+
+                // If we are currently looking at this conversation, refresh it to ensure
+                // we have the latest messages even if socket failed to deliver
+                if (activeConversation === String(data.senderId) && token) {
+                    console.log('[Push] Foreground message for active chat - refreshing...');
+                    useMessageStore.getState().fetchMessages(String(data.senderId), token);
+                } else {
+                    // Fallback: If socket hasn't caught it yet, show a toast
+                    // useUIStore will handle internal suppression if activeChatId matches
+                    useUIStore.getState().showToast({
+                        title: `New Message from ${data.senderName || 'User'}`,
+                        message: String(data.text || "📷 Image"),
+                        type: 'message',
+                        relatedScreen: 'chat',
+                        relatedChatId: String(data.senderId)
+                    });
+                }
+            }
         });
 
         const responseListener = Notifications.addNotificationResponseReceivedListener(response => {

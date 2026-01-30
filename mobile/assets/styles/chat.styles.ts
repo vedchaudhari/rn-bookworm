@@ -184,8 +184,7 @@ const styles = StyleSheet.create({
     },
     inputWrapper: {
         paddingHorizontal: SPACING.xl,
-        paddingBottom: Platform.OS === 'ios' ? SPACING.md : SPACING.xl,
-        paddingTop: SPACING.lg,
+        // paddingBottom is handled dynamically in chat.tsx for Safe Area compliance
         backgroundColor: COLORS.background,
     },
     inputContainer: {

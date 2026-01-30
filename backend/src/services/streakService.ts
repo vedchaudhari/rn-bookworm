@@ -1,5 +1,5 @@
-// backend/src/services/streakService.ts
 import UserStreak, { IUserStreakDocument } from '../models/UserStreak';
+import User from '../models/User';
 import DailyChallenge from '../models/DailyChallenge';
 import { addInkDrops } from './inkDropService';
 import { toObjectId } from '../lib/objectId';
@@ -35,16 +35,20 @@ export class StreakService {
         if (!streak) {
             streak = await UserStreak.create({
                 userId: toObjectId(userId),
-                currentStreak: 1,
+                currentStreak: 0, // Start at 0
                 currentStreakStartDate: new Date(),
                 lastCheckInDate: new Date(0), // Epoch start (never checked in)
                 lastCheckInTimestamp: new Date(0),
-                longestStreak: 1,
+                longestStreak: 0,
                 longestStreakStartDate: new Date(),
                 totalCheckIns: 0,
                 streakRestoresUsed: 0,
                 canRestoreStreak: false
             });
+        } else {
+            // Check for broken streaks upon retrieval
+            // This ensures the UI receives the correct "broken" state even if checkIn hasn't been called
+            await this.maintainStreakState(streak);
         }
 
         return streak;
@@ -54,9 +58,9 @@ export class StreakService {
      * Daily check-in (idempotent)
      */
     static async checkIn(userId: string, isPro: boolean = false): Promise<StreakUpdateResult> {
+        // use getOrCreateStreak to ensure we have the up-to-date state (including any broken status)
         const streak = await this.getOrCreateStreak(userId);
         const now = new Date();
-        const today = this.getUTCDateString(now);
 
         // Already checked in today
         if (streak.hasCheckedInToday()) {
@@ -70,10 +74,14 @@ export class StreakService {
 
         let inkDropsEarned = 0;
         let milestoneAchieved: string | null = null;
+        let isStreakRestored = false;
 
-        // Check if streak is continuing or breaking
+        // At this point, streak.currentStreak is 0 if broken/new, or N if active (checked in yesterday)
+        // If it WAS broken, getOrCreateStreak -> maintainStreakState would have set it to 0.
+
+        // Logic to determine if we are continuing or starting over
         if (streak.isStreakActive()) {
-            // Continue streak
+            // Checked in yesterday (or today, but we handled today above)
             streak.currentStreak += 1;
             streak.lastCheckInDate = now;
             streak.lastCheckInTimestamp = now;
@@ -84,16 +92,24 @@ export class StreakService {
                 streak.longestStreakEndDate = now;
             }
         } else {
-            // Streak broken - reset
-            if (streak.currentStreak > 0) {
-                streak.lastBreakDate = now;
-                streak.canRestoreStreak = true; // Offer one-time restore
-            }
+            // Streak is broken or new
+            // currentStreak should be 0 here because of maintainStreakState
 
+            // If strictly following logic, we reset to 1
             streak.currentStreak = 1;
             streak.currentStreakStartDate = now;
             streak.lastCheckInDate = now;
             streak.lastCheckInTimestamp = now;
+
+            // Note: canRestoreStreak might be true here if it broke recently.
+            // By checking in, we are effectively starting a new streak.
+            // The user had a chance to restore but chose to check in instead.
+            // Depending on product requirement, we might want to KEEP the option to restore the PREVIOUS streak?
+            // Usually, checking in "accepts" the break.
+            // However, the original code implies restoration is an explicit action.
+            // We'll leave canRestoreStreak as is. If they restore later, it might be tricky.
+            // But restoreStreak() checks !isStreakActive(). Now it IS active (1 day).
+            // So checking in VOIDS the restore chance. This is standard behavior.
         }
 
         streak.totalCheckIns += 1;
@@ -111,6 +127,14 @@ export class StreakService {
 
         await streak.save();
 
+        // Sync to User model
+        await User.findByIdAndUpdate(userId, {
+            currentStreak: streak.currentStreak,
+            longestStreak: streak.longestStreak
+        });
+
+        console.log(`[Streaks] Check-in successful for user ${userId}. New streak: ${streak.currentStreak}`);
+
         // Award Ink Drops
         if (inkDropsEarned > 0) {
             await addInkDrops(userId, inkDropsEarned, 'streak_check_in');
@@ -122,6 +146,42 @@ export class StreakService {
             inkDropsEarned,
             milestoneAchieved
         };
+    }
+
+    /**
+     * Internal helper to handle broken streaks on read
+     * This ensures the user sees "Streak 0" or "Restore Streak" immediately
+     */
+    private static async maintainStreakState(streak: IUserStreakDocument): Promise<void> {
+        // If streak is already 0, nothing to break
+        if (streak.currentStreak <= 0) return;
+
+        // If today is checked in, status is fine
+        if (streak.hasCheckedInToday()) return;
+
+        // If yesterday was checked in, status is active.
+        if (streak.isStreakActive()) return;
+
+        // If we get here, the streak is broken (last checkin was < yesterday)
+        // We must mark it as broken.
+
+        console.log(`[Streaks] Found broken streak for user ${streak.userId}. Resetting...`);
+
+        // If it was a meaningful streak, allow restore
+        if (streak.currentStreak > 0) {
+            streak.lastBreakDate = new Date();
+            streak.canRestoreStreak = true;
+        }
+
+        streak.currentStreak = 0;
+
+        // We do strictly save here to ensure other clients see the update
+        await streak.save();
+
+        // Sync to User
+        await User.findByIdAndUpdate(streak.userId, {
+            currentStreak: 0
+        });
     }
 
     /**
@@ -151,9 +211,15 @@ export class StreakService {
         streak.lastCheckInDate = new Date();
         streak.lastCheckInTimestamp = new Date();
         streak.canRestoreStreak = false;
-        streak.streakRestoresUsed += 1;
+        streak.streakRestoresUsed = (streak.streakRestoresUsed || 0) + 1;
 
         await streak.save();
+
+        // Sync to User model
+        await User.findByIdAndUpdate(userId, {
+            currentStreak: streak.currentStreak,
+            longestStreak: streak.longestStreak
+        });
 
         return streak;
     }
@@ -195,8 +261,18 @@ export class StreakService {
         }
 
         // Mark as achieved
+        if (!streak.milestones) {
+            (streak as any).milestones = {
+                day7: { achieved: false, date: null },
+                day30: { achieved: false, date: null },
+                day100: { achieved: false, date: null },
+                day365: { achieved: false, date: null }
+            };
+        }
+
         streak.milestones[milestoneKey].achieved = true;
         streak.milestones[milestoneKey].date = new Date();
+        streak.markModified('milestones');
 
         // Pro users get 1.5x bonus
         const reward = isPro ? Math.floor(milestone.reward * 1.5) : milestone.reward;

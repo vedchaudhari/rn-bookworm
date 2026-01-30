@@ -62,8 +62,8 @@ const UserStreakSchema: Schema = new Schema({
     // Current streak data
     currentStreak: {
         type: Number,
-        default: 1,
-        min: 1
+        default: 0,
+        min: 0
     },
     currentStreakStartDate: {
         type: Date,
@@ -82,7 +82,7 @@ const UserStreakSchema: Schema = new Schema({
     longestStreak: {
         type: Number,
         default: 1,
-        min: 1
+        min: 0
     },
     longestStreakStartDate: {
         type: Date,

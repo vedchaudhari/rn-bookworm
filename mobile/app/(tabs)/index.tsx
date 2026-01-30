@@ -120,7 +120,7 @@ export default function Home() {
     const BookListSkeleton = () => (
         <View style={{ paddingTop: 20 }}>
             {[1, 2, 3].map((key) => (
-                <View key={key} style={{ marginHorizontal: 20, marginBottom: 20, borderRadius: 20, backgroundColor: COLORS.surface, overflow: 'hidden' }}>
+                <View key={key} style={{ marginHorizontal: 16, marginBottom: 20, borderRadius: 20, backgroundColor: COLORS.surface, overflow: 'hidden' }}>
                     <SkeletonLoader width="100%" height={200} borderRadius={0} />
                     <View style={{ padding: 16, gap: 10 }}>
                         <SkeletonLoader width="60%" height={24} />

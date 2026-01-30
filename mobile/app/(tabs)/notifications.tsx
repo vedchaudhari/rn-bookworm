@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../constants/colors';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useAuthStore } from '../../store/authContext';
+import { useUIStore } from '../../store/uiStore';
 import SafeScreen from '../../components/SafeScreen';
 import AppHeader from '../../components/AppHeader';
 
@@ -34,10 +35,13 @@ export default function Notifications() {
 
     const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, connect, disconnect } = useNotificationStore();
     const { token, user } = useAuthStore();
+    const { setActiveScreen } = useUIStore();
     const router = useRouter();
 
     useFocusEffect(
         React.useCallback(() => {
+            // Track that user is viewing notifications screen
+            setActiveScreen('notifications');
             loadNotifications();
 
             // Auto-mark all as read when tab is opened if there are unread items
@@ -45,7 +49,9 @@ export default function Notifications() {
                 markAllAsRead(token);
             }
 
-            return () => { };
+            return () => {
+                setActiveScreen(null);
+            };
         }, [token, unreadCount])
     );
 

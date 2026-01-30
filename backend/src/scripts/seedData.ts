@@ -210,6 +210,32 @@ async function seed() {
                 return `ExponentPushToken[${token}]`;
             };
 
+            // Determine streak state based on index for testing
+            let streakState = 'active'; // random default
+            if (i === 0) streakState = 'active'; // Aarav: Checked in today
+            else if (i === 1) streakState = 'pending'; // Isha: Checked in yesterday
+            else if (i === 2) streakState = 'broken'; // Vihaan: Checked in 2 days ago (Broken)
+            else if (i === 3) streakState = 'new'; // Anya: Never checked in
+            else streakState = Math.random() > 0.5 ? 'active' : 'pending';
+
+            let currentStreak = Math.floor(Math.random() * 12) + 1;
+            let lastCheckInDate = new Date();
+
+            if (streakState === 'active') {
+                lastCheckInDate = new Date();
+            } else if (streakState === 'pending') {
+                lastCheckInDate = new Date();
+                lastCheckInDate.setDate(lastCheckInDate.getDate() - 1);
+            } else if (streakState === 'broken') {
+                lastCheckInDate = new Date();
+                lastCheckInDate.setDate(lastCheckInDate.getDate() - 2);
+                // We write a high streak, but the service will detect it as broken
+                currentStreak = 15;
+            } else if (streakState === 'new') {
+                lastCheckInDate = new Date(0);
+                currentStreak = 0;
+            }
+
             const user = await User.create({
                 ...userData,
                 password: 'Password123!', // Default password
@@ -219,8 +245,8 @@ async function seed() {
                 inkDrops: 1000,
                 points: points,
                 level: Math.floor(points / 100) + 1,
-                currentStreak: Math.floor(Math.random() * 12) + 1,
-                longestStreak: Math.floor(Math.random() * 15) + 12,
+                currentStreak: currentStreak,
+                longestStreak: Math.max(currentStreak, Math.floor(Math.random() * 15) + 12),
                 createdAt: userJoinedDate,
                 lastActiveDate: new Date(),
                 expoPushToken: hasToken ? generateRealisticToken() : null,
@@ -230,11 +256,12 @@ async function seed() {
             // Create corresponding streak object
             await UserStreak.create({
                 userId: user._id,
-                currentStreak: user.currentStreak,
+                currentStreak: currentStreak,
                 longestStreak: user.longestStreak,
                 totalCheckIns: user.longestStreak + Math.floor(Math.random() * 5),
-                lastCheckInDate: new Date(),
-                createdAt: userJoinedDate
+                lastCheckInDate: lastCheckInDate,
+                createdAt: userJoinedDate,
+                canRestoreStreak: false // Default to false, service will update if broken
             });
 
             createdUsers.push(user);

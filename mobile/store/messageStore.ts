@@ -42,6 +42,7 @@ interface MessageState {
     messages: { [userId: string]: Message[] };
     unreadCount: number;
     activeConversation: string | null;
+    currentUserId: string | null;
     fetchConversations: (token: string) => Promise<{ success: boolean; error?: string }>;
     fetchMessages: (userId: string, token: string, page?: number) => Promise<{ success: boolean; hasMore?: boolean; error?: string }>;
     sendMessage: (
@@ -70,6 +71,7 @@ interface MessageState {
     updateLocalDeletedMessage: (data: { messageId: string, conversationId: string }) => void;
     updateLocalMessagesRead: (data: { conversationId: string, readerId: string, readAt: string }) => void;
     updateLocalMessageDelivered: (data: { messageId: string, deliveredAt: string }) => void;
+    setCurrentUserId: (userId: string | null) => void;
     reset: () => void;
 }
 
@@ -78,6 +80,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     messages: {},
     unreadCount: 0,
     activeConversation: null,
+    currentUserId: null,
 
     // Fetch all conversations
     fetchConversations: async (token: string) => {
@@ -536,14 +539,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
     // Socket: Update messages when read by recipient
     updateLocalMessagesRead: (data: { conversationId: string, readerId: string, readAt: string }) => {
-        const { messages } = get();
+        const { messages, currentUserId } = get();
         const otherUserId = data.readerId;
 
         if (messages[otherUserId]) {
             const updated = messages[otherUserId].map(m => {
                 const senderId = typeof m.sender === 'object' ? m.sender._id : m.sender;
                 // If the other user (readerId) read them, it means any message they received (where WE are sender) is now read
-                if (senderId === 'me' || senderId === (get() as any).currentUserId) { // Handle both cases
+                if (senderId === 'me' || senderId === currentUserId) {
                     return { ...m, read: true, readAt: data.readAt };
                 }
                 return m;
@@ -566,6 +569,11 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         }
     },
 
+    // Set current user ID for tick matching
+    setCurrentUserId: (userId: string | null) => {
+        set({ currentUserId: userId });
+    },
+
     // Reset store
     reset: () => {
         set({
@@ -573,6 +581,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             messages: {},
             unreadCount: 0,
             activeConversation: null,
+            currentUserId: null,
         });
     },
 }));

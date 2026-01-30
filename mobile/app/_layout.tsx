@@ -43,7 +43,7 @@ export default function RootLayout() {
 
     // Connect socket when user is logged in
     const { connect, disconnect, socket, fetchUnreadCount: fetchNotifUnread } = useNotificationStore();
-    const { addReceivedMessage, fetchUnreadCount: fetchMsgUnread, reset: resetMessages } = useMessageStore();
+    const { addReceivedMessage, fetchUnreadCount: fetchMsgUnread, reset: resetMessages, setCurrentUserId, updateLocalMessagesRead, updateLocalMessageDelivered } = useMessageStore();
     const { showToast } = useUIStore();
 
     useEffect(() => {
@@ -51,12 +51,14 @@ export default function RootLayout() {
 
         if (userId && token && !isCheckingAuth) {
             connect(userId);
+            setCurrentUserId(userId);
             registerForPushNotificationsAsync(token).catch(err => console.error('[Push] Registration error:', err));
             fetchNotifUnread(token).catch(console.error);
             fetchMsgUnread(token).catch(console.error);
         } else if (!isCheckingAuth) {
             disconnect();
             resetMessages();
+            setCurrentUserId(null);
         }
 
         // We handle disconnect in the else block above for explicit state changes
@@ -73,11 +75,14 @@ export default function RootLayout() {
             }
             // Only show toast if it's not from self
             if (message.sender?._id !== currentUserId) {
+                const senderId = typeof message.sender === 'object' ? message.sender._id : message.sender;
 
                 showToast({
                     title: `New Message from ${message.sender?.username || 'User'}`,
                     message: message.text || "📷 Image",
-                    type: 'message'
+                    type: 'message',
+                    relatedScreen: 'chat',
+                    relatedChatId: senderId // Suppress only if viewing THIS chat
                 });
             }
         };
@@ -87,16 +92,26 @@ export default function RootLayout() {
             showToast({
                 title: "Notification",
                 message: notification.message || "You have a new notification",
-                type: 'info'
+                type: 'info',
+                relatedScreen: 'notifications'
             });
         };
 
         socket.on('new_message', handleNewMessage);
         socket.on('notification', handleNewNotification);
 
+        // Real-time status ticks
+        const handleMessagesRead = (data: any) => updateLocalMessagesRead(data);
+        const handleMessageDelivered = (data: any) => updateLocalMessageDelivered(data);
+
+        socket.on('messages_read', handleMessagesRead);
+        socket.on('message_delivered', handleMessageDelivered);
+
         return () => {
             socket.off('new_message', handleNewMessage);
             socket.off('notification', handleNewNotification);
+            socket.off('messages_read', handleMessagesRead);
+            socket.off('message_delivered', handleMessageDelivered);
         };
     }, [socket, addReceivedMessage, showToast, user?._id, user?.id, token]);
 

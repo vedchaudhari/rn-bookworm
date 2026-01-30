@@ -1,15 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { View, Text } from 'react-native';
+import { View, Text, useWindowDimensions } from 'react-native';
 import COLORS from '../../constants/colors';
+import { SPACING } from '../../constants/styleConstants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMessageStore } from '../../store/messageStore';
 import { useNotificationStore } from '../../store/notificationStore';
 
 export default function TabLayout() {
     const insets = useSafeAreaInsets();
+    const { width } = useWindowDimensions();
     const { unreadCount: msgUnread } = useMessageStore();
     const { unreadCount: notifUnread } = useNotificationStore();
+
+    const MARGIN = 16;
+    const TAB_WIDTH = width - (MARGIN * 2);
 
     return (
         <Tabs
@@ -20,15 +25,15 @@ export default function TabLayout() {
                 tabBarStyle: {
                     position: 'absolute',
                     bottom: Math.max(insets.bottom, 16),
-                    left: 20,
-                    right: 20,
+                    left: Math.max(insets.left, 16),
+                    right: Math.max(insets.right, 16),
                     backgroundColor: COLORS.surface + 'F2',
                     borderRadius: 30,
-                    height: 64,
+                    height: 60,
                     borderTopWidth: 1,
                     borderTopColor: COLORS.glassBorder,
                     paddingBottom: 0,
-                    shadowColor: '#000',
+                    shadowColor: 'black',
                     shadowOffset: { width: 0, height: 10 },
                     shadowOpacity: 0.3,
                     shadowRadius: 20,

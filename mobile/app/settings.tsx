@@ -191,7 +191,7 @@ export default function SettingsScreen() {
                     <Text style={styles.logoutText}>Sign Out</Text>
                 </TouchableOpacity>
 
-                <Text style={styles.versionText}>Bookworm v1.0.4 Premium</Text>
+                <Text style={styles.versionText}>Readsphere v1.0.4</Text>
             </ScrollView>
         </SafeScreen>
     );

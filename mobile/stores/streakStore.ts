@@ -77,6 +77,20 @@ export const useStreakStore = create<StreakStore>((set, get) => ({
             // Fetch updated streak data
             await get().fetchStreak();
 
+            // Sync with AuthStore to update Profile UI immediately
+            try {
+                const { useAuthStore } = require('../store/authContext');
+                const updatedStreak = get().streak;
+                if (updatedStreak) {
+                    await useAuthStore.getState().updateUser({
+                        currentStreak: updatedStreak.currentStreak,
+                        longestStreak: updatedStreak.longestStreak
+                    });
+                }
+            } catch (authError) {
+                console.error('[StreakStore] Failed to sync with AuthStore:', authError);
+            }
+
             set({ isCheckingIn: false });
 
             return {

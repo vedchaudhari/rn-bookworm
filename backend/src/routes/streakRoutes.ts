@@ -47,8 +47,8 @@ router.get('/my-streak', authenticateToken, async (req: Request, res: Response) 
  * Daily check-in (idempotent)
  */
 router.post('/check-in', authenticateToken, async (req: Request, res: Response) => {
+    const userId = (req as any).user?._id?.toString();
     try {
-        const userId = (req as any).user?._id?.toString();
         if (!userId) {
             console.error(`[Streaks] User ID missing in /check-in: user=${JSON.stringify((req as any).user)}`);
             return res.status(401).json({ error: "User not authenticated correctly" });
@@ -68,8 +68,15 @@ router.post('/check-in', authenticateToken, async (req: Request, res: Response) 
             milestoneAchieved: result.milestoneAchieved
         });
     } catch (error: any) {
-        console.error('Error during check-in:', error);
-        res.status(500).json({ error: 'Failed to complete check-in' });
+        console.error(`[Streaks] Error during check-in for user ${userId || 'unknown'}:`, {
+            message: error.message,
+            stack: error.stack,
+            userId
+        });
+        res.status(500).json({
+            error: 'Failed to complete check-in',
+            message: error.message // Include message for easier debugging in dev
+        });
     }
 });
 
