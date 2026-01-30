@@ -14,7 +14,7 @@ export type NotificationType =
 export interface INotification {
     user: mongoose.Types.ObjectId;
     type: NotificationType;
-    data: any; // Mixed data depending on type
+    data: any; // Mixed data  depending on type
     read: boolean;
 }
 
