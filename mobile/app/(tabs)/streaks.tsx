@@ -175,7 +175,7 @@ export default function StreakDashboardScreen() {
     const checkedInToday = hasCheckedInToday();
 
     return (
-        <SafeScreen>
+        <SafeScreen top={false}>
             <AppHeader
                 showBack
                 rightElement={

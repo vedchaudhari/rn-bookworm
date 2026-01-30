@@ -170,7 +170,10 @@ export default function SettingsScreen() {
                 {/* Account Section */}
                 <Text style={styles.sectionTitle}>Privacy & Security</Text>
                 <GlassCard style={styles.card}>
-                    <TouchableOpacity style={styles.actionRow}>
+                    <TouchableOpacity
+                        style={styles.actionRow}
+                        onPress={() => router.push('/change-password')}
+                    >
                         <Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} />
                         <Text style={styles.actionText}>Change Password</Text>
                         <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />

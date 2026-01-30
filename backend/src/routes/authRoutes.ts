@@ -159,4 +159,40 @@ router.get("/me", protectRoute, asyncHandler(async (req: Request, res: Response)
     });
 }));
 
+// Change Password Route
+interface ChangePasswordBody {
+    currentPassword?: string;
+    newPassword?: string;
+}
+
+router.put("/change-password", protectRoute, asyncHandler(async (req: Request<{}, {}, ChangePasswordBody>, res: Response) => {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user!._id;
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters long" });
+    }
+
+    const user = await User.findById(userId).select('+password');
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verify current password
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+        return res.status(403).json({ message: "Incorrect current password" });
+    }
+
+    // Update password (pre-save hook will hash it)
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ message: "Password updated successfully" });
+}));
+
 export default router;

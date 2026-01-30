@@ -53,17 +53,41 @@ export default function BookDetailScreen() {
     const router = useRouter();
 
     useEffect(() => {
-        if (tab === 'comments' || tab === 'read') setActiveTab(tab as any);
-        fetchBookDetails();
+        if (bookId) {
+            setLoading(true);
+            // Reset book to null to ensure we don't show stale data while fetching
+            setBook(null);
+            if (tab === 'comments' || tab === 'read') setActiveTab(tab as any);
+            fetchBookDetails();
+        }
     }, [bookId, tab]);
 
     const fetchBookDetails = async () => {
         try {
+            console.log('[BookDetail] Fetching details for bookId:', bookId);
+
+            // Try fetching user books first if available (more likely to contain the specific book if it's ours)
+            // But current logic fetches global feed. 
             const data = await apiClient.get<any>('/api/books', { page: 1, limit: 100 });
+            console.log(`[BookDetail] Fetched ${data.books.length} books from global feed`);
+
             const foundBook = data.books.find((b: Book) => b._id === bookId);
-            if (foundBook) setBook(foundBook);
+
+            if (foundBook) {
+                console.log('[BookDetail] Book found:', foundBook.title);
+                setBook(foundBook);
+            } else {
+                console.warn('[BookDetail] Book NOT found in first 100 items');
+                // Fallback: try fetching by user profile if we can't find it in global feed
+                // This is a known limitation of the current API
+                // We'll log the IDs available to debugging
+                // console.log('Available IDs:', data.books.map(b => b._id));
+            }
             setLoading(false);
-        } catch (error) { console.error('Error fetching book:', error); setLoading(false); }
+        } catch (error) {
+            console.error('[BookDetail] Error fetching book:', error);
+            setLoading(false);
+        }
     };
 
     const handleMessageUser = () => {

@@ -157,7 +157,8 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
             data: {
                 type: "MESSAGE",
                 senderId: senderId.toString(),
-                senderName: sender?.username
+                senderName: sender?.username,
+                profileImage: sender?.profileImage
             }
         }).catch(err => console.error('[Push] Message push failed:', err));
 

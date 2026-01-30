@@ -75,7 +75,7 @@ export default function RootLayout() {
             }
             // Only show toast if it's not from self
             if (message.sender?._id !== currentUserId) {
-                const senderId = typeof message.sender === 'object' ? message.sender._id : message.sender;
+                const senderId = typeof message.sender === 'object' ? message.sender._id.toString() : String(message.sender);
 
                 showToast({
                     title: `New Message from ${message.sender?.username || 'User'}`,
@@ -219,18 +219,13 @@ export default function RootLayout() {
                         2. STABLE LOGOUT: No race conditions with imperative replace() calls.
                         3. SECURE: Private routes simply don't exist until authenticated.
                     */}
-                    {!hasCompletedOnboarding ? (
-                        <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-                    ) : !isAuthenticated ? (
-                        <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
-                    ) : (
-                        <>
-                            <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-                            <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
-                            <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
-                            <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
-                        </>
-                    )}
+                    <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+                    <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
+                    <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+                    <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
+                    <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
+                    <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
+                    <Stack.Screen name="book-detail" options={{ headerShown: false }} />
                 </Stack>
                 <StatusBar style="light" />
                 <GlobalAlert />

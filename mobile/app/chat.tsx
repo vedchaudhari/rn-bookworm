@@ -38,15 +38,10 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, media, onPlayingChange }) => {
     const scale = useSharedValue(1);
     const opacity = useSharedValue(0);
-    const translateX = useSharedValue(0);
-    const translateY = useSharedValue(0);
-    const originX = useSharedValue(0);
-    const originY = useSharedValue(0);
+    const savedScale = useSharedValue(1);
 
     const resetStates = useCallback(() => {
         scale.value = withTiming(1);
-        translateX.value = withTiming(0);
-        translateY.value = withTiming(0);
     }, []);
 
     useEffect(() => {
@@ -58,9 +53,7 @@ const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, medi
         }
     }, [visible]);
 
-    const savedScale = useSharedValue(1);
-
-    // Pinch to zoom (Images only)
+    // Pinch to zoom (Images only) - Simple zoom without pan for now to ensure fixed layout
     const pinchGesture = Gesture.Pinch()
         .onUpdate((e) => {
             scale.value = savedScale.value * e.scale;
@@ -74,42 +67,9 @@ const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, medi
             }
         });
 
-    const panGesture = Gesture.Pan()
-        .onUpdate((e) => {
-            if (scale.value <= 1.05) { // Swipe to close only when not zoomed
-                translateX.value = e.translationX;
-                translateY.value = e.translationY;
-
-                // Scale down slightly as we swipe for a "pop-out" effect
-                const dragProgress = Math.min(Math.abs(e.translationY) / 600, 0.5);
-                scale.value = 1 - dragProgress;
-                opacity.value = 1 - Math.abs(e.translationY) / 500;
-            }
-        })
-        .onEnd((e) => {
-            if (scale.value < 1 && (Math.abs(e.translationY) > 150 || Math.abs(e.velocityY) > 1000)) {
-                opacity.value = withTiming(0, { duration: 200 }, () => {
-                    runOnJS(onClose)();
-                });
-                translateY.value = withTiming(e.translationY > 0 ? SCREEN_HEIGHT : -SCREEN_HEIGHT);
-            } else {
-                translateX.value = withTiming(0);
-                translateY.value = withTiming(0);
-                opacity.value = withTiming(1);
-                scale.value = withTiming(1);
-                savedScale.value = 1;
-            }
-        });
-
-    const combinedGestures = media?.type === 'image'
-        ? Gesture.Race(pinchGesture, panGesture)
-        : panGesture;
-
     const animatedStyle = useAnimatedStyle(() => ({
         opacity: opacity.value,
         transform: [
-            { translateX: translateX.value },
-            { translateY: translateY.value },
             { scale: scale.value }
         ]
     }));
@@ -119,15 +79,15 @@ const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, medi
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
             <GestureHandlerRootView style={{ flex: 1, backgroundColor: 'black' }}>
-                <StatusBar hidden={visible} />
-                <GestureDetector gesture={combinedGestures}>
-                    <Animated.View style={[{ flex: 1 }, animatedStyle]}>
-                        <View style={{ position: 'absolute', top: 50, right: 20, zIndex: 10 }}>
-                            <TouchableOpacity onPress={onClose} style={{ padding: 10, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 25 }}>
-                                <Ionicons name="close" size={28} color="white" />
-                            </TouchableOpacity>
-                        </View>
+                {/* Fixed: Do not hide status bar to prevent layout shifts */}
+                <View style={{ position: 'absolute', top: 50, right: 20, zIndex: 20 }}>
+                    <TouchableOpacity onPress={onClose} style={{ padding: 10, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 25 }}>
+                        <Ionicons name="close" size={28} color="white" />
+                    </TouchableOpacity>
+                </View>
 
+                <GestureDetector gesture={pinchGesture}>
+                    <Animated.View style={[{ flex: 1 }, animatedStyle]}>
                         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                             {media.type === 'image' ? (
                                 <Image
@@ -155,7 +115,6 @@ interface ChatImageProps {
 }
 
 const ChatImage: React.FC<ChatImageProps> = React.memo(({ uri, messageId, initialWidth, initialHeight }) => {
-    // ... logic remains same ...
     const getInitialDims = () => {
         if (initialWidth && initialHeight) {
             const aspectRatio = initialWidth / initialHeight;
@@ -205,9 +164,10 @@ const ChatImage: React.FC<ChatImageProps> = React.memo(({ uri, messageId, initia
                 source={{ uri }}
                 style={{ width: '100%', height: '100%' }}
                 contentFit="cover"
-                cachePolicy="disk"
+                cachePolicy="memory-disk"
                 transition={200}
                 onLoad={handleLoad}
+                onError={(e) => console.log('Image load error:', e)}
             />
         </View>
     );
@@ -493,7 +453,10 @@ export default function ChatScreen() {
     const displayStatus = getDisplayStatus();
     const pulseOpacity = useSharedValue(0.4);
     const isTyping = typingStatus[userId!];
-    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    if (Platform.OS === 'android' &&
+        UIManager.setLayoutAnimationEnabledExperimental &&
+        !(global as any).nativeFabricUIManager // Avoid calling on New Architecture
+    ) {
         UIManager.setLayoutAnimationEnabledExperimental(true);
     }
 
@@ -527,11 +490,15 @@ export default function ChatScreen() {
 
     useEffect(() => {
         setActiveScreen('chat');
-        if (userId) setActiveChatId(String(userId));
+        if (userId) {
+            setActiveChatId(String(userId));
+            setActiveConversation(String(userId)); // Sync MessageStore
+        }
 
         return () => {
             setActiveScreen(null);
             setActiveChatId(null);
+            setActiveConversation(null); // Sync MessageStore
         };
     }, [userId]);
 

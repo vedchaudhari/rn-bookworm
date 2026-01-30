@@ -144,7 +144,8 @@ export function setupPushNotificationListeners(router: any) {
                     pathname: '/chat',
                     params: {
                         userId: targetUserId,
-                        username: String(data.senderName || 'Chat')
+                        username: String(data.senderName || 'Chat'),
+                        profileImage: String(data.profileImage || '')
                     }
                 });
             } else if (data?.type === 'NEW_POST' && data.bookId) {
