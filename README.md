@@ -50,7 +50,7 @@
 
 ### 📚 Content Features
 - **Book Reader**: In-app reading experience with chapter navigation
-- **Rich Media Upload**: Support for book covers via Cloudinary
+- **Rich Media Upload**: Support for book covers and PDFs via AWS S3
 - **Genre Categories**: Organize books by Fiction, Non-Fiction, Fantasy, Sci-Fi, and more
 - **Tagging System**: Add custom tags for better discoverability
 
@@ -79,7 +79,7 @@
 - **Authentication**: 
   - JWT (JSON Web Tokens) `9.0.2`
   - Bcrypt.js `3.0.2` (Password hashing)
-- **File Storage**: Cloudinary SDK `2.6.0`
+- **File Storage**: AWS S3 (via `@aws-sdk/client-s3`)
 - **Task Scheduling**: Cron jobs `4.1.0`
 - **Security**: CORS `2.8.5`, Environment variables with Dotenv `16.4.7`
 
@@ -139,7 +139,7 @@ graph TB
     end
     
     subgraph "External Services"
-        F[Cloudinary<br/>Image Storage]
+        F[AWS S3<br/>File Storage]
         G[GitHub Actions<br/>CI/CD Pipeline]
     end
     
@@ -147,7 +147,7 @@ graph TB
     B -->|DNS Resolution| C
     C -->|Proxy| D
     D -->|Mongoose ODM| E
-    D -->|Upload Images| F
+    D -->|Upload/Read Files| F
     G -->|Auto Deploy| C
     G -->|Auto Deploy| D
 ```
@@ -162,7 +162,8 @@ graph LR
     D --> E[MongoDB]
     C --> F[Socket.IO Server]
     F --> G[WebSocket Clients]
-    D --> H[Cloudinary API]
+    F --> G[WebSocket Clients]
+    D --> H[AWS S3 API]
 ```
 
 ### Key Components
@@ -237,9 +238,10 @@ services:
    
    JWT_SECRET=your_super_secret_jwt_key_here_change_in_production
    
-   CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-   CLOUDINARY_API_KEY=your_cloudinary_api_key
-   CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+   AWS_REGION=ap-south-1
+   AWS_ACCESS_KEY_ID=your_access_key_id
+   AWS_SECRET_ACCESS_KEY=your_secret_access_key
+   AWS_S3_BUCKET_NAME=your_bucket_name
    ```
 
 4. **Run development server**
@@ -361,9 +363,10 @@ docker compose restart nginx
 PORT=3000
 MONGO_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/readsphere
 JWT_SECRET=<strong-random-secret>
-CLOUDINARY_CLOUD_NAME=<your-cloudinary-name>
-CLOUDINARY_API_KEY=<your-cloudinary-key>
-CLOUDINARY_API_SECRET=<your-cloudinary-secret>
+AWS_REGION=ap-south-1
+AWS_ACCESS_KEY_ID=<your-access-key-id>
+AWS_SECRET_ACCESS_KEY=<your-secret-access-key>
+AWS_S3_BUCKET_NAME=<your-bucket-name>
 NODE_ENV=production
 ```
 
@@ -555,7 +558,7 @@ Contributions are welcome! Please follow these guidelines:
 ## 📊 Performance Optimizations
 
 - **Lazy Loading**: Code splitting in React Native
-- **Image Optimization**: Cloudinary transformations
+- **S3 Presigned URLs**: Direct-to-S3 uploads for performance
 - **Database Indexing**: MongoDB indexes on frequently queried fields
 - **Connection Pooling**: Mongoose connection management
 - **Docker Multi-stage Builds**: Optimized container images
@@ -583,7 +586,7 @@ This project is licensed under the **ISC License**.
 - **React Native & Expo**: Amazing mobile development framework
 - **Socket.IO**: Real-time communication made easy
 - **MongoDB**: Flexible NoSQL database
-- **Cloudinary**: Powerful image management
+- **AWS S3**: Reliable cloud storage
 - **AWS**: Reliable cloud infrastructure
 - **Hostinger**: Domain and DNS services
 - **Let's Encrypt**: Free SSL certificates

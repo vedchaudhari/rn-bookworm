@@ -16,7 +16,7 @@ import Notification from '../models/Notification';
 // Load env vars
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/bookworm";
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/readsphere";
 
 const INDIAN_USERS = [
     { username: 'aarav_sharma', name: 'Aarav Sharma', email: 'aarav@example.com', bio: 'Lover of classical literature and historical fiction.' },
