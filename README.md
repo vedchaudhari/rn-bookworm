@@ -37,7 +37,7 @@
 
 ### 🎮 Gamification
 - **Achievement System**: Unlock badges and milestones
-- **Reading Streaks**: Track daily reading consistency
+- **Reading Streaks**: Track daily reading consistency with **Streak Restoration** for missed days
 - **Points & Levels**: Earn XP for activities and level up
 - **Reading Goals**: Set and track monthly/yearly reading targets
 - **Leaderboards**: Compete with the community
@@ -249,6 +249,13 @@ services:
    
    Backend will be available at: `http://localhost:3000`
 
+5. **Seed the Database (Optional)**
+   Populate the database with test users, books, and social interactions:
+   ```bash
+   npm run seed
+   ```
+   *Creates users with various streak states (Active, Pending, Broken) for testing.*
+
 ### Mobile App Setup
 
 1. **Navigate to mobile directory**
@@ -263,9 +270,12 @@ services:
 
 3. **Configure API endpoint**
    
-   Update the API base URL in your app configuration:
-   - For local development: `http://localhost:3000` (use your machine's IP for physical devices)
-   - For production: `https://api-bookworm.backend-portfolio-api.online`
+   Edit `mobile/constants/api.ts` to set your backend URL:
+   - **Production (Default)**: `https://api-bookworm.backend-portfolio-api.online`
+   - **Local Development**: Uncomment the localhost/IP address line
+     ```typescript
+     // export const API_URL = `http://YOUR_LOCAL_IP:3000`;
+     ```
 
 4. **Start Expo development server**
    ```bash

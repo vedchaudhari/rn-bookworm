@@ -101,15 +101,11 @@ export class StreakService {
             streak.lastCheckInDate = now;
             streak.lastCheckInTimestamp = now;
 
-            // Note: canRestoreStreak might be true here if it broke recently.
-            // By checking in, we are effectively starting a new streak.
-            // The user had a chance to restore but chose to check in instead.
-            // Depending on product requirement, we might want to KEEP the option to restore the PREVIOUS streak?
-            // Usually, checking in "accepts" the break.
-            // However, the original code implies restoration is an explicit action.
-            // We'll leave canRestoreStreak as is. If they restore later, it might be tricky.
-            // But restoreStreak() checks !isStreakActive(). Now it IS active (1 day).
-            // So checking in VOIDS the restore chance. This is standard behavior.
+            // Update longest if exceeded (important for first-time streaks or if longest was 0)
+            if (streak.currentStreak > streak.longestStreak) {
+                streak.longestStreak = streak.currentStreak;
+                streak.longestStreakEndDate = now;
+            }
         }
 
         streak.totalCheckIns += 1;

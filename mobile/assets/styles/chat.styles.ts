@@ -128,7 +128,10 @@ const styles = StyleSheet.create({
     sentImage: {
         borderRadius: BORDER_RADIUS.xl + 2,
         backgroundColor: COLORS.surfaceHighlight, // Stable placeholder color
+        overflow: 'hidden',
         // Dynamic width/height will be applied inline by ChatImage component
+        maxWidth: 240,
+        maxHeight: 320,
     },
     sentVideoContainer: {
         width: 240,

@@ -244,6 +244,7 @@ const StatusTicks = React.memo(({ deliveredAt, readAt, pending }: { deliveredAt?
     const secondTickTranslateX = useSharedValue(isDelivered ? 0 : -8);
 
     useEffect(() => {
+        // Only run animations if component is mounted
         if (isRead) {
             blueOpacity.value = withTiming(1, { duration: 450 });
         }
