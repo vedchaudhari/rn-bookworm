@@ -9,7 +9,7 @@
 
 // export const API_URL = `http://192.168.29.143:3000`;
 
-//For production
-export const API_URL = `https://api-bookworm.backend-portfolio-api.online`;
+//For production/EAS builds
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || `https://api-bookworm.backend-portfolio-api.online`;
 
 // export const API_URL = `https://148feef334d2.ngrok-free.app`;
