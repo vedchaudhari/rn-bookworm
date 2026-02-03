@@ -26,7 +26,7 @@ interface ChapterContent extends ChapterMeta {
 type ReaderTheme = 'dark' | 'sepia' | 'light';
 
 const THEMES = {
-    dark: { bg: COLORS.background, text: COLORS.textPrimary, card: COLORS.surface, border: COLORS.borderLight },
+    dark: { bg: COLORS.background, text: COLORS.textPrimary, card: COLORS.surface, border: COLORS.glassBorderLight },
     sepia: { bg: '#F4ECD8', text: '#5B4636', card: '#EADFCA', border: '#D3C4A9' },
     light: { bg: '#FFFFFF', text: '#121212', card: '#F5F5F5', border: '#EEEEEE' },
 };
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
         paddingBottom: 10,
         backgroundColor: COLORS.background,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.borderLight
+        borderBottomColor: COLORS.glassBorderLight
     },
     backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
     headerTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginHorizontal: 8 },
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
 
     navigationControls: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 40, marginBottom: 20 },
     navButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 30, gap: 8 },
-    navButtonPrev: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
+    navButtonPrev: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.glassBorder },
     navButtonNext: { backgroundColor: COLORS.primary },
     navButtonDisabled: { opacity: 0.3 },
     navButtonTextPrev: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '600' },
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     emptyContainer: { alignItems: 'center', padding: 40, marginTop: 60 },
     emptyText: { fontSize: 18, fontWeight: '600', color: COLORS.textPrimary, marginTop: 16 },
     emptySubtext: { fontSize: 14, color: COLORS.textSecondary, marginTop: 8, textAlign: 'center' },
-    footer: { marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: COLORS.borderLight, alignItems: 'center' },
+    footer: { marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: COLORS.glassBorderLight, alignItems: 'center' },
     footerText: { fontSize: 13, color: COLORS.textMuted },
 });
 

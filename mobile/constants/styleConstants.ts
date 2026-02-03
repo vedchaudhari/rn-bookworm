@@ -7,8 +7,9 @@
  */
 
 import { Platform } from 'react-native';
+import COLORS from './colors';
 
-// ==================== SPACING SYSTEM ====================
+// ... rest of imports
 // Based on 4px baseline grid for consistent rhythm
 export const SPACING = {
     xs: 4,
@@ -235,17 +236,41 @@ export const SHADOWS = {
     },
     strong: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 6,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.5,
+        shadowRadius: 16,
+        elevation: 12,
     },
     extraStrong: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.6,
+        shadowRadius: 28,
+        elevation: 20,
+    },
+    // Metallic/Chrome shadow for 3D elements
+    chrome: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    // Aura Glow - Soft colored under-currents
+    aura: {
+        shadowColor: COLORS.primaryGlow,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
         shadowRadius: 20,
-        elevation: 10,
+        elevation: 0,
+    },
+    // God Level Elevation - Massively protruding
+    godLevel: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 25 },
+        shadowOpacity: 0.7,
+        shadowRadius: 40,
+        elevation: 30,
     },
 } as const;
 

@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from 'expo-router';
 import COLORS from '../constants/colors';
+import { SPACING, BORDER_RADIUS, SHADOWS, FONT_SIZE } from '../constants/styleConstants';
 import styles from '../assets/styles/post.styles';
 import LikeButton from './LikeButton';
 import { formatPublishDate } from '../lib/utils';
@@ -43,22 +44,42 @@ interface SocialPostCardProps {
 }
 
 const localStyles = StyleSheet.create({
+    card: {
+        backgroundColor: COLORS.surfaceSilk,
+        borderRadius: BORDER_RADIUS.xxl, // More rounded for luxury feel
+        marginHorizontal: SPACING.xl,
+        marginBottom: SPACING.xxl,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: COLORS.glassBorder,
+        ...SHADOWS.godLevel, // Absolute depth
+    },
+    bookTitle: {
+        fontSize: FONT_SIZE.xl,
+        fontWeight: '900',
+        color: COLORS.textPrimary,
+        marginBottom: SPACING.xs,
+        letterSpacing: 0.8, // Editorial/Magazine style
+        lineHeight: 28,
+    },
+    authorName: {
+        fontSize: FONT_SIZE.base,
+        color: COLORS.textSecondary,
+        fontWeight: '700',
+        letterSpacing: 0.3,
+    },
     dropdown: {
         position: 'absolute',
-        top: 45, // Restore downwards opening
-        right: 15,
-        backgroundColor: COLORS.surface || '#2a2a2a',
-        borderRadius: 12,
-        padding: 8,
-        minWidth: 150,
+        top: 50,
+        right: 20,
+        backgroundColor: 'rgba(14, 27, 36, 0.98)',
+        borderRadius: 18,
+        padding: 10,
+        minWidth: 180,
         zIndex: 5000,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4.65,
-        elevation: 10,
+        ...SHADOWS.extraStrong,
         borderWidth: 1,
-        borderColor: COLORS.borderLight || '#3a3a3a',
+        borderColor: 'rgba(255, 255, 255, 0.15)',
     },
     dropdownItem: {
         flexDirection: 'row',
@@ -74,9 +95,9 @@ const localStyles = StyleSheet.create({
     },
     divider: {
         height: 1,
-        backgroundColor: COLORS.borderLight || '#3a3a3a',
+        backgroundColor: COLORS.glassBorder,
         marginVertical: 4,
-        opacity: 0.5,
+        opacity: 0.3,
     }
 });
 
@@ -136,7 +157,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
                     key={i}
                     name={i <= rating ? "star" : "star-outline"}
                     size={12}
-                    color={i <= rating ? COLORS.gold : COLORS.textMuted}
+                    color={i <= rating ? COLORS.ratingGold : COLORS.textMuted}
                     style={{ marginRight: 1 }}
                 />
             );
@@ -190,8 +211,8 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
                                     </TouchableOpacity>
                                     <View style={localStyles.divider} />
                                     <TouchableOpacity style={localStyles.dropdownItem} onPress={handleDelete}>
-                                        <Ionicons name="trash-outline" size={18} color={COLORS.error || '#ef4444'} />
-                                        <Text style={[localStyles.dropdownText, { color: COLORS.error || '#ef4444' }]}>Delete</Text>
+                                        <Ionicons name="trash-outline" size={18} color={COLORS.error} />
+                                        <Text style={[localStyles.dropdownText, { color: COLORS.error }]}>Delete</Text>
                                     </TouchableOpacity>
                                 </>
                             )}
@@ -219,7 +240,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
                             position: 'absolute',
                             bottom: 12,
                             right: 12,
-                            backgroundColor: 'rgba(0,0,0,0.7)',
+                            backgroundColor: COLORS.overlay,
                             flexDirection: 'row',
                             alignItems: 'center',
                             paddingVertical: 6,

@@ -73,7 +73,7 @@ export default function Signup() {
             </View>
             <View style={styles.floatingIcon3}>
                 <Animated.View entering={FadeInDown.delay(300).springify()}>
-                    <Ionicons name="bookmark" size={35} color={COLORS.gold} style={{ opacity: 0.12 }} />
+                    <Ionicons name="bookmark" size={35} color={COLORS.ratingGold} style={{ opacity: 0.12 }} />
                 </Animated.View>
             </View>
 

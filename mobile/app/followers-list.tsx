@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '800', color: COLORS.textPrimary, letterSpacing: -0.5 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
     listContent: { paddingBottom: 20 },
-    userItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+    userItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: COLORS.glassBorder },
     avatar: { width: 56, height: 56, borderRadius: 28 },
     userInfo: { flex: 1, marginHorizontal: 12 },
     username: { fontSize: 16, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 2 },

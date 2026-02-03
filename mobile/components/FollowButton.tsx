@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     },
     followingButton: {
         backgroundColor: COLORS.surface,
-        borderColor: COLORS.borderLight,
+        borderColor: COLORS.glassBorderLight,
     },
     compactButton: {
         height: 36,

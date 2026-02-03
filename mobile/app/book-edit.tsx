@@ -129,7 +129,7 @@ export default function BookEditScreen() {
                         <Ionicons
                             name={star <= rating ? "star" : "star-outline"}
                             size={32}
-                            color={star <= rating ? COLORS.gold : COLORS.textTertiary}
+                            color={star <= rating ? COLORS.ratingGold : COLORS.textTertiary}
                         />
                     </TouchableOpacity>
                 ))}
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     overlayText: { color: '#fff', fontSize: 12, fontWeight: '600' },
     form: { gap: 16 },
     label: { fontSize: 14, fontWeight: '700', color: COLORS.textSecondary, marginBottom: -8, marginLeft: 4 },
-    input: { backgroundColor: COLORS.surface, borderRadius: 12, padding: 16, color: COLORS.textPrimary, fontSize: 16, borderWidth: 1, borderColor: COLORS.borderLight },
+    input: { backgroundColor: COLORS.surface, borderRadius: 12, padding: 16, color: COLORS.textPrimary, fontSize: 16, borderWidth: 1, borderColor: COLORS.glassBorderLight },
     textArea: { minHeight: 120, textAlignVertical: 'top' },
     starContainer: { flexDirection: 'row', gap: 8, paddingVertical: 8 },
     saveButton: { backgroundColor: COLORS.primary, borderRadius: 16, padding: 18, alignItems: 'center', marginTop: 32, marginBottom: 40 },

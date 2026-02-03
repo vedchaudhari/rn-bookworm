@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         backgroundColor: COLORS.background,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.borderLight,
+        borderBottomColor: COLORS.glassBorderLight,
         zIndex: 10,
     },
     backButton: {

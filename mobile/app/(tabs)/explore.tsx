@@ -163,7 +163,7 @@ export default function Explore() {
                         <Text style={styles.bookAuthor} numberOfLines={1}>{item.author || 'Author Name'}</Text>
                         <View style={styles.cardFooter}>
                             <View style={styles.ratingBadge}>
-                                <Ionicons name="star" size={12} color={COLORS.gold} />
+                                <Ionicons name="star" size={12} color={COLORS.ratingGold} />
                                 <Text style={styles.ratingText}>{item.rating?.toFixed(1) || '4.5'}</Text>
                             </View>
                             <View style={styles.statsBadge}>

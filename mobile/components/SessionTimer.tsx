@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
         marginTop: SPACING.lg,
         paddingTop: SPACING.lg,
         borderTopWidth: 1,
-        borderTopColor: COLORS.border,
+        borderTopColor: COLORS.glassBorder,
         flexDirection: 'row',
         gap: SPACING.xl,
     },

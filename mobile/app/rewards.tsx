@@ -82,10 +82,10 @@ export default function RewardsScreen() {
     const getIconColor = (type: string): string => {
         switch (type) {
             case 'streak_check_in': return COLORS.warning;
-            case 'challenge_completed': return COLORS.gold;
+            case 'challenge_completed': return COLORS.ratingGold;
             case 'reading_session': return COLORS.primary;
             case 'purchase': return COLORS.secondary;
-            case 'tip_received': return COLORS.gold;
+            case 'tip_received': return COLORS.ratingGold;
             case 'admin_grant': return COLORS.success;
             default: return COLORS.textPrimary;
         }
@@ -131,7 +131,7 @@ export default function RewardsScreen() {
             <View style={styles.container}>
                 {/* Header with Total */}
                 <GlassCard style={styles.headerCard}>
-                    <Ionicons name="trophy" size={48} color={COLORS.gold} />
+                    <Ionicons name="trophy" size={48} color={COLORS.ratingGold} />
                     <Text style={styles.totalLabel}>Total Ink Drops Earned</Text>
                     <Text style={styles.totalValue}>{filteredTotal}</Text>
                     <Text style={styles.totalSubtext}>
@@ -163,7 +163,7 @@ export default function RewardsScreen() {
                             <Text style={styles.categoryLabel}>Streaks</Text>
                         </View>
                         <View style={styles.categoryCard}>
-                            <Ionicons name="trophy" size={24} color={COLORS.gold} />
+                            <Ionicons name="trophy" size={24} color={COLORS.ratingGold} />
                             <Text style={styles.categoryValue}>{data.totals.challenge}</Text>
                             <Text style={styles.categoryLabel}>Challenges</Text>
                         </View>
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
 
     headerCard: { alignItems: 'center', padding: 24, marginBottom: 20, borderRadius: 20 },
     totalLabel: { fontSize: 14, color: COLORS.textSecondary, marginTop: 12, fontWeight: '600' },
-    totalValue: { fontSize: 48, fontWeight: '900', color: COLORS.gold, marginTop: 4 },
+    totalValue: { fontSize: 48, fontWeight: '900', color: COLORS.ratingGold, marginTop: 4 },
     totalSubtext: { fontSize: 12, color: COLORS.textMuted, marginTop: 4 },
 
     filterContainer: { flexDirection: 'row', gap: 8, marginBottom: 20 },
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     filterTextActive: { color: COLORS.white },
 
     categoryGrid: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-    categoryCard: { flex: 1, backgroundColor: COLORS.surface, padding: 16, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: COLORS.borderLight },
+    categoryCard: { flex: 1, backgroundColor: COLORS.surface, padding: 16, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: COLORS.glassBorderLight },
     categoryValue: { fontSize: 20, fontWeight: '900', color: COLORS.textPrimary, marginTop: 8 },
     categoryLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600', textTransform: 'uppercase', marginTop: 4 },
 
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     rewardInfo: { flex: 1 },
     rewardDescription: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4 },
     rewardDate: { fontSize: 12, color: COLORS.textMuted },
-    rewardAmount: { fontSize: 18, fontWeight: '900', color: COLORS.gold },
+    rewardAmount: { fontSize: 18, fontWeight: '900', color: COLORS.ratingGold },
 
     emptyContainer: { alignItems: 'center', marginTop: 60, paddingHorizontal: 40 },
     emptyText: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginTop: 16 },

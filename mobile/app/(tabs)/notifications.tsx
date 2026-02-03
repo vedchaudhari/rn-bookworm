@@ -80,7 +80,7 @@ export default function Notifications() {
             case 'LIKE': return { name: 'heart', color: COLORS.error };
             case 'COMMENT': return { name: 'chatbubble', color: COLORS.accent };
             case 'FOLLOW': return { name: 'person-add', color: COLORS.accentLight };
-            case 'ACHIEVEMENT': return { name: 'trophy', color: COLORS.gold };
+            case 'ACHIEVEMENT': return { name: 'trophy', color: COLORS.ratingGold };
             case 'GOAL_COMPLETED': return { name: 'checkmark-circle', color: COLORS.success };
             default: return { name: 'notifications', color: COLORS.primary };
         }

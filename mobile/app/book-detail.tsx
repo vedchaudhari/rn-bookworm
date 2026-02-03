@@ -130,7 +130,7 @@ export default function BookDetailScreen() {
 
     const renderRatingStars = (rating: number) => {
         const stars = [];
-        for (let i = 1; i <= 5; i++) { stars.push(<Ionicons key={i} name={i <= rating ? 'star' : 'star-outline'} size={20} color={COLORS.gold} style={{ marginRight: 4 }} />); }
+        for (let i = 1; i <= 5; i++) { stars.push(<Ionicons key={i} name={i <= rating ? 'star' : 'star-outline'} size={20} color={COLORS.ratingGold} style={{ marginRight: 4 }} />); }
         return stars;
     };
 
@@ -193,9 +193,9 @@ export default function BookDetailScreen() {
                                     <View style={styles.userActionsRow}>
                                         <TouchableOpacity
                                             onPress={() => setShowTipModal(true)}
-                                            style={[styles.glassIconButton, { borderColor: COLORS.gold + '40' }]}
+                                            style={[styles.glassIconButton, { borderColor: COLORS.primaryGlow }]}
                                         >
-                                            <Ionicons name="water" size={18} color={COLORS.gold} />
+                                            <Ionicons name="water" size={18} color={COLORS.primary} />
                                         </TouchableOpacity>
                                         <FollowButton userId={book.user._id} initialFollowing={book.user.isFollowing || false} />
                                         <TouchableOpacity onPress={handleMessageUser} style={styles.glassIconButton}><Ionicons name="chatbubble-outline" size={18} color={COLORS.textPrimary} /></TouchableOpacity>
@@ -257,7 +257,7 @@ export default function BookDetailScreen() {
 
                         <Text style={styles.modalSubtitle}>Support {book?.user.username} with Ink Drops</Text>
                         <View style={styles.walletInfo}>
-                            <Ionicons name="water" size={16} color={COLORS.gold} />
+                            <Ionicons name="water" size={16} color={COLORS.primary} />
                             <Text style={styles.walletText}>Balance: {balance} Ink Drops</Text>
                         </View>
 
@@ -270,7 +270,7 @@ export default function BookDetailScreen() {
                                     disabled={isTipping}
                                 >
                                     <Text style={styles.tipOptionText}>{amount}</Text>
-                                    <Ionicons name="water" size={12} color={COLORS.gold} />
+                                    <Ionicons name="water" size={12} color={COLORS.ratingGold} />
                                 </TouchableOpacity>
                             ))}
                         </View>
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
     errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
     errorText: { fontSize: 16, color: COLORS.textSecondary },
-    tabContainer: { flexDirection: 'row', backgroundColor: COLORS.surface, marginHorizontal: 20, borderRadius: 30, padding: 4, marginVertical: 16, borderWidth: 1, borderColor: COLORS.borderLight },
+    tabContainer: { flexDirection: 'row', backgroundColor: COLORS.surface, marginHorizontal: 20, borderRadius: 30, padding: 4, marginVertical: 16, borderWidth: 1, borderColor: COLORS.glassBorderLight },
     tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 24 },
     tabActive: { backgroundColor: COLORS.surfaceHighlight },
     tabText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary, letterSpacing: 0.5 },
@@ -345,10 +345,10 @@ const styles = StyleSheet.create({
     modalTitle: { fontSize: 22, fontWeight: '900', color: COLORS.textPrimary },
     modalSubtitle: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 16 },
     walletInfo: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, alignSelf: 'flex-start' },
-    walletText: { color: COLORS.gold, fontWeight: '700', fontSize: 13 },
+    walletText: { color: COLORS.ratingGold, fontWeight: '700', fontSize: 13 },
     tipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 10 },
     tipOption: { flex: 1, minWidth: '30%', backgroundColor: 'rgba(255,255,255,0.05)', paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     tipOptionText: { color: COLORS.textPrimary, fontWeight: '800', fontSize: 16 },
-    getMoreBtn: { marginTop: 20, paddingVertical: 12, alignItems: 'center', backgroundColor: COLORS.gold + '20', borderRadius: 12, borderWidth: 1, borderColor: COLORS.gold + '40' },
-    getMoreText: { color: COLORS.gold, fontWeight: '700' },
+    getMoreBtn: { marginTop: 20, paddingVertical: 12, alignItems: 'center', backgroundColor: COLORS.ratingGold + '20', borderRadius: 12, borderWidth: 1, borderColor: COLORS.ratingGold + '40' },
+    getMoreText: { color: COLORS.ratingGold, fontWeight: '700' },
 });

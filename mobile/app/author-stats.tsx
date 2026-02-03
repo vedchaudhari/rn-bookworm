@@ -116,7 +116,7 @@ export default function AuthorStats() {
                     </GlassCard>
 
                     <GlassCard style={styles.statBox}>
-                        <Ionicons name="book-outline" size={24} color={COLORS.gold} />
+                        <Ionicons name="book-outline" size={24} color={COLORS.ratingGold} />
                         <Text style={styles.statVal}>{stats?.currentlyReading}</Text>
                         <Text style={styles.statLabel}>Active Now</Text>
                     </GlassCard>

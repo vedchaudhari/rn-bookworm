@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
         color: COLORS.textPrimary,
         fontSize: 15,
         borderWidth: 1,
-        borderColor: COLORS.borderLight,
+        borderColor: COLORS.glassBorderLight,
     },
     submitBtn: {
         backgroundColor: COLORS.primary,

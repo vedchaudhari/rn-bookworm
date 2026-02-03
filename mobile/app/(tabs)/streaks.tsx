@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
         paddingVertical: SPACING.xl,
         borderTopWidth: 1,
         borderBottomWidth: 1,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
     },
     statItem: {
         alignItems: 'center',
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     },
     statDivider: {
         width: 1,
-        backgroundColor: COLORS.border,
+        backgroundColor: COLORS.glassBorder,
         height: '60%',
         alignSelf: 'center',
     },
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: SPACING.lg,
         borderWidth: 2,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
         position: 'relative',
     },
     milestoneAchieved: {

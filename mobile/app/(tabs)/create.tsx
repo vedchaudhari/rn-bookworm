@@ -234,7 +234,7 @@ export default function CreateTab() {
                     <Ionicons
                         name={i <= rating ? "star" : "star-outline"}
                         size={32}
-                        color={i <= rating ? COLORS.gold : COLORS.textSecondary}
+                        color={i <= rating ? COLORS.ratingGold : COLORS.textSecondary}
                     />
                 </TouchableOpacity>
             )

@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     typeTextActive: { color: COLORS.white },
     inputGroup: { marginBottom: SPACING.lg },
     label: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 8 },
-    input: { backgroundColor: COLORS.surface, borderRadius: 12, padding: 12, color: COLORS.textPrimary, fontSize: 15, borderWidth: 1, borderColor: COLORS.borderLight },
+    input: { backgroundColor: COLORS.surface, borderRadius: 12, padding: 12, color: COLORS.textPrimary, fontSize: 15, borderWidth: 1, borderColor: COLORS.glassBorderLight },
     textArea: { minHeight: 100, textAlignVertical: 'top' },
     saveBtn: { backgroundColor: COLORS.primary, borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: SPACING.xl, ...SHADOWS.medium },
     saveBtnDisabled: { opacity: 0.7 },

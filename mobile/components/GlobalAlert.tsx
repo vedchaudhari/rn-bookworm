@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     cancelButton: {
         backgroundColor: 'rgba(255,255,255,0.05)',
         borderWidth: 1,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
     },
     confirmButton: {
         backgroundColor: COLORS.primary,

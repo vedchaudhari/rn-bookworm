@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     conversationCard: { flexDirection: 'row', padding: 16, marginHorizontal: 20, gap: 16, alignItems: 'center' },
     unreadConversation: { backgroundColor: COLORS.surfaceHighlight, borderColor: COLORS.primaryLight + '44' },
     avatarContainer: { position: 'relative' },
-    avatar: { width: 50, height: 50, borderRadius: 25, borderWidth: 1, borderColor: COLORS.borderLight },
+    avatar: { width: 50, height: 50, borderRadius: 25, borderWidth: 1, borderColor: COLORS.glassBorderLight },
     selfBadge: { position: 'absolute', bottom: -2, right: -2, backgroundColor: COLORS.primary, width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.surfaceHighlight },
     conversationContent: { flex: 1, justifyContent: 'center' },
     conversationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },

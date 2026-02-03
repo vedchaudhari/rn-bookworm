@@ -9,6 +9,7 @@ import {
     FONT_SIZE,
     BORDER_RADIUS,
     COMPONENT_SIZES,
+    SHADOWS,
 } from '../constants/styleConstants';
 import type { BookNote } from '../lib/api/bookNoteApi';
 
@@ -225,10 +226,13 @@ export default function NoteCard({
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.xl,
+        backgroundColor: COLORS.surfaceSilk,
+        borderRadius: BORDER_RADIUS.xxl,
         padding: PADDING.card.vertical,
-        marginBottom: SPACING.lg,
+        marginBottom: SPACING.xl,
+        ...SHADOWS.godLevel,
+        borderWidth: 1,
+        borderColor: COLORS.glassBorder,
     },
     header: {
         flexDirection: 'row',
@@ -268,7 +272,7 @@ const styles = StyleSheet.create({
     },
     highlightContainer: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(255, 215, 0, 0.1)',
+        backgroundColor: COLORS.ratingGold + '15',
         padding: SPACING.md,
         borderRadius: BORDER_RADIUS.md,
         marginBottom: SPACING.md,
@@ -282,7 +286,8 @@ const styles = StyleSheet.create({
         fontSize: FONT_SIZE.md,
         color: COLORS.textPrimary,
         fontStyle: 'italic',
-        lineHeight: FONT_SIZE.md * 1.5,
+        lineHeight: 24,
+        fontWeight: '500',
     },
     userNote: {
         fontSize: FONT_SIZE.md,
@@ -297,7 +302,7 @@ const styles = StyleSheet.create({
         marginBottom: SPACING.md,
     },
     tag: {
-        backgroundColor: 'rgba(0, 229, 255, 0.1)',
+        backgroundColor: COLORS.primary + '15',
         paddingHorizontal: SPACING.md,
         paddingVertical: SPACING.xs,
         borderRadius: BORDER_RADIUS.circular,
@@ -319,7 +324,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: SPACING.md,
         borderTopWidth: 1,
-        borderTopColor: COLORS.border,
+        borderTopColor: COLORS.glassBorder,
     },
     metaLeft: {
         flexDirection: 'row',
@@ -348,7 +353,7 @@ const styles = StyleSheet.create({
         marginTop: SPACING.md,
         paddingTop: SPACING.md,
         borderTopWidth: 1,
-        borderTopColor: COLORS.border,
+        borderTopColor: COLORS.glassBorder,
     },
     actionButton: {
         padding: SPACING.sm,

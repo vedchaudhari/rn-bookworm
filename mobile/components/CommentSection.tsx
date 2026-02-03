@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         padding: 12,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
+        borderBottomColor: COLORS.glassBorder,
         gap: 8,
     },
     input: {
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
         padding: 12,
         gap: 10,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
+        borderBottomColor: COLORS.glassBorder,
     },
     avatar: {
         width: 36,

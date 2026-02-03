@@ -22,7 +22,7 @@ const styles = StyleSheet.create({
         borderRadius: RADIUS.card.medium,
         // Removed overflow: 'hidden' to allow menu dropdowns to be visible
         borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
         ...SHADOWS.strong,
     },
     header: {
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         marginRight: SPACING.md,
         borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
     },
     username: {
         fontSize: FONT_SIZE.md,

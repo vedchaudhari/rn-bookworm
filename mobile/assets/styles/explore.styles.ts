@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.surface,
         borderRadius: RADIUS.card.medium,
         borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
         ...SHADOWS.medium,
         overflow: 'hidden',
     },
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
         gap: GAP.sm,
         backgroundColor: COLORS.surfaceHighlight,
         borderTopWidth: BORDER_WIDTH.thin,
-        borderTopColor: COLORS.border,
+        borderTopColor: COLORS.glassBorder,
     },
     typeBtn: {
         flex: 1,
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
         borderRadius: BORDER_RADIUS.lg,
         backgroundColor: COLORS.surface,
         borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
     },
     genreChipActive: {
         backgroundColor: COLORS.surfaceHighlight,
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
         padding: PADDING.card.horizontal,
         alignItems: 'center',
         borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
         ...SHADOWS.medium,
     },
     suggestedAvatar: {
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
         borderRadius: BORDER_RADIUS.lg,
         backgroundColor: COLORS.surface,
         borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
     },
     tabActive: {
         backgroundColor: COLORS.surfaceHighlight,
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
         borderRadius: RADIUS.card.medium,
         overflow: 'hidden',
         borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
         ...SHADOWS.light,
     },
     bookImage: {
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
         padding: PADDING.card.horizontal,
         borderRadius: RADIUS.card.medium,
         borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
         gap: GAP.lg,
     },
     userAvatar: {

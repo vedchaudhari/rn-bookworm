@@ -335,7 +335,7 @@ export default function Profile() {
                                 label="Ink Drops"
                                 value={balance}
                                 icon="water"
-                                color={COLORS.gold}
+                                color={COLORS.ratingGold}
                                 style={styles.statCard}
                             />
                         </TouchableOpacity>

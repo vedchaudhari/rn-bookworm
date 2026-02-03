@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
         padding: SPACING.md,
         marginBottom: MARGIN.item.medium,
         borderWidth: 1,
-        borderColor: COLORS.borderLight,
+        borderColor: COLORS.glassBorderLight,
     },
     cardContent: {
         flexDirection: 'row',

@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: SPACING.xl,
         paddingVertical: SPACING.lg,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.borderLight,
+        borderBottomColor: COLORS.glassBorderLight,
     },
     backBtn: {
         width: 40,
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
         color: COLORS.textPrimary,
         fontSize: 15,
         borderWidth: 1,
-        borderColor: COLORS.borderLight,
+        borderColor: COLORS.glassBorderLight,
     },
     textArea: {
         minHeight: 80,
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 14,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.borderLight,
+        borderBottomColor: COLORS.glassBorderLight,
     },
     settingIconContainer: {
         width: 36,
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 16,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.borderLight,
+        borderBottomColor: COLORS.glassBorderLight,
     },
     actionText: {
         flex: 1,

@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
         borderRadius: RADIUS.card.massive,
         padding: PADDING.card.vertical,
         borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
         ...SHADOWS.extraStrong,
     },
     header: {
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: PADDING.input.horizontal,
         height: COMPONENT_SIZES.input.standard,
         borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
     },
     inputContainerFocused: {
         borderColor: COLORS.primary,
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
         marginTop: MARGIN.section.medium,
         paddingTop: PADDING.card.vertical,
         borderTopWidth: BORDER_WIDTH.thin,
-        borderTopColor: COLORS.border,
+        borderTopColor: COLORS.glassBorder,
     },
     footerText: {
         color: COLORS.textMuted,

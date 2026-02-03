@@ -135,7 +135,7 @@ export default function ChapterEditor() {
                         style={[styles.premiumBtn, isPremium && styles.premiumBtnActive]}
                         onPress={() => setIsPremium(!isPremium)}
                     >
-                        <Ionicons name={isPremium ? "star" : "star-outline"} size={16} color={isPremium ? COLORS.white : COLORS.gold} />
+                        <Ionicons name={isPremium ? "star" : "star-outline"} size={16} color={isPremium ? COLORS.white : COLORS.ratingGold} />
                         <Text style={[styles.premiumText, isPremium && { color: COLORS.white }]}>Premium</Text>
                     </TouchableOpacity>
                 </View>
@@ -174,11 +174,41 @@ const styles = StyleSheet.create({
     settingsRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 20 },
     inputGroup: { marginBottom: 20 },
     label: { fontSize: 13, fontWeight: '700', color: COLORS.textTertiary, marginBottom: 8, textTransform: 'uppercase' },
-    input: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 14, color: COLORS.textPrimary, fontSize: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-    contentInput: { flex: 1, minHeight: 400, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 20, color: COLORS.textPrimary, fontSize: 17, lineHeight: 26 },
-    premiumBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,215,0,0.1)', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, gap: 6, marginBottom: 20 },
-    premiumBtnActive: { backgroundColor: COLORS.gold },
-    premiumText: { fontWeight: '700', color: COLORS.gold, fontSize: 14 },
+    input: {
+        backgroundColor: COLORS.surfaceHighlight,
+        borderRadius: 12,
+        padding: 14,
+        color: COLORS.textPrimary,
+        fontSize: 16,
+        borderWidth: 1,
+        borderColor: COLORS.glassBorder
+    },
+    contentInput: {
+        flex: 1,
+        minHeight: 400,
+        backgroundColor: COLORS.surfaceHighlight,
+        borderRadius: 16,
+        padding: 20,
+        color: COLORS.textPrimary,
+        fontSize: 17,
+        lineHeight: 26,
+        borderWidth: 1,
+        borderColor: COLORS.glassBorder
+    },
+    premiumBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.ratingGold + '15',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 12,
+        gap: 6,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: COLORS.ratingGold + '30'
+    },
+    premiumBtnActive: { backgroundColor: COLORS.ratingGold },
+    premiumText: { fontWeight: '700', color: COLORS.ratingGold, fontSize: 14 },
     saveBtn: { marginRight: 8, paddingHorizontal: 12, paddingVertical: 6 },
     saveBtnText: { color: COLORS.primary, fontWeight: '800', fontSize: 16 },
 });

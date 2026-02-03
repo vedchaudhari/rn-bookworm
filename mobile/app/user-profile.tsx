@@ -164,7 +164,7 @@ export default function UserProfile() {
                         <TouchableOpacity style={styles.statBox} onPress={handleFollowingPress}><Text style={styles.statNumber}>{stats.following}</Text><Text style={styles.statLabel}>Following</Text></TouchableOpacity>
                     </GlassCard>
                     <View style={styles.badgesRow}>
-                        <View style={styles.levelBadge}><Ionicons name="trophy" size={14} color={COLORS.gold} /><Text style={styles.levelText}>Level {user?.level || 1}</Text></View>
+                        <View style={styles.levelBadge}><Ionicons name="trophy" size={14} color={COLORS.ratingGold} /><Text style={styles.levelText}>Level {user?.level || 1}</Text></View>
                         {(user?.currentStreak || 0) > 0 && <View style={styles.streakBadge}><Ionicons name="flame" size={14} color={COLORS.error} /><Text style={styles.streakText}>{user?.currentStreak} day streak</Text></View>}
                     </View>
                     <View style={styles.actionButtonsCentered}>
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     statLabel: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary, textTransform: 'uppercase', marginTop: 4, letterSpacing: 0.5 },
     badgesRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 20 },
     levelBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(244, 180, 0, 0.1)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, gap: 6, borderWidth: 1, borderColor: 'rgba(244, 180, 0, 0.2)' },
-    levelText: { color: COLORS.gold, fontSize: 13, fontWeight: '800' },
+    levelText: { color: COLORS.ratingGold, fontSize: 13, fontWeight: '800' },
     streakBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 71, 87, 0.1)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, gap: 6, borderWidth: 1, borderColor: 'rgba(255, 71, 87, 0.2)' },
     streakText: { color: COLORS.error, fontSize: 13, fontWeight: '800' },
     actionButtonsCentered: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 24, paddingHorizontal: 20 },

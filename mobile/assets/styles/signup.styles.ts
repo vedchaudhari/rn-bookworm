@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
         borderRadius: RADIUS.card.massive,
         padding: PADDING.card.vertical + 4,
         borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
         ...SHADOWS.extraStrong,
         backdropFilter: 'blur(10px)',
     },
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: PADDING.input.horizontal,
         height: COMPONENT_SIZES.input.standard,
         borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
     },
     inputIcon: {
         marginRight: SPACING.lg,
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
         marginTop: MARGIN.section.medium,
         paddingTop: PADDING.card.vertical,
         borderTopWidth: BORDER_WIDTH.thin,
-        borderTopColor: COLORS.border,
+        borderTopColor: COLORS.glassBorder,
     },
     footerText: {
         color: COLORS.textMuted,

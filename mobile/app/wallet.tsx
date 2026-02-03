@@ -79,7 +79,7 @@ export default function WalletScreen() {
                 <GlassCard style={styles.balanceCard}>
                     <Text style={styles.balanceLabel}>Current Balance</Text>
                     <View style={styles.balanceRow}>
-                        <Ionicons name="water" size={32} color={COLORS.gold} />
+                        <Ionicons name="water" size={32} color={COLORS.ratingGold} />
                         <Text style={styles.balanceValue}>{balance}</Text>
                     </View>
                     <Text style={styles.balanceSubtext}>Ink Drops are used to tip authors and unlock premium content.</Text>
@@ -99,7 +99,7 @@ export default function WalletScreen() {
                                     <Text style={styles.badgeText}>{tier.badge}</Text>
                                 </View>
                             )}
-                            <Ionicons name="water" size={24} color={COLORS.gold} />
+                            <Ionicons name="water" size={24} color={COLORS.ratingGold} />
                             <Text style={styles.tierAmount}>{tier.drops}</Text>
                             <Text style={styles.tierLabel}>{tier.label}</Text>
                             <View style={styles.priceBtn}>

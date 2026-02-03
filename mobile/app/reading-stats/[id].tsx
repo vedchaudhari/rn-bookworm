@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
         marginTop: SPACING.xl,
         paddingTop: SPACING.xl,
         borderTopWidth: 1,
-        borderTopColor: COLORS.border,
+        borderTopColor: COLORS.glassBorder,
     },
     legendItem: {
         flexDirection: 'row',

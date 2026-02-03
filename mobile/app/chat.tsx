@@ -6,14 +6,16 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform, Alert, StyleSheet, StatusBar, Dimensions, Keyboard, LayoutAnimation, UIManager } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform, Alert, StyleSheet, StatusBar, Dimensions, Keyboard, LayoutAnimation, UIManager, ScrollView } from 'react-native';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import * as FileSystem from 'expo-file-system';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import COLORS from '../constants/colors';
-import { SPACING } from '../constants/styleConstants';
+import { SPACING, SHADOWS } from '../constants/styleConstants';
 import { useMessageStore, Message } from '../store/messageStore';
 import { useAuthStore } from '../store/authContext';
 import { useNotificationStore } from '../store/notificationStore';
@@ -29,13 +31,14 @@ import ChatHeader from '../components/ChatHeader';
 interface MediaViewerProps {
     visible: boolean;
     onClose: () => void;
-    media: { uri: string, type: 'image' | 'video' } | null;
+    media: { uri: string, type: 'image' | 'video', timestamp?: string, senderName?: string } | null;
     onPlayingChange?: (playing: boolean) => void;
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, media, onPlayingChange }) => {
+    const { showAlert } = useUIStore();
     const scale = useSharedValue(1);
     const opacity = useSharedValue(0);
     const savedScale = useSharedValue(1);
@@ -46,14 +49,41 @@ const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, medi
 
     useEffect(() => {
         if (visible) {
-            opacity.value = withTiming(1, { duration: 300 });
+            opacity.value = withTiming(1, { duration: 400 });
             resetStates();
         } else {
-            opacity.value = withTiming(0, { duration: 250 });
+            opacity.value = withTiming(0, { duration: 300 });
         }
     }, [visible]);
 
-    // Pinch to zoom (Images only) - Simple zoom without pan for now to ensure fixed layout
+    const handleSave = async () => {
+        if (!media) return;
+        try {
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== 'granted') {
+                showAlert({ title: 'Permission Denied', message: 'We need access to your gallery to save media.', type: 'error' });
+                return;
+            }
+            await MediaLibrary.saveToLibraryAsync(media.uri);
+            showAlert({ title: 'Success', message: 'Media saved to gallery!', type: 'success' });
+        } catch (error) {
+            showAlert({ title: 'Error', message: 'Failed to save media.', type: 'error' });
+        }
+    };
+
+    const handleShare = async () => {
+        if (!media) return;
+        try {
+            if (!(await Sharing.isAvailableAsync())) {
+                showAlert({ title: 'Not Available', message: 'Sharing is not supported on this device.', type: 'error' });
+                return;
+            }
+            await Sharing.shareAsync(media.uri);
+        } catch (error) {
+            showAlert({ title: 'Error', message: 'Failed to share media.', type: 'error' });
+        }
+    };
+
     const pinchGesture = Gesture.Pinch()
         .onUpdate((e) => {
             scale.value = savedScale.value * e.scale;
@@ -69,38 +99,112 @@ const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, medi
 
     const animatedStyle = useAnimatedStyle(() => ({
         opacity: opacity.value,
-        transform: [
-            { scale: scale.value }
-        ]
+        transform: [{ scale: scale.value }]
     }));
 
     if (!media) return null;
 
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-            <GestureHandlerRootView style={{ flex: 1, backgroundColor: 'black' }}>
-                {/* Fixed: Do not hide status bar to prevent layout shifts */}
-                <View style={{ position: 'absolute', top: 50, right: 20, zIndex: 20 }}>
-                    <TouchableOpacity onPress={onClose} style={{ padding: 10, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 25 }}>
-                        <Ionicons name="close" size={28} color="white" />
+            <GestureHandlerRootView style={{ flex: 1, backgroundColor: 'rgba(5, 10, 15, 0.98)' }}>
+                {/* Silk Top Rim */}
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1.5, backgroundColor: COLORS.diamondRim, zIndex: 100 }} />
+
+                {/* Close Button & Media Info */}
+                <View style={{ position: 'absolute', top: 50, left: 24, right: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 200 }}>
+                    <View style={{ backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                        <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>{media.senderName || 'Media'}</Text>
+                        {media.timestamp && <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '600' }}>{media.timestamp}</Text>}
+                    </View>
+
+                    <TouchableOpacity
+                        onPress={onClose}
+                        style={{
+                            width: 44,
+                            height: 44,
+                            backgroundColor: 'rgba(255,255,255,0.08)',
+                            borderRadius: 22,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            borderWidth: 1,
+                            borderColor: 'rgba(255,255,255,0.1)'
+                        }}
+                    >
+                        <Ionicons name="close" size={26} color="white" />
                     </TouchableOpacity>
                 </View>
 
                 <GestureDetector gesture={pinchGesture}>
                     <Animated.View style={[{ flex: 1 }, animatedStyle]}>
                         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                            {media.type === 'image' ? (
-                                <Image
-                                    source={{ uri: media.uri }}
-                                    style={{ width: SCREEN_WIDTH, height: SCREEN_HEIGHT }}
-                                    contentFit="contain"
-                                />
-                            ) : (
-                                <FullscreenVideo uri={media.uri} onPlayingChange={onPlayingChange} />
-                            )}
+                            <View style={{
+                                width: SCREEN_WIDTH * 0.95,
+                                height: SCREEN_HEIGHT * 0.7,
+                                borderRadius: 32,
+                                overflow: 'hidden',
+                                borderWidth: 1.5,
+                                borderColor: COLORS.diamondRim,
+                                ...SHADOWS.godLevel,
+                                shadowColor: COLORS.primaryGlow
+                            }}>
+                                {media.type === 'image' ? (
+                                    <Image
+                                        source={{ uri: media.uri }}
+                                        style={{ width: '100%', height: '100%' }}
+                                        contentFit="contain"
+                                    />
+                                ) : (
+                                    <FullscreenVideo uri={media.uri} onPlayingChange={onPlayingChange} />
+                                )}
+                            </View>
                         </View>
                     </Animated.View>
                 </GestureDetector>
+
+                {/* God Level Action Bar */}
+                <View style={{ position: 'absolute', bottom: 60, left: 40, right: 40, flexDirection: 'row', justifyContent: 'center', gap: 20, zIndex: 300 }}>
+                    <TouchableOpacity
+                        onPress={handleSave}
+                        style={{
+                            flex: 1,
+                            flexDirection: 'row',
+                            backgroundColor: 'rgba(255,255,255,0.08)',
+                            paddingVertical: 14,
+                            borderRadius: 24,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            gap: 10,
+                            borderWidth: 1,
+                            borderColor: COLORS.diamondRim,
+                            ...SHADOWS.aura,
+                            shadowColor: '#fff'
+                        }}
+                    >
+                        <Ionicons name="download-outline" size={20} color="white" />
+                        <Text style={{ color: 'white', fontWeight: '900', fontSize: 14 }}>Save</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={handleShare}
+                        style={{
+                            flex: 1,
+                            flexDirection: 'row',
+                            backgroundColor: COLORS.primary,
+                            paddingVertical: 14,
+                            borderRadius: 24,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            gap: 10,
+                            borderWidth: 1,
+                            borderColor: 'rgba(0,0,0,0.1)',
+                            ...SHADOWS.aura,
+                            shadowColor: COLORS.primary
+                        }}
+                    >
+                        <Ionicons name="share-social-outline" size={20} color="black" />
+                        <Text style={{ color: 'black', fontWeight: '900', fontSize: 14 }}>Share</Text>
+                    </TouchableOpacity>
+                </View>
             </GestureHandlerRootView>
         </Modal>
     );
@@ -300,6 +404,420 @@ const FullscreenVideo: React.FC<{ uri: string, autoPlay?: boolean, onPlayingChan
 
 
 
+import { useChatThemeStore, ChatTheme } from '../store/chatThemeStore';
+
+// Palette Presets
+const PALETTE_PRESETS: { name: string, theme: ChatTheme }[] = [
+    {
+        name: 'God Level',
+        theme: {
+            backgroundColor: COLORS.background,
+            myBubbleColor: COLORS.primary,
+            theirBubbleColor: COLORS.surfaceSilk,
+            myTextColor: '#FFFFFF',
+            theirTextColor: '#FFFFFF',
+            auraColor: COLORS.primary,
+        }
+    },
+    {
+        name: 'Royal Purple',
+        theme: {
+            backgroundColor: '#0F0B1E',
+            myBubbleColor: '#8B5CF6',
+            theirBubbleColor: 'rgba(45, 30, 60, 0.95)',
+            myTextColor: '#FFFFFF',
+            theirTextColor: '#FFFFFF',
+            auraColor: '#8B5CF6',
+        }
+    },
+    {
+        name: 'Midnight Rose',
+        theme: {
+            backgroundColor: '#1A0B10',
+            myBubbleColor: '#F43F5E',
+            theirBubbleColor: 'rgba(60, 30, 40, 0.95)',
+            myTextColor: '#FFFFFF',
+            theirTextColor: '#FFFFFF',
+            auraColor: '#F43F5E',
+        }
+    },
+    {
+        name: 'Emerald Eve',
+        theme: {
+            backgroundColor: '#061310',
+            myBubbleColor: '#10B981',
+            theirBubbleColor: 'rgba(20, 50, 40, 0.95)',
+            myTextColor: '#FFFFFF',
+            theirTextColor: '#FFFFFF',
+            auraColor: '#10B981',
+        }
+    },
+    {
+        name: 'Amber Glow',
+        theme: {
+            backgroundColor: '#130D06',
+            myBubbleColor: '#F59E0B',
+            theirBubbleColor: 'rgba(50, 40, 20, 0.95)',
+            myTextColor: '#FFFFFF',
+            theirTextColor: '#FFFFFF',
+            auraColor: '#F59E0B',
+        }
+    },
+    {
+        name: 'Cyber Neon',
+        theme: {
+            backgroundColor: '#0A001A',
+            myBubbleColor: '#FF00FF',
+            theirBubbleColor: 'rgba(0, 255, 255, 0.1)',
+            myTextColor: '#FFFFFF',
+            theirTextColor: '#FFFFFF',
+            auraColor: '#FF00FF',
+        }
+    },
+    {
+        name: 'Ghost Whisper',
+        theme: {
+            backgroundColor: '#F8FAFC',
+            myBubbleColor: '#64748B',
+            theirBubbleColor: '#E2E8F0',
+            myTextColor: '#FFFFFF',
+            theirTextColor: '#FFFFFF',
+            auraColor: '#64748B',
+        }
+    },
+];
+
+const ThemePaletteModal: React.FC<{
+    visible: boolean;
+    onClose: () => void;
+    userId: string;
+}> = ({ visible, onClose, userId }) => {
+    const { setTheme, resetTheme, getTheme } = useChatThemeStore();
+    const currentTheme = getTheme(userId);
+
+    const translateY = useSharedValue(SCREEN_HEIGHT);
+    const backgroundOpacity = useSharedValue(0);
+
+    useEffect(() => {
+        if (visible) {
+            translateY.value = withSpring(0, { damping: 20, stiffness: 90 });
+            backgroundOpacity.value = withTiming(1);
+        } else {
+            translateY.value = withTiming(SCREEN_HEIGHT);
+            backgroundOpacity.value = withTiming(0);
+        }
+    }, [visible]);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: translateY.value }]
+    }));
+
+    if (!visible) return null;
+
+    return (
+        <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+            <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+                <TouchableOpacity activeOpacity={1} onPress={onClose} style={[{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.7)' }]} />
+                <Animated.View style={[
+                    {
+                        backgroundColor: '#12161B',
+                        borderTopLeftRadius: 36,
+                        borderTopRightRadius: 36,
+                        padding: 24,
+                        maxHeight: SCREEN_HEIGHT * 0.85,
+                        paddingBottom: Platform.OS === 'ios' ? 48 : 32,
+                        borderWidth: 1.5,
+                        borderColor: COLORS.diamondRim,
+                        ...SHADOWS.godLevel
+                    },
+                    animatedStyle
+                ]}>
+                    <View style={{ width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff', marginBottom: 24, letterSpacing: 0.5 }}>Chat Palette</Text>
+
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        {/* Interactive Preview */}
+                        <View style={{
+                            backgroundColor: currentTheme.backgroundColor,
+                            borderRadius: 24,
+                            padding: 20,
+                            marginBottom: 24,
+                            borderWidth: 1.5,
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            ...SHADOWS.medium
+                        }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 12 }}>
+                                <View style={{ backgroundColor: currentTheme.theirBubbleColor, padding: 12, borderRadius: 16, borderBottomLeftRadius: 4, maxWidth: '80%' }}>
+                                    <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 13 }}>Shall we dance with the colors?</Text>
+                                </View>
+                            </View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                                <View style={{ backgroundColor: currentTheme.myBubbleColor, padding: 12, borderRadius: 16, borderBottomRightRadius: 4, maxWidth: '80%', ...SHADOWS.aura, shadowColor: currentTheme.auraColor }}>
+                                    <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>Absolutely. Let's paint this void.</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 16, letterSpacing: 1 }}>Ethereal Themes</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 32 }}>
+                            {PALETTE_PRESETS.map((p) => {
+                                const isActive = currentTheme.backgroundColor.toLowerCase() === p.theme.backgroundColor.toLowerCase() &&
+                                    currentTheme.myBubbleColor.toLowerCase() === p.theme.myBubbleColor.toLowerCase();
+                                return (
+                                    <TouchableOpacity
+                                        key={p.name}
+                                        onPress={() => setTheme(userId, p.theme)}
+                                        style={{
+                                            padding: 12,
+                                            borderRadius: 24,
+                                            backgroundColor: p.theme.backgroundColor,
+                                            borderWidth: 2,
+                                            borderColor: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.05)',
+                                            alignItems: 'center',
+                                            width: (SCREEN_WIDTH - 60) / 2,
+                                            ...SHADOWS.medium,
+                                            shadowColor: isActive ? '#FFFFFF' : 'transparent',
+                                            shadowOpacity: isActive ? 0.3 : 0
+                                        }}
+                                    >
+                                        <View style={{ flexDirection: 'row', gap: 4, marginBottom: 8, alignItems: 'center' }}>
+                                            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: p.theme.myBubbleColor, ...SHADOWS.aura, shadowColor: p.theme.auraColor }} />
+                                            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: p.theme.theirBubbleColor }} />
+                                            {isActive && (
+                                                <View style={{
+                                                    position: 'absolute',
+                                                    right: -10,
+                                                    top: -6,
+                                                    backgroundColor: '#FFFFFF',
+                                                    borderRadius: 10,
+                                                    width: 18,
+                                                    height: 18,
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center',
+                                                    ...SHADOWS.medium
+                                                }}>
+                                                    <Ionicons name="checkmark" size={12} color="#000" />
+                                                </View>
+                                            )}
+                                        </View>
+                                        <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>{p.name}</Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 16, letterSpacing: 1 }}>Individual Accents</Text>
+
+                        {/* Background Selection Rings */}
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.3)', marginBottom: 12, textTransform: 'uppercase' }}>Atmosphere</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
+                            <View style={{ flexDirection: 'row', gap: 14, paddingRight: 20 }}>
+                                {['#0B0F14', '#0F0B1E', '#1A0B10', '#061310', '#130D06', '#0A001A', '#000000'].map((color) => {
+                                    const isSelected = currentTheme.backgroundColor.toLowerCase() === color.toLowerCase();
+                                    return (
+                                        <TouchableOpacity
+                                            key={color}
+                                            onPress={() => setTheme(userId, { backgroundColor: color })}
+                                            style={{
+                                                width: 48,
+                                                height: 48,
+                                                borderRadius: 24,
+                                                backgroundColor: color,
+                                                borderWidth: 2.5,
+                                                borderColor: isSelected ? '#FFFFFF' : 'rgba(255,255,255,0.1)',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                ...SHADOWS.medium
+                                            }}
+                                        >
+                                            {isSelected && <Ionicons name="checkmark" size={20} color="#FFFFFF" />}
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </ScrollView>
+
+                        {/* Bubble Color Selection Rings */}
+                        {/* Bubble Color Selection Rings */}
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.3)', marginBottom: 12, textTransform: 'uppercase' }}>Essence (My Bubble)</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
+                            <View style={{ flexDirection: 'row', gap: 14, paddingRight: 20 }}>
+                                {['#19E3D1', '#8B5CF6', '#F43F5E', '#10B981', '#F59E0B', '#FF00FF', '#64748B', '#FFFFFF'].map((color) => {
+                                    const isSelected = currentTheme.myBubbleColor.toLowerCase() === color.toLowerCase();
+                                    return (
+                                        <TouchableOpacity
+                                            key={color}
+                                            onPress={() => setTheme(userId, { myBubbleColor: color, auraColor: color })}
+                                            style={{
+                                                width: 48,
+                                                height: 48,
+                                                borderRadius: 24,
+                                                backgroundColor: color,
+                                                borderWidth: 2.5,
+                                                borderColor: isSelected ? '#FFFFFF' : 'rgba(255,255,255,0.1)',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                ...SHADOWS.aura,
+                                                shadowColor: color
+                                            }}
+                                        >
+                                            {isSelected && <Ionicons name="checkmark" size={20} color={color.toLowerCase() === '#ffffff' ? '#000' : '#FFFFFF'} />}
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </ScrollView>
+
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.3)', marginBottom: 12, textTransform: 'uppercase' }}>Essence (Their Bubble)</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 32 }}>
+                            <View style={{ flexDirection: 'row', gap: 14, paddingRight: 20 }}>
+                                {['rgba(25, 227, 209, 0.15)', 'rgba(139, 92, 246, 0.15)', 'rgba(244, 63, 94, 0.15)', 'rgba(16, 185, 129, 0.15)', 'rgba(245, 158, 11, 0.15)', 'rgba(255, 0, 255, 0.15)', 'rgba(20, 26, 33, 0.95)', '#FFFFFF'].map((color) => {
+                                    const isSelected = currentTheme.theirBubbleColor.toLowerCase() === color.toLowerCase();
+                                    return (
+                                        <TouchableOpacity
+                                            key={color}
+                                            onPress={() => setTheme(userId, { theirBubbleColor: color })}
+                                            style={{
+                                                width: 48,
+                                                height: 48,
+                                                borderRadius: 24,
+                                                backgroundColor: color,
+                                                borderWidth: 2.5,
+                                                borderColor: isSelected ? '#FFFFFF' : 'rgba(255,255,255,0.1)',
+                                                justifyContent: 'center',
+                                                alignItems: 'center'
+                                            }}
+                                        >
+                                            {isSelected && <Ionicons name="checkmark" size={20} color={color.toLowerCase() === '#ffffff' ? '#000' : '#FFFFFF'} />}
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </ScrollView>
+
+                        <TouchableOpacity
+                            onPress={() => resetTheme(userId)}
+                            style={{
+                                width: '100%',
+                                padding: 18,
+                                borderRadius: 24,
+                                backgroundColor: 'rgba(255,255,255,0.03)',
+                                alignItems: 'center',
+                                borderWidth: 1,
+                                borderColor: 'rgba(255,255,255,0.08)'
+                            }}
+                        >
+                            <Text style={{ color: COLORS.textMuted, fontWeight: '800' }}>Revert to Defaults</Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </Animated.View>
+            </View>
+        </Modal>
+    );
+};
+
+const MediaSelectionModal: React.FC<{
+    visible: boolean;
+    onClose: () => void;
+    onSelectImage: () => void;
+    onSelectVideo: () => void;
+}> = ({ visible, onClose, onSelectImage, onSelectVideo }) => {
+    const translateY = useSharedValue(SCREEN_HEIGHT);
+
+    useEffect(() => {
+        if (visible) {
+            translateY.value = withSpring(0, { damping: 20, stiffness: 90 });
+        } else {
+            translateY.value = withTiming(SCREEN_HEIGHT);
+        }
+    }, [visible]);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: translateY.value }]
+    }));
+
+    if (!visible) return null;
+
+    return (
+        <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+            <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+                <TouchableOpacity activeOpacity={1} onPress={onClose} style={[{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.7)' }]} />
+                <Animated.View style={[
+                    {
+                        backgroundColor: '#0F1216',
+                        borderTopLeftRadius: 40,
+                        borderTopRightRadius: 40,
+                        padding: 32,
+                        paddingBottom: Platform.OS === 'ios' ? 54 : 40,
+                        borderWidth: 1.5,
+                        borderColor: COLORS.diamondRim,
+                        ...SHADOWS.godLevel
+                    },
+                    animatedStyle
+                ]}>
+                    <View style={{ width: 45, height: 5, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2.5, alignSelf: 'center', marginBottom: 24 }} />
+                    <Text style={{ fontSize: 26, fontWeight: '900', color: '#fff', marginBottom: 8, letterSpacing: 0.5 }}>Share Media</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.textMuted, marginBottom: 32 }}>Choose your digital essence to transmit.</Text>
+
+                    <View style={{ flexDirection: 'row', gap: 16 }}>
+                        <TouchableOpacity
+                            onPress={() => { onSelectImage(); onClose(); }}
+                            style={{
+                                flex: 1,
+                                backgroundColor: 'rgba(255,255,255,0.03)',
+                                padding: 24,
+                                borderRadius: 32,
+                                alignItems: 'center',
+                                borderWidth: 1.5,
+                                borderColor: 'rgba(255,255,255,0.08)',
+                                gap: 12
+                            }}
+                        >
+                            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(52, 211, 153, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(52, 211, 153, 0.2)' }}>
+                                <Ionicons name="image" size={32} color="#34D399" />
+                            </View>
+                            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Image</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => { onSelectVideo(); onClose(); }}
+                            style={{
+                                flex: 1,
+                                backgroundColor: 'rgba(255,255,255,0.03)',
+                                padding: 24,
+                                borderRadius: 32,
+                                alignItems: 'center',
+                                borderWidth: 1.5,
+                                borderColor: 'rgba(255,255,255,0.08)',
+                                gap: 12
+                            }}
+                        >
+                            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(139, 92, 246, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.2)' }}>
+                                <Ionicons name="videocam" size={32} color="#8B5CF6" />
+                            </View>
+                            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Video</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity
+                        onPress={onClose}
+                        style={{
+                            marginTop: 24,
+                            width: '100%',
+                            padding: 20,
+                            borderRadius: 24,
+                            backgroundColor: 'rgba(255,255,255,0.02)',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <Text style={{ color: COLORS.textMuted, fontWeight: '800', fontSize: 15 }}>Cancel</Text>
+                    </TouchableOpacity>
+                </Animated.View>
+            </View>
+        </Modal>
+    );
+};
+
 // MessageItem Component for performance
 interface MessageItemProps {
     item: Message;
@@ -307,13 +825,15 @@ interface MessageItemProps {
     currentUserId: string;
     displayAvatar: string;
     onLongPress: (item: Message) => void;
-    onShowViewer: (uri: string, type: 'image' | 'video') => void;
+    onShowViewer: (uri: string, type: 'image' | 'video', timestamp?: string, senderName?: string) => void;
     showAvatar: boolean;
     isGlobalVideoPlaying?: boolean;
     activeVideoUri?: string | null;
+    theme: ChatTheme;
+    username: string;
 }
 
-const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onLongPress, onShowViewer, showAvatar, isGlobalVideoPlaying, activeVideoUri }: MessageItemProps) => {
+const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onLongPress, onShowViewer, showAvatar, isGlobalVideoPlaying, activeVideoUri, theme, username }: MessageItemProps) => {
     const senderId = typeof item.sender === 'object' ? item.sender._id : item.sender;
     const isMe = senderId === currentUserId || senderId === 'me';
     const isThisVideoPlaying = !!(item.video && activeVideoUri === item.video && isGlobalVideoPlaying);
@@ -334,21 +854,23 @@ const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onL
             <TouchableOpacity
                 onLongPress={() => onLongPress(item)}
                 onPress={() => {
-                    if (item.image) onShowViewer(item.image, 'image');
-                    else if (item.video) onShowViewer(item.video, 'video');
+                    const timestamp = new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const senderName = isMe ? 'You' : username;
+                    if (item.image) onShowViewer(item.image, 'image', timestamp, senderName);
+                    else if (item.video) onShowViewer(item.video, 'video', timestamp, senderName);
                 }}
                 activeOpacity={0.8}
                 style={[
                     styles.messageBubble,
-                    isMe ? styles.myBubble : styles.theirBubble,
+                    isMe ? { backgroundColor: theme.myBubbleColor, borderBottomRightRadius: 4, ...SHADOWS.aura, shadowColor: theme.auraColor } : { backgroundColor: theme.theirBubbleColor, borderBottomLeftRadius: 4 },
                     (item.image || item.video) && styles.imageBubble,
                     item.isDeleted && styles.deletedBubble
                 ]}
             >
                 {item.isDeleted ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Ionicons name="ban" size={14} color={isMe ? 'rgba(255,255,255,0.6)' : COLORS.textMuted} />
-                        <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText, styles.deletedText]}>
+                        <Ionicons name="ban" size={14} color="rgba(255,255,255,0.6)" />
+                        <Text style={[styles.messageText, { color: '#FFFFFF' }, styles.deletedText]}>
                             This message was deleted
                         </Text>
                     </View>
@@ -368,15 +890,15 @@ const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onL
                                 isPlaying={isThisVideoPlaying}
                             />
                         )}
-                        {item.text && <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText]}>{item.text}</Text>}
+                        {item.text && <Text style={[styles.messageText, { color: '#FFFFFF' }]}>{item.text}</Text>}
                     </>
                 )}
 
                 <View style={{ flexDirection: 'row', alignSelf: 'flex-end', alignItems: 'center', gap: 4, marginTop: 4 }}>
                     {item.isEdited && !item.isDeleted && (
-                        <Text style={[styles.editedLabel, isMe ? styles.myTime : styles.theirTime]}>Edited</Text>
+                        <Text style={[styles.editedLabel, { color: '#FFFFFF', opacity: 0.6 }]}>Edited</Text>
                     )}
-                    <Text style={[styles.messageTime, isMe ? styles.myTime : styles.theirTime]}>
+                    <Text style={[styles.messageTime, { color: '#FFFFFF', opacity: 0.6 }]}>
                         {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </Text>
                     {isMe && !item.isDeleted && (
@@ -402,7 +924,10 @@ const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onL
         prevProps.index === nextProps.index &&
         prevProps.showAvatar === nextProps.showAvatar &&
         prevProps.isGlobalVideoPlaying === nextProps.isGlobalVideoPlaying &&
-        prevProps.activeVideoUri === nextProps.activeVideoUri
+        prevProps.activeVideoUri === nextProps.activeVideoUri &&
+        prevProps.theme.backgroundColor === nextProps.theme.backgroundColor &&
+        prevProps.theme.myBubbleColor === nextProps.theme.myBubbleColor &&
+        prevProps.theme.theirBubbleColor === nextProps.theme.theirBubbleColor
     );
 });
 
@@ -424,10 +949,14 @@ export default function ChatScreen() {
     const [activeVideoUri, setActiveVideoUri] = useState<string | null>(null);
     const [isGlobalVideoPlaying, setIsGlobalVideoPlaying] = useState(false);
     const [viewerVisible, setViewerVisible] = useState(false);
-    const [viewerMedia, setViewerMedia] = useState<{ uri: string, type: 'image' | 'video' } | null>(null);
+    const [viewerMedia, setViewerMedia] = useState<{ uri: string, type: 'image' | 'video', timestamp?: string, senderName?: string } | null>(null);
     const flatListRef = useRef<FlatList>(null);
 
     const { messages, fetchMessages, sendMessage, markAsRead, addReceivedMessage, activeConversation, setActiveConversation, editMessage, deleteMessageForMe, deleteMessageForEveryone, updateLocalEditedMessage, updateLocalDeletedMessage, updateLocalMessagesRead, updateLocalMessageDelivered, clearChatHistory } = useMessageStore();
+    const { getTheme } = useChatThemeStore();
+    const currentTheme = getTheme(userId!);
+    const [paletteVisible, setPaletteVisible] = useState(false);
+    const [mediaModalVisible, setMediaModalVisible] = useState(false);
     const { token, user } = useAuthStore();
     const { showAlert, setActiveScreen, setActiveChatId } = useUIStore();
     const { socket, userStatuses, typingStatus, sendTypingStart, sendTypingStop, isConnected } = useNotificationStore();
@@ -467,8 +996,8 @@ export default function ChatScreen() {
         return () => { showSub.remove(); hideSub.remove(); };
     }, []);
 
-    const handleShowViewer = useCallback((uri: string, type: 'image' | 'video') => {
-        setViewerMedia({ uri, type });
+    const handleShowViewer = useCallback((uri: string, type: 'image' | 'video', timestamp?: string, senderName?: string) => {
+        setViewerMedia({ uri, type, timestamp, senderName });
         setActiveVideoUri(type === 'video' ? uri : null);
         setIsGlobalVideoPlaying(false);
         setViewerVisible(true);
@@ -614,16 +1143,7 @@ export default function ChatScreen() {
     const loadMessages = async () => { await fetchMessages(userId!, token!); };
 
     const handlePickMedia = () => {
-        Alert.alert(
-            'Share Media',
-            'Choose what to share',
-            [
-                { text: 'Image', onPress: () => handlePickImage(false) },
-                { text: 'Video', onPress: handlePickVideo },
-                { text: 'Cancel', style: 'cancel' }
-            ],
-            { cancelable: true }
-        );
+        setMediaModalVisible(true);
     };
 
     const handlePickImage = async (allowEditing: boolean = false) => {
@@ -963,9 +1483,11 @@ export default function ChatScreen() {
                 showAvatar={showAvatar}
                 isGlobalVideoPlaying={isGlobalVideoPlaying}
                 activeVideoUri={activeVideoUri}
+                theme={currentTheme}
+                username={username}
             />
         );
-    }, [user, displayAvatar, handleLongPress, conversationMessages]);
+    }, [user, displayAvatar, handleLongPress, conversationMessages, currentTheme]);
 
     const insets = useSafeAreaInsets();
 
@@ -996,11 +1518,12 @@ export default function ChatScreen() {
                 displayStatus={displayStatus}
                 animatedStatusStyle={animatedStatusStyle}
                 onClearChat={handleClearChat}
+                onOpenPalette={() => setPaletteVisible(true)}
             />
 
             {/* Smooth Reanimated View for Keyboard */}
             <Animated.View style={[{ flex: 1 }, animatedContainerStyle]}>
-                <View style={[styles.container, { paddingTop: 0 }]}>
+                <View style={[styles.container, { paddingTop: 0, backgroundColor: currentTheme.backgroundColor }]}>
 
                     {/* Messages List */}
                     <View style={{ flex: 1 }}>
@@ -1009,11 +1532,12 @@ export default function ChatScreen() {
                             data={conversationMessages}
                             renderItem={renderMessage}
                             keyExtractor={(item) => item._id}
-                            contentContainerStyle={[styles.messagesList, { paddingBottom: 16, paddingTop: 16 }]}
+                            extraData={currentTheme}
+                            contentContainerStyle={[styles.messagesList, { paddingBottom: 20, paddingTop: Platform.OS === 'ios' ? 120 : 100 }]}
                             inverted
                             showsVerticalScrollIndicator={false}
-                            keyboardShouldPersistTaps="handled" // Essential for smooth dismiss
-                            keyboardDismissMode="interactive" // Allows user to drag keyboard down
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="interactive"
                             removeClippedSubviews={Platform.OS === 'android'}
                             initialNumToRender={20}
                             maxToRenderPerBatch={10}
@@ -1023,25 +1547,30 @@ export default function ChatScreen() {
                             scrollEventThrottle={16}
                             ListEmptyComponent={
                                 <View style={styles.emptyContainer}>
-                                    <View style={styles.emptyIconCircle}>
-                                        <Ionicons name="chatbubbles-outline" size={32} color={COLORS.primary} />
+                                    <View style={[styles.emptyIconCircle, { backgroundColor: 'rgba(25, 227, 209, 0.08)', ...SHADOWS.aura }]}>
+                                        <Ionicons name="chatbubbles" size={40} color={COLORS.primary} />
                                     </View>
-                                    <Text style={styles.emptyText}>Start a literary conversation with {username}</Text>
+                                    <Text style={[styles.emptyText, { fontSize: 18, color: COLORS.textPrimary, fontWeight: '900' }]}>
+                                        The conversation begins...
+                                    </Text>
+                                    <Text style={[styles.emptyText, { color: COLORS.textSecondary, marginTop: 8 }]}>
+                                        Start a literary dialogue with {username}
+                                    </Text>
                                 </View>
                             }
                         />
                     </View>
 
-                    {/* Input Wrapper - No longer needs dynamic padding props, outer container handles it */}
-                    <View style={[styles.inputWrapper, { paddingTop: 12, paddingBottom: 0 }]}>
+                    {/* Input Wrapper - Floating Capsule */}
+                    <View style={styles.inputWrapper}>
                         <View style={styles.inputContainer}>
                             <TouchableOpacity onPress={handlePickMedia} style={styles.iconButton}>
-                                <Ionicons name="add" size={24} color={COLORS.primary} />
+                                <Ionicons name="add-circle-outline" size={26} color={COLORS.primary} />
                             </TouchableOpacity>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Type a message..."
-                                placeholderTextColor={COLORS.textMuted}
+                                placeholder="Whisper something..."
+                                placeholderTextColor="rgba(168, 178, 209, 0.4)"
                                 value={messageText}
                                 onChangeText={handleTextChange}
                                 onFocus={() => setIsInputActive(true)}
@@ -1054,7 +1583,7 @@ export default function ChatScreen() {
                                 disabled={!messageText.trim() || sending}
                                 style={[styles.sendButton, (!messageText.trim() || sending) && styles.sendButtonDisabled]}
                             >
-                                {sending ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="send" size={18} color="#fff" />}
+                                {sending ? <ActivityIndicator size="small" color="#000" /> : <Ionicons name="paper-plane" size={20} color="#000" />}
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -1101,6 +1630,17 @@ export default function ChatScreen() {
                 }}
                 media={viewerMedia}
                 onPlayingChange={setIsGlobalVideoPlaying}
+            />
+            <ThemePaletteModal
+                visible={paletteVisible}
+                onClose={() => setPaletteVisible(false)}
+                userId={userId!}
+            />
+            <MediaSelectionModal
+                visible={mediaModalVisible}
+                onClose={() => setMediaModalVisible(false)}
+                onSelectImage={() => handlePickImage(false)}
+                onSelectVideo={handlePickVideo}
             />
         </SafeScreen >
     );

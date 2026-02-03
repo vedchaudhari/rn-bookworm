@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
         marginTop: SPACING.md,
         paddingTop: SPACING.md,
         borderTopWidth: 1,
-        borderTopColor: COLORS.border,
+        borderTopColor: COLORS.glassBorder,
     },
     noteMetaText: {
         fontSize: FONT_SIZE.xs,

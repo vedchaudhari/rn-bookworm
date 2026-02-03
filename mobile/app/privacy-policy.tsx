@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: SPACING.xl,
         paddingVertical: SPACING.lg,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.borderLight,
+        borderBottomColor: COLORS.glassBorderLight,
     },
     backBtn: {
         width: 40,

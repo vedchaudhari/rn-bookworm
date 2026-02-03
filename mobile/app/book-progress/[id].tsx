@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
         marginTop: SPACING.xxl,
         paddingTop: SPACING.xl,
         borderTopWidth: 1,
-        borderTopColor: COLORS.border,
+        borderTopColor: COLORS.glassBorder,
     },
     statItem: {
         alignItems: 'center',

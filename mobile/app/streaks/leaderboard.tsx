@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: PADDING.screen.horizontal,
         paddingVertical: SPACING.xl,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
+        borderBottomColor: COLORS.glassBorder,
     },
     backButton: {
         padding: SPACING.sm,

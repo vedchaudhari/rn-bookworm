@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { View, Text, useWindowDimensions } from 'react-native';
 import COLORS from '../../constants/colors';
-import { SPACING } from '../../constants/styleConstants';
+import { SPACING, SHADOWS } from '../../constants/styleConstants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMessageStore } from '../../store/messageStore';
 import { useNotificationStore } from '../../store/notificationStore';
@@ -24,24 +24,28 @@ export default function TabLayout() {
                 tabBarInactiveTintColor: COLORS.textSecondary,
                 tabBarStyle: {
                     position: 'absolute',
-                    bottom: Math.max(insets.bottom, 16),
-                    left: Math.max(insets.left, 16),
-                    right: Math.max(insets.right, 16),
-                    backgroundColor: COLORS.surface + 'F2',
-                    borderRadius: 30,
-                    height: 60,
-                    borderTopWidth: 1,
-                    borderTopColor: COLORS.glassBorder,
+                    bottom: Math.max(insets.bottom, 24), // Lifted higher for god level feel
+                    left: 24,
+                    right: 24,
+                    backgroundColor: 'rgba(14, 27, 36, 0.88)',
+                    borderRadius: 40,
+                    height: 75,
+                    borderTopWidth: 1.2,
+                    borderTopColor: COLORS.diamondRim, // Sharp Diamond Rim
                     paddingBottom: 0,
-                    shadowColor: 'black',
-                    shadowOffset: { width: 0, height: 10 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 20,
-                    elevation: 10,
+                    ...SHADOWS.godLevel,
+                    // Subsurface aura glow
+                    shadowColor: COLORS.primary,
                 },
                 tabBarItemStyle: {
-                    height: 64,
-                    paddingTop: 6,
+                    height: 75,
+                    paddingTop: 14,
+                },
+                tabBarLabelStyle: {
+                    fontSize: 11,
+                    fontWeight: '800',
+                    marginBottom: 12,
+                    letterSpacing: 0.5,
                 }
             }}
         >

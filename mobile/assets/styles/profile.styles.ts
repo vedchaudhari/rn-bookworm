@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
         borderRadius: 100,
         padding: 4,
         borderWidth: 1,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
         height: 48,
     },
     tabItem: {
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.surface,
         borderRadius: 100,
         borderWidth: 1,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
     },
     userListAvatar: {
         width: 48,

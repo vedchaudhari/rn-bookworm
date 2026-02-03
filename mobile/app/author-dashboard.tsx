@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     actionRow: {
         flexDirection: 'row',
         borderTopWidth: 1,
-        borderTopColor: COLORS.border,
+        borderTopColor: COLORS.glassBorder,
         paddingTop: SPACING.md,
         gap: SPACING.md,
     },
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
         borderRadius: BORDER_RADIUS.md,
         gap: 6,
         borderWidth: 1,
-        borderColor: COLORS.border,
+        borderColor: COLORS.glassBorder,
     },
     actionText: {
         fontSize: FONT_SIZE.xs,
