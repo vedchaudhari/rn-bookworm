@@ -24,22 +24,21 @@ export default function TabLayout() {
                 tabBarInactiveTintColor: COLORS.textSecondary,
                 tabBarStyle: {
                     position: 'absolute',
-                    bottom: Math.max(insets.bottom, 24), // Lifted higher for god level feel
-                    left: 24,
-                    right: 24,
-                    backgroundColor: 'rgba(14, 27, 36, 0.88)',
-                    borderRadius: 40,
-                    height: 75,
+                    bottom: Math.max(insets.bottom, 12), // Lowered slightly to resolve FAB conflict
+                    left: 20,
+                    right: 20,
+                    backgroundColor: 'rgba(14, 27, 36, 0.9)',
+                    borderRadius: 30,
+                    height: 64,
                     borderTopWidth: 1.2,
-                    borderTopColor: COLORS.diamondRim, // Sharp Diamond Rim
+                    borderTopColor: COLORS.diamondRim,
                     paddingBottom: 0,
                     ...SHADOWS.godLevel,
-                    // Subsurface aura glow
                     shadowColor: COLORS.primary,
                 },
                 tabBarItemStyle: {
-                    height: 75,
-                    paddingTop: 14,
+                    height: 64,
+                    paddingTop: 8,
                 },
                 tabBarLabelStyle: {
                     fontSize: 11,

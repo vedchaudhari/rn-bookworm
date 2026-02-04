@@ -17,6 +17,7 @@ import StatCard from '../../components/StatCard';
 import PremiumButton from '../../components/PremiumButton';
 import { useUIStore } from '../../store/uiStore';
 import { apiClient } from '../../lib/apiClient';
+import ImageCropper from '../../components/ImageCropper';
 
 interface User {
     _id: string;
@@ -69,6 +70,8 @@ export default function Profile() {
     const [following, setFollowing] = useState<User[]>([]);
     const [loadingUsers, setLoadingUsers] = useState<boolean>(false);
     const [uploadingImage, setUploadingImage] = useState<boolean>(false);
+    const [cropperVisible, setCropperVisible] = useState<boolean>(false);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const { showAlert } = useUIStore();
 
     useEffect(() => {
@@ -153,27 +156,36 @@ export default function Profile() {
 
     const handleChangeProfileImage = async () => {
         try {
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== 'granted') {
-                showAlert({ title: 'Permission Required', message: 'Please grant photo library access.', type: 'error' });
-                return;
-            }
 
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: 'images',
-                allowsEditing: true,
-                aspect: [1, 1],
+                allowsEditing: false, // Use custom cropper
                 quality: 0.8,
             });
 
-            if (result.canceled || !result.assets[0]) return;
+            if (result.canceled || !result.assets[0]) {
+                setUploadingImage(false); // Stop indicator if canceled
+                return;
+            }
 
+            setSelectedImage(result.assets[0].uri);
+            setCropperVisible(true);
+        } catch (err: any) {
+            console.error("Upload error:", err);
+            showAlert({ title: 'Error', message: err.message || 'Upload failed', type: 'error' });
+            setUploadingImage(false); // Stop indicator on error
+        }
+    };
+
+    const handleCropComplete = async (croppedUri: string) => {
+        setCropperVisible(false);
+        if (!croppedUri || !token) return;
+
+        try {
             setUploadingImage(true);
-            const imageUri = result.assets[0].uri;
-            const fileName = imageUri.split('/').pop() || 'profile.jpg';
+            const fileName = croppedUri.split('/').pop() || 'profile.jpg';
             const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
 
-            // Map common extensions to specific mime types
             let contentType = 'image/jpeg';
             if (fileExtension === 'png') contentType = 'image/png';
             else if (fileExtension === 'webp') contentType = 'image/webp';
@@ -182,42 +194,32 @@ export default function Profile() {
                 '/api/users/presigned-url/profile-image', { fileName, contentType }
             );
 
-            console.log('[Upload] 2. Uploading to S3...', uploadUrl);
-
-            // Convert file URI to blob for upload - more reliable in production builds
-            const blobResponse = await fetch(imageUri);
+            const blobResponse = await fetch(croppedUri);
             const blob = await blobResponse.blob();
 
             const uploadResponse = await fetch(uploadUrl, {
                 method: 'PUT',
                 body: blob,
-                headers: {
-                    'Content-Type': contentType,
-                }
+                headers: { 'Content-Type': contentType }
             });
 
-            if (!uploadResponse.ok) {
-                console.error('[Upload] S3 Error:', uploadResponse.status);
-                throw new Error(`Cloud upload failed: Status ${uploadResponse.status}`);
-            }
+            if (!uploadResponse.ok) throw new Error('Cloud upload failed');
 
-
-            console.log('[Upload] 3. Syncing with backend...');
             const updateResponse = await apiClient.put<{ success: boolean; user: any }>('/api/users/update-profile-image', {
                 profileImage: finalUrl,
             });
 
             if (updateResponse.success) {
-                const updatedUser = updateResponse.user;
-                useAuthStore.setState({ user: updatedUser });
+                useAuthStore.setState({ user: updateResponse.user });
                 showAlert({ title: 'Success', message: 'Profile updated!', type: 'success' });
                 fetchData();
             }
         } catch (err: any) {
-            console.error("Upload error:", err);
+            console.error("Crop upload error:", err);
             showAlert({ title: 'Error', message: err.message || 'Upload failed', type: 'error' });
         } finally {
             setUploadingImage(false);
+            setSelectedImage(null);
         }
     };
 
@@ -421,6 +423,14 @@ export default function Profile() {
                 )}
 
             </ScrollView>
+
+            <ImageCropper
+                visible={cropperVisible}
+                imageUri={selectedImage}
+                onCancel={() => setCropperVisible(false)}
+                onCrop={handleCropComplete}
+                aspectRatio={[1, 1]}
+            />
         </SafeScreen>
     );
 }

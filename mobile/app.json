@@ -56,7 +56,13 @@
         }
       ],
       "expo-font",
-      "expo-video"
+      "expo-video",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow ReadSphere to access your camera to scan book barcodes."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

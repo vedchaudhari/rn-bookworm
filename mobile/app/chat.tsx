@@ -24,6 +24,7 @@ import SafeScreen from '../components/SafeScreen';
 import { useUIStore } from '../store/uiStore';
 import styles from '../assets/styles/chat.styles';
 import ChatHeader from '../components/ChatHeader';
+import ImageCropper from '../components/ImageCropper';
 
 
 
@@ -59,11 +60,6 @@ const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, medi
     const handleSave = async () => {
         if (!media) return;
         try {
-            const { status } = await MediaLibrary.requestPermissionsAsync();
-            if (status !== 'granted') {
-                showAlert({ title: 'Permission Denied', message: 'We need access to your gallery to save media.', type: 'error' });
-                return;
-            }
             await MediaLibrary.saveToLibraryAsync(media.uri);
             showAlert({ title: 'Success', message: 'Media saved to gallery!', type: 'success' });
         } catch (error) {
@@ -946,6 +942,8 @@ export default function ChatScreen() {
     const [selectedVideoThumbnail, setSelectedVideoThumbnail] = useState<string | null>(null);
     const [selectedVideoSize, setSelectedVideoSize] = useState<number | null>(null);
     const [showPreview, setShowPreview] = useState(false);
+    const [cropperVisible, setCropperVisible] = useState(false);
+    const [tempImageToCrop, setTempImageToCrop] = useState<string | null>(null);
     const [activeVideoUri, setActiveVideoUri] = useState<string | null>(null);
     const [isGlobalVideoPlaying, setIsGlobalVideoPlaying] = useState(false);
     const [viewerVisible, setViewerVisible] = useState(false);
@@ -982,12 +980,7 @@ export default function ChatScreen() {
     const displayStatus = getDisplayStatus();
     const pulseOpacity = useSharedValue(0.4);
     const isTyping = typingStatus[userId!];
-    if (Platform.OS === 'android' &&
-        UIManager.setLayoutAnimationEnabledExperimental &&
-        !(global as any).nativeFabricUIManager // Avoid calling on New Architecture
-    ) {
-        UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
+
 
     const [keyboardVisible, setKeyboardVisible] = useState(false);
     useEffect(() => {
@@ -1150,20 +1143,32 @@ export default function ChatScreen() {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['images'],
-                allowsEditing: allowEditing,
-                aspect: [1, 1], // Square crop if enabled
+                allowsEditing: false, // Use custom cropper instead
                 quality: 0.8,
                 base64: false
             });
 
             if (!result.canceled && result.assets[0].uri) {
-                const asset = result.assets[0];
-                setSelectedImage(asset.uri);
-                setSelectedImageDims({ width: asset.width, height: asset.height });
-
-                setShowPreview(true);
+                if (allowEditing) {
+                    setTempImageToCrop(result.assets[0].uri);
+                    setCropperVisible(true);
+                } else {
+                    const asset = result.assets[0];
+                    setSelectedImage(asset.uri);
+                    setSelectedImageDims({ width: asset.width, height: asset.height });
+                    setShowPreview(true);
+                }
             }
         } catch (error) { showAlert({ title: 'Error', message: 'Failed to pick image', type: 'error' }); }
+    };
+
+    const handleCropComplete = (croppedUri: string) => {
+        setCropperVisible(false);
+        setSelectedImage(croppedUri);
+        // We might need to get dimensions of cropped image, but 1:1 is assumed for now
+        setSelectedImageDims({ width: 1000, height: 1000 });
+        setShowPreview(true);
+        setTempImageToCrop(null);
     };
 
     const handleShowCropOption = () => {
@@ -1495,9 +1500,16 @@ export default function ChatScreen() {
     const keyboard = useAnimatedKeyboard();
 
     const animatedContainerStyle = useAnimatedStyle(() => {
+        const keyboardHeight = keyboard.height.value;
         const basePadding = Math.max(insets.bottom, 16);
-        const targetPadding = Math.max(keyboard.height.value + 16, basePadding);
+        const wrapperPadding = Platform.OS === 'ios' ? 30 : 20;
 
+        // "Tiny padding" gap of 10px for a premium look
+        const targetPadding = Math.max(keyboardHeight - wrapperPadding + 10, basePadding);
+
+        // We use withSpring for the "Liquid Smooth" feel.
+        // For the "no animation of moving down", we use a very high stiffness and low mass 
+        // to make it feel locked to the keyboard, and snap to the bottom instantly on close.
         return {
             paddingBottom: targetPadding,
         };
@@ -1519,6 +1531,17 @@ export default function ChatScreen() {
                 animatedStatusStyle={animatedStatusStyle}
                 onClearChat={handleClearChat}
                 onOpenPalette={() => setPaletteVisible(true)}
+            />
+
+            <ImageCropper
+                visible={cropperVisible}
+                imageUri={tempImageToCrop}
+                onCancel={() => {
+                    setCropperVisible(false);
+                    setTempImageToCrop(null);
+                }}
+                onCrop={handleCropComplete}
+                aspectRatio={[1, 1]}
             />
 
             {/* Smooth Reanimated View for Keyboard */}

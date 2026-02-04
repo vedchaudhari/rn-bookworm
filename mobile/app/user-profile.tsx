@@ -13,6 +13,7 @@ import GlassCard from '../components/GlassCard';
 import KeyboardScreen from '../components/KeyboardScreen';
 import SafeScreen from '../components/SafeScreen';
 import { useUIStore } from '../store/uiStore';
+import ImageCropper from '../components/ImageCropper';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = width / 3;
@@ -33,6 +34,8 @@ export default function UserProfile() {
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState({ followers: 0, following: 0 });
     const [isFollowing, setIsFollowing] = useState(false);
+    const [cropperVisible, setCropperVisible] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     const isOwnProfile = (currentUser?._id || (currentUser as any)?.id) === userId;
 
@@ -74,40 +77,14 @@ export default function UserProfile() {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.5,
+                allowsEditing: false, // Use our custom cropper instead
+                quality: 0.8,
                 base64: false
             });
 
             if (!result.canceled && result.assets[0].uri) {
-                const imageUri = result.assets[0].uri;
-                const fileName = imageUri.split('/').pop() || 'profile.jpg';
-                const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
-
-                let contentType = 'image/jpeg';
-                if (fileExtension === 'png') contentType = 'image/png';
-                else if (fileExtension === 'webp') contentType = 'image/webp';
-
-                const { uploadUrl, finalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
-                    '/api/messages/presigned-url',
-                    { fileName, contentType, folder: 'profiles' }
-                );
-
-                const blobRes = await fetch(imageUri);
-                const blob = await blobRes.blob();
-
-                const uploadRes = await fetch(uploadUrl, {
-                    method: 'PUT',
-                    body: blob,
-                    headers: { 'Content-Type': contentType }
-                });
-
-                if (!uploadRes.ok) throw new Error('Cloud upload failed');
-
-                await apiClient.put('/api/users/update-profile-image', { profileImage: finalUrl });
-                setUser(prev => prev ? { ...prev, profileImage: finalUrl } : null);
-                fetchData();
+                setSelectedImage(result.assets[0].uri);
+                setCropperVisible(true);
             }
         } catch (error: any) {
             showAlert({ title: 'Error', message: error.message || 'Failed to update profile image', type: 'error' });
@@ -115,6 +92,43 @@ export default function UserProfile() {
         }
     };
 
+
+    const handleCropComplete = async (croppedUri: string) => {
+        setCropperVisible(false);
+        try {
+            setLoading(true);
+            const fileName = croppedUri.split('/').pop() || 'profile.jpg';
+            const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+
+            let contentType = 'image/jpeg';
+            if (fileExtension === 'png') contentType = 'image/png';
+            else if (fileExtension === 'webp') contentType = 'image/webp';
+
+            const { uploadUrl, finalUrl } = await apiClient.get<{ uploadUrl: string; finalUrl: string }>(
+                '/api/users/presigned-url/profile-image',
+                { fileName, contentType }
+            );
+
+            const blobRes = await fetch(croppedUri);
+            const blob = await blobRes.blob();
+
+            const uploadRes = await fetch(uploadUrl, {
+                method: 'PUT',
+                body: blob,
+                headers: { 'Content-Type': contentType }
+            });
+
+            if (!uploadRes.ok) throw new Error('Cloud upload failed');
+
+            await apiClient.put('/api/users/update-profile-image', { profileImage: finalUrl });
+            setUser(prev => prev ? { ...prev, profileImage: finalUrl } : null);
+            fetchData();
+        } catch (error: any) {
+            showAlert({ title: 'Error', message: error.message || 'Failed to update profile image', type: 'error' });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => { fetchData(); }, [userId, token]);
     const handleRefresh = () => { setRefreshing(true); fetchData(); };
@@ -189,6 +203,14 @@ export default function UserProfile() {
                     <View style={styles.booksHeader}><Text style={styles.sectionTitle}>Bookshelf</Text></View>
                     {books.length > 0 ? <FlatList data={books} renderItem={renderBookItem} keyExtractor={(item, index) => `${item._id || 'book'}-${index}`} numColumns={3} scrollEnabled={false} contentContainerStyle={styles.gridContent} /> : <View style={styles.emptyContainer}><Ionicons name="book-outline" size={48} color={COLORS.textMuted} /><Text style={styles.emptyText}>Empty bookshelf</Text></View>}
                 </KeyboardScreen>
+
+                <ImageCropper
+                    visible={cropperVisible}
+                    imageUri={selectedImage}
+                    onCancel={() => setCropperVisible(false)}
+                    onCrop={handleCropComplete}
+                    aspectRatio={[1, 1]}
+                />
             </View>
         </SafeScreen>
     );

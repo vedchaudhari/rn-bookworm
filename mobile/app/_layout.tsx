@@ -22,12 +22,14 @@ import GlobalAlert from "../components/GlobalAlert";
 import Toast from "../components/Toast";
 import { useUIStore } from "../store/uiStore";
 import { registerForPushNotificationsAsync, setupPushNotificationListeners } from "../lib/pushNotifications";
+import { usePermissions } from "../hooks/usePermissions";
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
     const { checkAuth, user, token, isCheckingAuth, isAuthLoading, hasCompletedOnboarding } = useAuthStore();
     const { hydrate } = useSocialStore();
+    usePermissions();
 
     const [fontsLoaded] = useFonts({
         "JetBrainsMono-Medium": require("../assets/fonts/JetBrainsMono-Medium.ttf"),

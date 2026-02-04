@@ -46,14 +46,14 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
                 ...SHADOWS.godLevel
             }
         ]}>
-            {/* Diamond Rim Decoration */}
+            {/* Subdued Top Rim */}
             <View style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
                 right: 0,
-                height: 1.2,
-                backgroundColor: COLORS.diamondRim,
+                height: 0.8,
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
                 zIndex: 1001
             }} />
 

@@ -57,6 +57,32 @@ export interface BookshelfFilters {
 
 export class BookshelfService {
     /**
+     * Internal: Cleanup orphaned bookshelf items for a user
+     * Removes items where the associated book no longer exists
+     */
+    static async cleanupOrphanedItems(userId: string): Promise<void> {
+        try {
+            const items = await BookshelfItem.find({ userId: toObjectId(userId) }).select('bookId');
+            if (items.length === 0) return;
+
+            const bookIds = items.map(i => i.bookId);
+            const existingBooks = await Book.find({ _id: { $in: bookIds } }).select('_id');
+            const existingBookIds = new Set(existingBooks.map(b => b._id.toString()));
+
+            const orphanedIds = items
+                .filter(i => !existingBookIds.has(i.bookId.toString()))
+                .map(i => i._id);
+
+            if (orphanedIds.length > 0) {
+                await BookshelfItem.deleteMany({ _id: { $in: orphanedIds } });
+                console.log(`[Cleanup] Permanently removed ${orphanedIds.length} orphaned items for user ${userId}`);
+            }
+        } catch (err) {
+            console.error("[Cleanup] Error cleaning up orphaned items:", err);
+        }
+    }
+
+    /**
      * Add a book to user's bookshelf
      * Prevents duplicates via unique index
      */
@@ -377,6 +403,9 @@ export class BookshelfService {
             offset = 0
         } = filters;
 
+        // Perform proactive cleanup of orphans first
+        await this.cleanupOrphanedItems(userId);
+
         // Build query
         const query: any = { userId: toObjectId(userId) };
 
@@ -457,6 +486,7 @@ export class BookshelfService {
      * Get user's favorites
      */
     static async getFavorites(userId: string, limit: number = 20): Promise<IBookshelfItemDocument[]> {
+        await this.cleanupOrphanedItems(userId);
         return await BookshelfItem.find({
             userId: toObjectId(userId),
             isFavorite: true
@@ -471,6 +501,7 @@ export class BookshelfService {
      * Get currently reading books
      */
     static async getCurrentlyReading(userId: string): Promise<IBookshelfItemDocument[]> {
+        await this.cleanupOrphanedItems(userId);
         return await BookshelfItem.find({
             userId: toObjectId(userId),
             status: 'currently_reading'
@@ -484,6 +515,7 @@ export class BookshelfService {
      * Get recently completed books
      */
     static async getRecentlyCompleted(userId: string, limit: number = 10): Promise<IBookshelfItemDocument[]> {
+        await this.cleanupOrphanedItems(userId);
         return await BookshelfItem.find({
             userId: toObjectId(userId),
             status: 'completed'
@@ -499,6 +531,7 @@ export class BookshelfService {
      * Used for reminder notifications
      */
     static async getOverdueGoals(userId: string): Promise<IBookshelfItemDocument[]> {
+        await this.cleanupOrphanedItems(userId);
         const now = new Date();
 
         return await BookshelfItem.find({
@@ -523,6 +556,9 @@ export class BookshelfService {
         totalReadingTime: number;
         averageRating: number;
     }> {
+        // Perform proactive cleanup of orphans first
+        await this.cleanupOrphanedItems(userId);
+
         const stats = await BookshelfItem.aggregate([
             {
                 $match: { userId: toObjectId(userId) }

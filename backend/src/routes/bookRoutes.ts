@@ -297,6 +297,15 @@ router.delete("/:id", protectRoute, asyncHandler(async (req: Request, res: Respo
 
     await book.deleteOne();
 
+    // Clean up bookshelf items associated with this book
+    try {
+        const BookshelfItem = await import("../models/BookshelfItem");
+        await BookshelfItem.default.deleteMany({ bookId: req.params.id });
+        console.log(`[Cleanup] Removed book ${req.params.id} from all bookshelves`);
+    } catch (cleanupErr) {
+        console.error("[Cleanup] Error removing book from bookshelves:", cleanupErr);
+    }
+
     // Clear Global Feed Cache
     try {
         const keys = await redis.keys('feed:global:*');

@@ -86,10 +86,18 @@ export default function GlobalAlert() {
                         <Text style={styles.title}>{alert.title}</Text>
                         <Text style={styles.message}>{alert.message}</Text>
 
-                        <View style={styles.buttonContainer}>
+                        <View style={[
+                            styles.buttonContainer,
+                            (alert.confirmText2 || (alert.confirmText && alert.confirmText.length > 15)) ? styles.buttonContainerVertical : styles.buttonContainerHorizontal
+                        ]}>
                             {alert.showCancel && (
                                 <TouchableOpacity
-                                    style={[styles.button, styles.cancelButton, isAlertLoading && { opacity: 0.5 }]}
+                                    style={[
+                                        styles.button,
+                                        !(alert.confirmText2 || (alert.confirmText && alert.confirmText.length > 15)) && styles.buttonFlex,
+                                        styles.cancelButton,
+                                        isAlertLoading && { opacity: 0.5 }
+                                    ]}
                                     onPress={handleCancel}
                                     disabled={isAlertLoading}
                                 >
@@ -98,7 +106,12 @@ export default function GlobalAlert() {
                             )}
 
                             <TouchableOpacity
-                                style={[styles.button, styles.confirmButton, isAlertLoading && { opacity: 0.9 }]}
+                                style={[
+                                    styles.button,
+                                    !(alert.confirmText2 || (alert.confirmText && alert.confirmText.length > 15)) && styles.buttonFlex,
+                                    styles.confirmButton,
+                                    isAlertLoading && { opacity: 0.9 }
+                                ]}
                                 onPress={handleConfirm}
                                 disabled={isAlertLoading}
                             >
@@ -111,7 +124,11 @@ export default function GlobalAlert() {
 
                             {alert.confirmText2 && (
                                 <TouchableOpacity
-                                    style={[styles.button, styles.confirmButton2, isAlertLoading && { opacity: 0.9 }]}
+                                    style={[
+                                        styles.button,
+                                        styles.confirmButton2,
+                                        isAlertLoading && { opacity: 0.9 }
+                                    ]}
                                     onPress={handleConfirm2}
                                     disabled={isAlertLoading}
                                 >
@@ -167,16 +184,27 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     buttonContainer: {
-        flexDirection: 'row',
-        gap: 12,
         width: '100%',
     },
+    buttonContainerHorizontal: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    buttonContainerVertical: {
+        flexDirection: 'column-reverse',
+        gap: 12,
+    },
     button: {
-        flex: 1,
-        height: 52,
+        minHeight: 52,
         borderRadius: STYLE_CONSTANTS.BORDER_RADIUS.xl,
         justifyContent: 'center',
         alignItems: 'center',
+        paddingHorizontal: 16,
+        width: '100%',
+    },
+    buttonFlex: {
+        flex: 1,
+        width: 'auto',
     },
     cancelButton: {
         backgroundColor: 'rgba(255,255,255,0.05)',
