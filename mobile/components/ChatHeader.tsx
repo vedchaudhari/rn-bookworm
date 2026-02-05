@@ -90,7 +90,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
                     onPress={onClearChat}
                     style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20 }}
                 >
-                    <Ionicons name="trash-outline" size={20} color={COLORS.textMuted} />
+                    <Ionicons name="trash-outline" size={20} color={COLORS.error} />
                 </TouchableOpacity>
             </View>
         </View>

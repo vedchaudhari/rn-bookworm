@@ -17,6 +17,12 @@ export interface IMessage {
     deletedFor: mongoose.Types.ObjectId[]; // List of user IDs who deleted for themselves
     deliveredAt?: Date;
     readAt?: Date;
+    book?: {
+        _id: string;
+        title: string;
+        author?: string;
+        image: string;
+    };
 }
 
 export interface IMessageDocument extends IMessage, Document {
@@ -93,6 +99,12 @@ const messageSchema = new Schema<IMessageDocument>(
         },
         readAt: {
             type: Date,
+        },
+        book: {
+            _id: String,
+            title: String,
+            author: String,
+            image: String,
         },
     },
     { timestamps: true }

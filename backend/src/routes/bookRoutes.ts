@@ -201,6 +201,21 @@ router.get("/", protectRoute, asyncHandler(async (req: Request, res: Response) =
     res.send(responseData);
 }));
 
+router.get("/:id", protectRoute, asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const book = await Book.findById(id).populate("user", "username profileImage level");
+    if (!book) {
+        return res.status(404).json({ message: "Book not found" });
+    }
+
+    // Add like and comment counts
+    const [enrichedBook] = await enrichBooksWithInteractions([book], req.user!._id);
+    const [signedBook] = await signBookUrls([enrichedBook]);
+
+    res.json(signedBook);
+}));
+
 router.get("/following", protectRoute, asyncHandler(async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;

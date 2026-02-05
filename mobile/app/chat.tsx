@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform, Alert, StyleSheet, StatusBar, Dimensions, Keyboard, LayoutAnimation, UIManager, ScrollView } from 'react-native';
 import * as VideoThumbnails from 'expo-video-thumbnails';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import * as Sharing from 'expo-sharing';
@@ -60,9 +60,20 @@ const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, medi
     const handleSave = async () => {
         if (!media) return;
         try {
-            await MediaLibrary.saveToLibraryAsync(media.uri);
+            let fileUri = media.uri;
+
+            // If it's a remote URL, we need to download it first
+            if (media.uri.startsWith('http')) {
+                const fileName = media.uri.split('/').pop() || (media.type === 'video' ? 'video.mp4' : 'image.jpg');
+                const downloadPath = `${FileSystem.cacheDirectory}${fileName}`;
+                const downloadResult = await FileSystem.downloadAsync(media.uri, downloadPath);
+                fileUri = downloadResult.uri;
+            }
+
+            await MediaLibrary.saveToLibraryAsync(fileUri);
             showAlert({ title: 'Success', message: 'Media saved to gallery!', type: 'success' });
         } catch (error) {
+            console.error('Save error:', error);
             showAlert({ title: 'Error', message: 'Failed to save media.', type: 'error' });
         }
     };
@@ -74,8 +85,20 @@ const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, medi
                 showAlert({ title: 'Not Available', message: 'Sharing is not supported on this device.', type: 'error' });
                 return;
             }
-            await Sharing.shareAsync(media.uri);
+
+            let fileUri = media.uri;
+
+            // Sharing works best with local files
+            if (media.uri.startsWith('http')) {
+                const fileName = media.uri.split('/').pop() || (media.type === 'video' ? 'video.mp4' : 'image.jpg');
+                const downloadPath = `${FileSystem.cacheDirectory}${fileName}`;
+                const downloadResult = await FileSystem.downloadAsync(media.uri, downloadPath);
+                fileUri = downloadResult.uri;
+            }
+
+            await Sharing.shareAsync(fileUri);
         } catch (error) {
+            console.error('Share error:', error);
             showAlert({ title: 'Error', message: 'Failed to share media.', type: 'error' });
         }
     };
@@ -164,20 +187,20 @@ const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, medi
                         style={{
                             flex: 1,
                             flexDirection: 'row',
-                            backgroundColor: 'rgba(255,255,255,0.08)',
+                            backgroundColor: 'white',
                             paddingVertical: 14,
                             borderRadius: 24,
                             justifyContent: 'center',
                             alignItems: 'center',
                             gap: 10,
                             borderWidth: 1,
-                            borderColor: COLORS.diamondRim,
+                            borderColor: 'white',
                             ...SHADOWS.aura,
                             shadowColor: '#fff'
                         }}
                     >
-                        <Ionicons name="download-outline" size={20} color="white" />
-                        <Text style={{ color: 'white', fontWeight: '900', fontSize: 14 }}>Save</Text>
+                        <Ionicons name="download-outline" size={20} color="black" />
+                        <Text style={{ color: 'black', fontWeight: '900', fontSize: 14 }}>Save</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -760,38 +783,42 @@ const MediaSelectionModal: React.FC<{
                             onPress={() => { onSelectImage(); onClose(); }}
                             style={{
                                 flex: 1,
-                                backgroundColor: 'rgba(255,255,255,0.03)',
+                                backgroundColor: 'rgba(255,255,255,0.06)',
                                 padding: 24,
                                 borderRadius: 32,
                                 alignItems: 'center',
                                 borderWidth: 1.5,
-                                borderColor: 'rgba(255,255,255,0.08)',
-                                gap: 12
+                                borderColor: 'rgba(255,255,255,0.15)',
+                                gap: 12,
+                                ...SHADOWS.aura,
+                                shadowColor: '#34D399'
                             }}
                         >
-                            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(52, 211, 153, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(52, 211, 153, 0.2)' }}>
+                            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(52, 211, 153, 0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(52, 211, 153, 0.3)' }}>
                                 <Ionicons name="image" size={32} color="#34D399" />
                             </View>
-                            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Image</Text>
+                            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>Image</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
                             onPress={() => { onSelectVideo(); onClose(); }}
                             style={{
                                 flex: 1,
-                                backgroundColor: 'rgba(255,255,255,0.03)',
+                                backgroundColor: 'rgba(255,255,255,0.06)',
                                 padding: 24,
                                 borderRadius: 32,
                                 alignItems: 'center',
                                 borderWidth: 1.5,
-                                borderColor: 'rgba(255,255,255,0.08)',
-                                gap: 12
+                                borderColor: 'rgba(255,255,255,0.15)',
+                                gap: 12,
+                                ...SHADOWS.aura,
+                                shadowColor: '#8B5CF6'
                             }}
                         >
-                            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(139, 92, 246, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.2)' }}>
+                            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(139, 92, 246, 0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.3)' }}>
                                 <Ionicons name="videocam" size={32} color="#8B5CF6" />
                             </View>
-                            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Video</Text>
+                            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>Video</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -806,7 +833,7 @@ const MediaSelectionModal: React.FC<{
                             alignItems: 'center'
                         }}
                     >
-                        <Text style={{ color: COLORS.textMuted, fontWeight: '800', fontSize: 15 }}>Cancel</Text>
+                        <Text style={{ color: 'white', fontWeight: '900', fontSize: 16 }}>Cancel</Text>
                     </TouchableOpacity>
                 </Animated.View>
             </View>
@@ -830,6 +857,7 @@ interface MessageItemProps {
 }
 
 const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onLongPress, onShowViewer, showAvatar, isGlobalVideoPlaying, activeVideoUri, theme, username }: MessageItemProps) => {
+    const router = useRouter();
     const senderId = typeof item.sender === 'object' ? item.sender._id : item.sender;
     const isMe = senderId === currentUserId || senderId === 'me';
     const isThisVideoPlaying = !!(item.video && activeVideoUri === item.video && isGlobalVideoPlaying);
@@ -885,6 +913,22 @@ const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onL
                                 thumbnail={item.videoThumbnail}
                                 isPlaying={isThisVideoPlaying}
                             />
+                        )}
+                        {item.book && (
+                            <TouchableOpacity
+                                onPress={() => router.push({ pathname: '/book-detail', params: { bookId: item.book!._id } })}
+                                style={styles.bookCard}
+                            >
+                                <Image source={{ uri: item.book.image }} style={styles.bookCardImage} contentFit="cover" />
+                                <View style={styles.bookCardContent}>
+                                    <Text style={styles.bookCardTitle} numberOfLines={1}>{item.book.title}</Text>
+                                    <Text style={styles.bookCardAuthor} numberOfLines={1}>{item.book.author || 'Author'}</Text>
+                                    <View style={styles.bookCardViewBtn}>
+                                        <Text style={styles.bookCardViewBtnText}>View Book</Text>
+                                        <Ionicons name="chevron-forward" size={14} color={COLORS.primary} />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
                         )}
                         {item.text && <Text style={[styles.messageText, { color: '#FFFFFF' }]}>{item.text}</Text>}
                     </>

@@ -11,11 +11,19 @@ import SafeScreen from '../../components/SafeScreen';
 import AppHeader from '../../components/AppHeader';
 
 interface NotificationData {
+    bookId?: string;
+    userId?: string;
+    likedBy?: string;
     likedByUsername?: string;
     bookTitle?: string;
+    commentedBy?: string;
     commentedByUsername?: string;
     commentText?: string;
+    followedBy?: string;
     followedByUsername?: string;
+    acceptedBy?: string;
+    acceptedByUsername?: string;
+    author?: string;
     achievementName?: string;
     points?: number;
     targetBooks?: number;
@@ -23,7 +31,7 @@ interface NotificationData {
 
 interface UINotification {
     _id: string;
-    type: 'LIKE' | 'COMMENT' | 'FOLLOW' | 'ACHIEVEMENT' | 'GOAL_COMPLETED';
+    type: 'LIKE' | 'COMMENT' | 'FOLLOW' | 'FOLLOW_ACCEPTED' | 'ACHIEVEMENT' | 'GOAL_COMPLETED' | 'NEW_POST';
     read: boolean;
     createdAt: string;
     data: NotificationData;
@@ -72,16 +80,48 @@ export default function Notifications() {
     };
 
     const handleNotificationPress = async (notification: UINotification) => {
-        if (!notification.read) await markAsRead(notification._id, token!);
+        if (!token) return;
+        if (!notification.read) await markAsRead(notification._id, token);
+
+        const { type, data } = notification;
+
+        switch (type) {
+            case 'LIKE':
+            case 'COMMENT':
+            case 'NEW_POST':
+                if (data.bookId) {
+                    router.push({ pathname: '/book-detail', params: { bookId: data.bookId } });
+                }
+                break;
+            case 'FOLLOW':
+            case 'FOLLOW_ACCEPTED':
+                if (data.followedBy || data.acceptedBy || data.userId) {
+                    router.push({
+                        pathname: '/user-profile',
+                        params: { userId: data.followedBy || data.acceptedBy || data.userId }
+                    });
+                }
+                break;
+            case 'ACHIEVEMENT':
+                router.push('/rewards');
+                break;
+            case 'GOAL_COMPLETED':
+                router.push('/author-dashboard');
+                break;
+            default:
+                break;
+        }
     };
 
     const getNotificationIcon = (type: string): { name: keyof typeof Ionicons.glyphMap; color: string } => {
         switch (type) {
             case 'LIKE': return { name: 'heart', color: COLORS.error };
             case 'COMMENT': return { name: 'chatbubble', color: COLORS.accent };
-            case 'FOLLOW': return { name: 'person-add', color: COLORS.accentLight };
+            case 'FOLLOW':
+            case 'FOLLOW_ACCEPTED': return { name: 'person-add', color: COLORS.accentLight };
             case 'ACHIEVEMENT': return { name: 'trophy', color: COLORS.ratingGold };
             case 'GOAL_COMPLETED': return { name: 'checkmark-circle', color: COLORS.success };
+            case 'NEW_POST': return { name: 'book', color: COLORS.primary };
             default: return { name: 'notifications', color: COLORS.primary };
         }
     };
@@ -89,11 +129,13 @@ export default function Notifications() {
     const getNotificationText = (notification: UINotification): string => {
         const { type, data } = notification;
         switch (type) {
-            case 'LIKE': return `${data.likedByUsername} liked your book "${data.bookTitle}"`;
-            case 'COMMENT': return `${data.commentedByUsername} commented on "${data.bookTitle}": "${data.commentText}"`;
-            case 'FOLLOW': return `${data.followedByUsername} started following you`;
+            case 'LIKE': return `${data.likedByUsername || 'Someone'} liked your book "${data.bookTitle}"`;
+            case 'COMMENT': return `${data.commentedByUsername || 'Someone'} commented on "${data.bookTitle}": "${data.commentText}"`;
+            case 'FOLLOW': return `${data.followedByUsername || 'Someone'} started following you`;
+            case 'FOLLOW_ACCEPTED': return `${data.acceptedByUsername || 'Someone'} accepted your follow request`;
             case 'ACHIEVEMENT': return `🎉 Achievement unlocked: ${data.achievementName}! +${data.points} points`;
             case 'GOAL_COMPLETED': return `🎯 Congratulations! You completed your reading goal of ${data.targetBooks} books!`;
+            case 'NEW_POST': return `📖 ${data.author || 'Someone'} just posted a new book: "${data.bookTitle}"`;
             default: return 'New notification';
         }
     };

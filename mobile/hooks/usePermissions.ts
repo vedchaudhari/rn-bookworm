@@ -5,8 +5,10 @@ import { Camera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 
-export const usePermissions = () => {
+export const usePermissions = (isEnabled: boolean = false) => {
     useEffect(() => {
+        if (!isEnabled) return;
+
         const requestAllPermissions = async () => {
             try {
                 // 1. Camera Permissions (for ISBN Scanner)
@@ -35,5 +37,5 @@ export const usePermissions = () => {
         };
 
         requestAllPermissions();
-    }, []);
+    }, [isEnabled]);
 };

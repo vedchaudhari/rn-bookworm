@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { TouchableOpacity, Text, StyleSheet, View, ViewStyle, TextStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, View, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -18,8 +18,10 @@ interface GlazedButtonProps {
     disabled?: boolean;
     accessibilityLabel?: string;
     accessibilityHint?: string;
+    loading?: boolean;
+    leftIcon?: ReactNode;
 }
-const GlazedButton = ({ onPress, title, style, textStyle, children, disabled, accessibilityLabel, accessibilityHint }: GlazedButtonProps) => {
+const GlazedButton = ({ onPress, title, style, textStyle, children, disabled, accessibilityLabel, accessibilityHint, loading, leftIcon }: GlazedButtonProps) => {
     const scale = useSharedValue(1);
 
     const animatedStyle = useAnimatedStyle(() => {
@@ -41,7 +43,7 @@ const GlazedButton = ({ onPress, title, style, textStyle, children, disabled, ac
             onPressIn={onPressIn}
             onPressOut={onPressOut}
             onPress={onPress}
-            disabled={disabled}
+            disabled={disabled || loading}
             activeOpacity={0.9}
             accessibilityLabel={accessibilityLabel}
             accessibilityHint={accessibilityHint}
@@ -62,7 +64,16 @@ const GlazedButton = ({ onPress, title, style, textStyle, children, disabled, ac
                 />
 
                 <View style={styles.content}>
-                    {children || <Text style={[styles.text, textStyle]}>{title}</Text>}
+                    {loading ? (
+                        <ActivityIndicator color={COLORS.white} size="small" />
+                    ) : (
+                        children || (
+                            <View style={styles.buttonContent}>
+                                {leftIcon && <View style={styles.leftIconContainer}>{leftIcon}</View>}
+                                <Text style={[styles.text, textStyle]}>{title}</Text>
+                            </View>
+                        )
+                    )}
                 </View>
 
                 {/* Subtle Inner Glow Border */}
@@ -119,6 +130,14 @@ const styles = StyleSheet.create({
         textShadowColor: 'rgba(0, 0, 0, 0.2)',
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 2,
+    },
+    buttonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    leftIconContainer: {
+        marginRight: 10,
     },
 });
 

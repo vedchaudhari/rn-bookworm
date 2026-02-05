@@ -27,10 +27,15 @@ import {
     COMPONENT_SIZES,
 } from '../../constants/styleConstants';
 import { useStreakStore } from '../../stores/streakStore';
+import { useReadingSessionStore } from '../../store/readingSessionStore';
 import { useUIStore } from '../../store/uiStore';
 import { analytics } from '../../lib/analytics';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import ReadingActivityCard from '../../components/ReadingActivityCard';
+import ReadingActivityChart from '../../components/ReadingActivityChart';
+import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 /**
  * StreakDashboardScreen
@@ -52,6 +57,20 @@ export default function StreakDashboardScreen() {
         checkIn,
         restoreStreak,
     } = useStreakStore();
+
+    const {
+        overallStats,
+        dailyStats,
+        weeklyStats,
+        monthlyStats,
+        sessions,
+        isLoading: isLoadingSessions,
+        fetchOverallStats,
+        fetchSessions,
+        fetchDailyStats,
+        fetchWeeklyStats,
+        fetchMonthlyStats,
+    } = useReadingSessionStore();
     const { showAlert } = useUIStore();
 
     // Load data on mount
@@ -61,9 +80,17 @@ export default function StreakDashboardScreen() {
 
     const loadInitialData = async () => {
         try {
-            await Promise.all([fetchStreak(), fetchTodayChallenge()]);
+            await Promise.all([
+                fetchStreak(),
+                fetchTodayChallenge(),
+                fetchOverallStats(),
+                fetchSessions({ limit: 5 }),
+                fetchDailyStats(30),
+                fetchWeeklyStats(12),
+                fetchMonthlyStats(12),
+            ]);
         } catch (error) {
-            console.error('Failed to load streak data:', error);
+            console.error('Failed to load activity data:', error);
         }
     };
 
@@ -110,6 +137,10 @@ export default function StreakDashboardScreen() {
                 streakCount: streak?.currentStreak || 0,
                 inkDropsEarned: result.inkDropsEarned,
             });
+
+            // Refresh stats to show new check-in
+            fetchDailyStats(30);
+            fetchOverallStats();
         } catch (error: any) {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
@@ -174,10 +205,31 @@ export default function StreakDashboardScreen() {
 
     const checkedInToday = hasCheckedInToday();
 
+    // Format data for chart
+    const chartDailyData = (dailyStats || []).slice(0, 7).reverse().map((d: any) => {
+        // Handle both string and object IDs
+        const date = typeof d._id === 'string' ? new Date(d._id) : new Date(d._id.year, d._id.month - 1, d._id.day);
+        return {
+            label: date.getDate().toString(),
+            value: d.totalMinutes
+        };
+    });
+
+    const chartWeeklyData = (weeklyStats || []).slice(0, 5).reverse().map((d: any) => ({
+        label: `W${d._id.week}`,
+        value: d.totalMinutes
+    }));
+
+    const chartMonthlyData = (monthlyStats || []).slice(0, 6).reverse().map((d: any) => ({
+        label: `${d._id.month}/${d._id.year.toString().slice(2)}`,
+        value: d.totalMinutes
+    }));
+
     return (
         <SafeScreen top={false}>
             <AppHeader
                 showBack
+                title="Activity"
                 rightElement={
                     <TouchableOpacity
                         onPress={() => router.push('/streaks/leaderboard' as any)}
@@ -194,6 +246,31 @@ export default function StreakDashboardScreen() {
                     <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} />
                 }
             >
+                {/* Zero State Welcome Card */}
+                {(!overallStats || overallStats.totalSessions === 0) && (
+                    <Animated.View entering={FadeInDown.duration(600)}>
+                        <LinearGradient
+                            colors={['rgba(25, 227, 209, 0.15)', 'rgba(0, 194, 255, 0.05)']}
+                            style={styles.welcomeCard}
+                        >
+                            <View style={styles.welcomeContent}>
+                                <View style={styles.welcomeIconContainer}>
+                                    <Ionicons name="sparkles" size={32} color={COLORS.primary} />
+                                </View>
+                                <View style={styles.welcomeTextColumn}>
+                                    <Text style={styles.welcomeTitle}>Begin Your Journey</Text>
+                                    <Text style={styles.welcomeSub}>Track your reading goals, earn ink drops, and build a consistent habit with the Activity Hub.</Text>
+                                </View>
+                            </View>
+                            <GlazedButton
+                                title="Start Reading Now"
+                                onPress={() => router.push('/(tabs)')}
+                                style={styles.welcomeButton}
+                                leftIcon={<Ionicons name="play" size={18} color={COLORS.white} />}
+                            />
+                        </LinearGradient>
+                    </Animated.View>
+                )}
                 {/* Header Section Removed - Handled by AppHeader */}
 
                 {/* Current Streak Card */}
@@ -251,53 +328,115 @@ export default function StreakDashboardScreen() {
                     )}
                 </GlassCard>
 
+                {/* Overall Stats Section */}
+                <Animated.View entering={FadeInDown.delay(100).duration(600)}>
+                    <Text style={styles.sectionTitle}>Performance</Text>
+                    {isLoadingSessions && !overallStats ? (
+                        <View style={styles.statsLoading}>
+                            <Loader />
+                        </View>
+                    ) : (
+                        <View style={styles.statsRow}>
+                            <GlassCard style={styles.miniStatCard}>
+                                <Ionicons name="time" size={20} color={COLORS.primary} />
+                                <Text style={styles.miniStatValue}>
+                                    {overallStats ? Math.floor(overallStats.totalMinutes / 60) : 0}h
+                                </Text>
+                                <Text style={styles.miniStatLabel}>Total Time</Text>
+                            </GlassCard>
+                            <GlassCard style={styles.miniStatCard}>
+                                <Ionicons name="book" size={20} color={COLORS.secondary} />
+                                <Text style={styles.miniStatValue}>{overallStats?.totalPages || 0}</Text>
+                                <Text style={styles.miniStatLabel}>Pages</Text>
+                            </GlassCard>
+                            <GlassCard style={styles.miniStatCard}>
+                                <Ionicons name="speedometer" size={20} color={COLORS.success} />
+                                <Text style={styles.miniStatValue}>
+                                    {overallStats?.averageSpeed ? overallStats.averageSpeed.toFixed(1) : 0}
+                                </Text>
+                                <Text style={styles.miniStatLabel}>Avg Speed</Text>
+                            </GlassCard>
+                        </View>
+                    )}
+                </Animated.View>
+
+                {/* Reading Activity Chart Section */}
+                <Animated.View entering={FadeInDown.delay(150).duration(600)}>
+                    <ReadingActivityChart
+                        dailyData={chartDailyData.length > 0 ? chartDailyData : [{ label: 'Today', value: 0 }]}
+                        weeklyData={chartWeeklyData.length > 0 ? chartWeeklyData : [{ label: 'Week', value: 0 }]}
+                        monthlyData={chartMonthlyData.length > 0 ? chartMonthlyData : [{ label: 'Month', value: 0 }]}
+                    />
+                </Animated.View>
+
                 {/* Today's Challenge Card */}
                 {todayChallenge && (
-                    <GlassCard style={styles.challengeCard}>
-                        <View style={styles.challengeHeader}>
-                            <Text style={styles.challengeTitle}>📚 Today's Challenge</Text>
-                            <View style={styles.rewardBadge}>
-                                <Ionicons name="water" size={COMPONENT_SIZES.icon.small} color={COLORS.primary} />
-                                <Text style={styles.rewardText}>{todayChallenge.rewardInkDrops}</Text>
+                    <Animated.View entering={FadeInDown.delay(200).duration(600)}>
+                        <GlassCard style={styles.challengeCard}>
+                            <View style={styles.challengeHeader}>
+                                <Text style={styles.challengeTitle}>📚 Today's Goal</Text>
+                                <View style={styles.rewardBadge}>
+                                    <Ionicons name="water" size={COMPONENT_SIZES.icon.small} color={COLORS.primary} />
+                                    <Text style={styles.rewardText}>{todayChallenge.rewardInkDrops}</Text>
+                                </View>
                             </View>
-                        </View>
 
-                        <Text style={styles.challengeDescription}>{todayChallenge.description}</Text>
+                            <Text style={styles.challengeDescription}>{todayChallenge.description}</Text>
 
-                        {/* Progress Bar */}
-                        <View style={styles.progressContainer}>
-                            <View style={styles.progressBar}>
-                                <View
-                                    style={[
-                                        styles.progressFill,
-                                        {
-                                            width: `${Math.min(
-                                                (todayChallenge.currentProgress / todayChallenge.targetCount) * 100,
-                                                100
-                                            )}%`,
-                                        },
-                                    ]}
-                                    accessible={false}
-                                />
+                            <View style={styles.progressContainer}>
+                                <View style={styles.progressBar}>
+                                    <View
+                                        style={[
+                                            styles.progressFill,
+                                            {
+                                                width: `${Math.min(
+                                                    (todayChallenge.currentProgress / todayChallenge.targetCount) * 100,
+                                                    100
+                                                )}%`,
+                                            },
+                                        ]}
+                                    />
+                                </View>
+                                <Text style={styles.progressText}>
+                                    {todayChallenge.currentProgress}/{todayChallenge.targetCount}
+                                </Text>
                             </View>
-                            <Text style={styles.progressText} accessibilityLabel={`Progress: ${todayChallenge.currentProgress} of ${todayChallenge.targetCount}`}>
-                                {todayChallenge.currentProgress}/{todayChallenge.targetCount}
-                            </Text>
-                        </View>
 
-                        {/* Time Remaining */}
-                        <Text style={styles.expiresText}>
-                            Expires: {new Date(todayChallenge.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Text>
-
-                        {todayChallenge.completed && (
-                            <View style={styles.completedBadge}>
-                                <Ionicons name="checkmark-circle" size={COMPONENT_SIZES.icon.medium} color={COLORS.success} />
-                                <Text style={styles.completedText}>Completed!</Text>
-                            </View>
-                        )}
-                    </GlassCard>
+                            {todayChallenge.completed && (
+                                <View style={styles.completedBadge}>
+                                    <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
+                                    <Text style={styles.completedText}>Goal Reached!</Text>
+                                </View>
+                            )}
+                        </GlassCard>
+                    </Animated.View>
                 )}
+
+                {/* Recent Activity Section */}
+                <Animated.View entering={FadeInDown.delay(300).duration(600)}>
+                    <View style={styles.activityHeader}>
+                        <Text style={styles.sectionTitle}>Recent Activity</Text>
+                        <TouchableOpacity onPress={() => router.push(`/reading-stats/history` as any)}>
+                            <Text style={styles.seeAllText}>See History</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {sessions.length > 0 ? (
+                        sessions.map((session, index) => (
+                            <Animated.View key={session._id} entering={FadeInRight.delay(400 + index * 100).duration(500)}>
+                                <ReadingActivityCard
+                                    session={session}
+                                    onPress={() => router.push({ pathname: '/reading-stats/[id]', params: { id: session._id } })}
+                                />
+                            </Animated.View>
+                        ))
+                    ) : (
+                        <GlassCard style={styles.emptyActivityCard}>
+                            <Ionicons name="book-outline" size={32} color={COLORS.textMuted} />
+                            <Text style={styles.emptyActivityText}>No recent reading sessions</Text>
+                        </GlassCard>
+                    )}
+                </Animated.View>
 
                 {/* Milestones Preview */}
                 <GlassCard style={styles.milestonesCard}>
@@ -353,6 +492,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    statsLoading: {
+        height: 80,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -364,7 +508,36 @@ const styles = StyleSheet.create({
         ...TYPOGRAPHY.h1,
         color: COLORS.textPrimary,
     },
-
+    sectionTitle: {
+        ...TYPOGRAPHY.h3,
+        color: COLORS.textPrimary,
+        marginBottom: SPACING.md,
+        marginTop: SPACING.lg,
+    },
+    // Stats Grid
+    statsRow: {
+        flexDirection: 'row',
+        gap: SPACING.md,
+        marginBottom: SPACING.md,
+    },
+    miniStatCard: {
+        flex: 1,
+        padding: SPACING.md,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    miniStatValue: {
+        fontSize: FONT_SIZE.lg,
+        fontWeight: '900',
+        color: COLORS.textPrimary,
+        marginTop: 4,
+    },
+    miniStatLabel: {
+        fontSize: 10,
+        color: COLORS.textMuted,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+    },
     // Streak Card
     streakCard: {
         padding: PADDING.card.vertical,
@@ -592,5 +765,66 @@ const styles = StyleSheet.create({
         fontSize: FONT_SIZE.md,
         fontWeight: '700',
         color: COLORS.primary,
+    },
+    activityHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: SPACING.sm,
+    },
+    seeAllText: {
+        color: COLORS.primary,
+        fontSize: FONT_SIZE.sm,
+        fontWeight: '700',
+    },
+    emptyActivityCard: {
+        padding: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderStyle: 'dashed',
+    },
+    emptyActivityText: {
+        color: COLORS.textMuted,
+        fontSize: FONT_SIZE.sm,
+        fontWeight: '500',
+        marginTop: 8,
+    },
+    // Welcome Card
+    welcomeCard: {
+        padding: 24,
+        borderRadius: BORDER_RADIUS.xl,
+        borderWidth: 1,
+        borderColor: 'rgba(25, 227, 209, 0.2)',
+        marginBottom: MARGIN.item.large,
+    },
+    welcomeContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    welcomeIconContainer: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(25, 227, 209, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    welcomeTextColumn: {
+        flex: 1,
+    },
+    welcomeTitle: {
+        ...TYPOGRAPHY.h3,
+        color: COLORS.textPrimary,
+        marginBottom: 4,
+    },
+    welcomeSub: {
+        fontSize: FONT_SIZE.sm,
+        color: COLORS.textSecondary,
+        lineHeight: 18,
+    },
+    welcomeButton: {
+        height: 50,
     },
 });

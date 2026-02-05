@@ -8,15 +8,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import COLORS from '../constants/colors';
 import { useAuthStore } from '../store/authContext';
 import { useNotificationStore } from '../store/notificationStore';
-import { SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../constants/styleConstants';
+import { SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS, TYPOGRAPHY } from '../constants/styleConstants';
 
 interface AppHeaderProps {
     showBack?: boolean;
     showSearch?: boolean;
+    title?: string;
     rightElement?: React.ReactNode;
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({ showBack, showSearch, rightElement }) => {
+const AppHeader: React.FC<AppHeaderProps> = ({ showBack, showSearch, title, rightElement }) => {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { unreadCount } = useNotificationStore();
@@ -53,13 +54,17 @@ const AppHeader: React.FC<AppHeaderProps> = ({ showBack, showSearch, rightElemen
                     ))}
                 </View>
 
-                {/* Center Logo */}
+                {/* Center Logo or Title */}
                 <View style={styles.logoContainer}>
-                    <Image
-                        source={require('../assets/images/icon.png')}
-                        style={styles.logo}
-                        contentFit="contain"
-                    />
+                    {title ? (
+                        <Text style={styles.titleText}>{title}</Text>
+                    ) : (
+                        <Image
+                            source={require('../assets/images/icon.png')}
+                            style={styles.logo}
+                            contentFit="contain"
+                        />
+                    )}
                 </View>
 
                 {/* Right Side */}
@@ -183,6 +188,11 @@ const styles = StyleSheet.create({
         width: '100%',
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(255, 255, 255, 0.12)', // Subtle chrome highlight
+    },
+    titleText: {
+        ...TYPOGRAPHY.h2,
+        color: COLORS.textPrimary,
+        fontWeight: '800',
     },
 });
 

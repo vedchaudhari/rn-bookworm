@@ -316,6 +316,52 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    // Book Card Styles
+    bookCard: {
+        width: 200,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        marginBottom: 4,
+    },
+    bookCardImage: {
+        width: '100%',
+        height: 260,
+        backgroundColor: COLORS.surfaceHighlight,
+    },
+    bookCardContent: {
+        padding: 12,
+    },
+    bookCardTitle: {
+        fontSize: 14,
+        fontWeight: '900',
+        color: COLORS.textPrimary,
+        marginBottom: 2,
+    },
+    bookCardAuthor: {
+        fontSize: 12,
+        color: COLORS.textSecondary,
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    bookCardViewBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+    },
+    bookCardViewBtnText: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: COLORS.primary,
+        textTransform: 'uppercase',
+    },
 });
 
 export default styles;

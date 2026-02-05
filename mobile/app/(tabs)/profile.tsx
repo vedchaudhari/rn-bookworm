@@ -18,6 +18,7 @@ import PremiumButton from '../../components/PremiumButton';
 import { useUIStore } from '../../store/uiStore';
 import { apiClient } from '../../lib/apiClient';
 import ImageCropper from '../../components/ImageCropper';
+import FollowButton from '../../components/FollowButton';
 
 interface User {
     _id: string;
@@ -28,6 +29,7 @@ interface User {
     profileImage?: string;
     currentStreak?: number;
     longestStreak?: number;
+    isFollowing?: boolean;
 }
 
 interface Book {
@@ -256,15 +258,29 @@ export default function Profile() {
         </TouchableOpacity>
     );
 
-    const renderUserStrip: ListRenderItem<User> = ({ item }) => (
-        <TouchableOpacity
-            style={styles.userListItem}
-            onPress={() => router.push({ pathname: '/user-profile', params: { userId: item.id || item._id } })}
-        >
-            <Image source={{ uri: item.profileImage }} style={styles.userListAvatar} />
-            <Text style={styles.userListName} numberOfLines={1}>{item.username}</Text>
-        </TouchableOpacity>
-    );
+    const renderUserStrip: ListRenderItem<User> = ({ item }) => {
+        const isSelf = (currentUser?._id || currentUser?.id) === (item.id || item._id);
+
+        return (
+            <TouchableOpacity
+                style={styles.userListItem}
+                onPress={() => router.push({ pathname: '/user-profile', params: { userId: item.id || item._id } })}
+                activeOpacity={0.7}
+            >
+                <Image source={{ uri: item.profileImage }} style={styles.userListAvatar} />
+                <Text style={styles.userListName} numberOfLines={1}>{item.username}</Text>
+
+                {!isSelf && (
+                    <FollowButton
+                        userId={item.id || item._id || ''}
+                        initialFollowing={item.isFollowing}
+                        compact={true}
+                        style={{ marginLeft: 12 }}
+                    />
+                )}
+            </TouchableOpacity>
+        );
+    };
 
     if (loading && !refreshing) {
         return (

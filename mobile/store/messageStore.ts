@@ -22,6 +22,12 @@ export interface Message {
     deliveredAt?: string;
     readAt?: string;
     deletedFor?: string[];
+    book?: {
+        _id: string;
+        title: string;
+        author?: string;
+        image: string;
+    };
     [key: string]: any;
 }
 
@@ -57,7 +63,8 @@ interface MessageState {
         localThumbnail?: string,
         width?: number,
         height?: number,
-        fileSizeBytes?: number
+        fileSizeBytes?: number,
+        book?: { _id: string; title: string; author?: string; image: string }
     ) => Promise<{ success: boolean; message?: Message; error?: string }>;
     addReceivedMessage: (message: Message, currentUserId: string) => void;
     fetchUnreadCount: (token: string) => Promise<{ success: boolean; error?: string }>;
@@ -182,7 +189,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         localThumbnail?: string,
         width?: number,
         height?: number,
-        fileSizeBytes?: number
+        fileSizeBytes?: number,
+        book?: { _id: string; title: string; author?: string; image: string }
     ) => {
         const { messages } = get();
         const tempId = Date.now().toString();
@@ -200,6 +208,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             fileSizeBytes,
             createdAt: new Date().toISOString(),
             pending: true,
+            book,
         };
 
         const userMessages = messages[receiverId] || [];
@@ -218,7 +227,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             updatedConversations[existingConvIndex] = {
                 ...conv,
                 lastMessage: {
-                    text: text || (image ? "Sent an image" : video ? "Sent a video" : ""),
+                    text: text || (book ? `Shared a book: ${book.title}` : image ? "Sent an image" : video ? "Sent a video" : ""),
                     createdAt: new Date().toISOString(),
                     senderId: 'me'
                 }
@@ -235,7 +244,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ text, image, video, videoThumbnail, fileSizeBytes }),
+                body: JSON.stringify({ text, image, video, videoThumbnail, fileSizeBytes, book }),
             });
 
             const data = await response.json();
@@ -336,7 +345,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             updatedConversations[existingConvIndex] = {
                 ...conv,
                 lastMessage: {
-                    text: message.text || (message.image ? "Sent an image" : message.video ? "Sent a video" : ""),
+                    text: message.text || (message.book ? `Shared a book: ${message.book.title}` : message.image ? "Sent an image" : message.video ? "Sent a video" : ""),
                     createdAt: message.createdAt,
                     senderId: senderId
                 },
@@ -353,7 +362,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                 _id: message.conversationId || `conv_${Date.now()}`,
                 otherUser: isSelf ? receiverId : message.sender, // Store the OTHER user's info
                 lastMessage: {
-                    text: message.text || (message.image ? "Sent an image" : message.video ? "Sent a video" : ""),
+                    text: message.text || (message.book ? `Shared a book: ${message.book.title}` : message.image ? "Sent an image" : message.video ? "Sent a video" : ""),
                     createdAt: message.createdAt,
                     senderId: senderId
                 },

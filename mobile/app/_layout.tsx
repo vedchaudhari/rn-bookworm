@@ -29,7 +29,8 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
     const { checkAuth, user, token, isCheckingAuth, isAuthLoading, hasCompletedOnboarding } = useAuthStore();
     const { hydrate } = useSocialStore();
-    usePermissions();
+    const isAuthenticated = !!(user && token);
+    usePermissions(isAuthenticated);
 
     const [fontsLoaded] = useFonts({
         "JetBrainsMono-Medium": require("../assets/fonts/JetBrainsMono-Medium.ttf"),
@@ -164,7 +165,7 @@ export default function RootLayout() {
     }, [user?._id, user?.id, token, isCheckingAuth]);
 
     const router = useRouter();
-    const isAuthenticated = !!(user && token);
+    // isAuthenticated is already defined above near line 31
 
     // Snap Redirector:
     // This ensures the navigator actually JUMPS to the correct stack
@@ -214,20 +215,19 @@ export default function RootLayout() {
                         animation: 'slide_from_right',
                     }}
                 >
-                    {/* 
-                        DECLARATIVE SCREEN SELECTION 
-                        Benefits:
-                        1. NO FLICKER: The app never renders the wrong group.
-                        2. STABLE LOGOUT: No race conditions with imperative replace() calls.
-                        3. SECURE: Private routes simply don't exist until authenticated.
-                    */}
-                    <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-                    <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
-                    <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-                    <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
-                    <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
-                    <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
-                    <Stack.Screen name="book-detail" options={{ headerShown: false }} />
+                    {!hasCompletedOnboarding ? (
+                        <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+                    ) : !isAuthenticated ? (
+                        <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
+                    ) : (
+                        <>
+                            <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+                            <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
+                            <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
+                            <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
+                            <Stack.Screen name="book-detail" options={{ headerShown: false }} />
+                        </>
+                    )}
                 </Stack>
                 <StatusBar style="light" />
                 <GlobalAlert />

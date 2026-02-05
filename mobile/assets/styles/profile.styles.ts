@@ -175,7 +175,8 @@ const styles = StyleSheet.create({
     userListItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: SPACING.md,
+        paddingHorizontal: SPACING.xl,
+        paddingVertical: SPACING.md,
         marginBottom: SPACING.sm,
         backgroundColor: COLORS.surface,
         borderRadius: 100,
@@ -189,6 +190,7 @@ const styles = StyleSheet.create({
         marginRight: SPACING.md,
     },
     userListName: {
+        flex: 1,
         fontSize: FONT_SIZE.md,
         fontWeight: '700',
         color: COLORS.textPrimary,

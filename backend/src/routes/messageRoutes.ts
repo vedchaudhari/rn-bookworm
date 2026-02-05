@@ -16,6 +16,12 @@ interface SendMessageBody {
     video?: string;
     videoThumbnail?: string;
     fileSizeBytes?: number;
+    book?: {
+        _id: string;
+        title: string;
+        author?: string;
+        image: string;
+    };
 }
 
 // Helper to sign all media in a message
@@ -90,7 +96,7 @@ router.get("/presigned-url", protectRoute, async (req: Request, res: Response) =
 router.post("/send/:receiverId", protectRoute, async (req: Request, res: Response) => {
     try {
         const { receiverId } = req.params;
-        const { text, image, video, videoThumbnail, fileSizeBytes } = req.body as SendMessageBody;
+        const { text, image, video, videoThumbnail, fileSizeBytes, book } = req.body as SendMessageBody;
         const senderId = req.user!._id;
 
         // Validate receiverId format
@@ -101,8 +107,8 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
         // Sanitize and validate text
         const trimmedText = text ? text.trim() : '';
 
-        if (!trimmedText && !image && !video) {
-            return res.status(400).json({ message: "Message text, image, or video is required" });
+        if (!trimmedText && !image && !video && !book) {
+            return res.status(400).json({ message: "Message content is required" });
         }
 
         if (trimmedText && trimmedText.length > 1000) {
@@ -134,6 +140,7 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
             videoThumbnail,
             fileSizeBytes,
             conversationId,
+            book,
         });
 
         await newMessage.save();

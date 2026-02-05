@@ -84,7 +84,12 @@ export default function TabLayout() {
             <Tabs.Screen
                 name="streaks"
                 options={{
-                    href: null,
+                    title: "Activity",
+                    tabBarIcon: ({ color, size }) => (<Ionicons
+                        name="pulse-outline"
+                        size={size}
+                        color={color}
+                    />)
                 }}
             />
             <Tabs.Screen

@@ -376,16 +376,20 @@ async function seed() {
 
                 // Create reading sessions for currently_reading and completed books
                 if (status !== 'want_to_read') {
-                    // Spread sessions over the last 10 days if currently reading, or less if completed
-                    const maxSessionAge = status === 'completed' ? 7 : 10;
-                    const numSessions = Math.floor(Math.random() * 5) + 5; // 5-10 sessions per active book
+                    // Spread sessions over the last 30 days to populate Daily/Weekly/Monthly charts
+                    const maxSessionAge = 30;
+                    const numSessions = Math.floor(Math.random() * 15) + 15; // 15-30 sessions per active book
 
                     for (let s = 0; s < numSessions; s++) {
                         const sessionDate = getRandomPastDate(maxSessionAge);
-                        const duration = Math.floor(Math.random() * 45) + 15;
-                        const pages = Math.floor(duration / 2);
+                        const duration = Math.floor(Math.random() * 60) + 10; // 10-70 mins
+                        const pages = Math.max(1, Math.floor(duration / 1.5)); // Approx 1.5 min per page
                         const startTime = new Date(sessionDate);
-                        startTime.setHours(Math.floor(Math.random() * 14) + 8); // Daytime/Evening reading
+
+                        // Randomize hour to simulate different reading times (Morning, Afternoon, Night)
+                        startTime.setHours(Math.floor(Math.random() * 18) + 6);
+                        startTime.setMinutes(Math.floor(Math.random() * 60));
+
                         const endTime = new Date(startTime.getTime() + duration * 60000);
 
                         await ReadingSession.create({
@@ -396,8 +400,8 @@ async function seed() {
                             endTime,
                             duration,
                             pagesRead: pages,
-                            startPage: 0,
-                            endPage: pages,
+                            startPage: Math.max(0, currentPage - pages),
+                            endPage: currentPage,
                             source: 'auto',
                             deviceType: 'mobile',
                             contributesToStreak: true,
