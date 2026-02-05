@@ -248,7 +248,7 @@ export default function BookDetailScreen() {
                         blurRadius={20}
                     />
                     <BlurView intensity={80} style={StyleSheet.absoluteFill} tint="dark" />
-                    <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.overlay }]} />
                 </View>
 
                 {/* Custom Header with Back and Share Button */}
@@ -289,13 +289,13 @@ export default function BookDetailScreen() {
                         style={styles.content}
                         contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
                     >
-                        <Animated.View entering={FadeIn.duration(800)}>
+                        <Animated.View>
                             <Image source={{ uri: book.image }} style={styles.bookImage} contentFit="cover" />
                         </Animated.View>
 
                         <Animated.View
-                            entering={SlideInDown.springify().damping(15)}
                             style={styles.infoSection}
                         >
                             <View style={styles.headerInfoCentered}>
@@ -369,7 +369,10 @@ export default function BookDetailScreen() {
                                 <View style={styles.moreFromAuthorSection}>
                                     <View style={styles.sectionHeader}>
                                         <Text style={styles.sectionTitle}>More by {book.user.username}</Text>
-                                        <TouchableOpacity onPress={() => router.push({ pathname: '/user-profile', params: { userId: book.user._id } })}>
+                                        <TouchableOpacity onPress={() => {
+                                            console.log('[BookDetail] Navigating to profile:', book.user._id);
+                                            router.push({ pathname: '/user-profile', params: { userId: book.user._id } });
+                                        }}>
                                             <Text style={styles.viewAllText}>View All</Text>
                                         </TouchableOpacity>
                                     </View>
@@ -381,7 +384,10 @@ export default function BookDetailScreen() {
                                         renderItem={({ item }) => (
                                             <TouchableOpacity
                                                 style={styles.authorBookCard}
-                                                onPress={() => router.push({ pathname: '/book-detail', params: { bookId: item._id } })}
+                                                onPress={() => {
+                                                    console.log('[BookDetail] Navigating to book:', item._id);
+                                                    router.push({ pathname: '/book-detail', params: { bookId: item._id } });
+                                                }}
                                             >
                                                 <Image source={{ uri: item.image }} style={styles.authorBookImage} />
                                                 <Text style={styles.authorBookTitle} numberOfLines={2}>{item.title}</Text>
@@ -529,13 +535,13 @@ export default function BookDetailScreen() {
 
                         <ScrollView style={{ maxHeight: 300 }}>
                             {conversations.length > 0 ? (
-                                conversations.map(conv => {
+                                conversations.map((conv, index) => {
                                     const otherUserInfo = typeof conv.otherUser === 'string' ? null : conv.otherUser;
                                     const otherUserId = typeof conv.otherUser === 'string' ? conv.otherUser : conv.otherUser._id;
 
                                     return (
                                         <TouchableOpacity
-                                            key={conv._id}
+                                            key={conv._id || index}
                                             style={styles.friendItem}
                                             onPress={() => handleShareToChat(otherUserId)}
                                             disabled={sharingTo !== null}
@@ -583,11 +589,11 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: 'rgba(0,0,0,0.4)',
+        backgroundColor: COLORS.glass.bg,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.15)'
+        borderColor: COLORS.glass.border
     },
     backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
@@ -686,7 +692,7 @@ const styles = StyleSheet.create({
     recommendationText: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 20 },
 
     // Modal Styles
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: 24 },
+    modalOverlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'center', padding: 24 },
     modalContent: { padding: 24, borderRadius: 24 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
     modalTitle: { fontSize: 22, fontWeight: '900', color: COLORS.textPrimary },

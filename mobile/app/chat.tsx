@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, withSpring, runOnJS, useAnimatedKeyboard } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { formatLastSeen } from '../lib/utils';
+import { processMessagesWithDates, ProcessedItem, GroupPosition } from '../lib/messageUtils';
+import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -215,7 +218,7 @@ const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, medi
                             alignItems: 'center',
                             gap: 10,
                             borderWidth: 1,
-                            borderColor: 'rgba(0,0,0,0.1)',
+                            borderColor: COLORS.glass.border,
                             ...SHADOWS.aura,
                             shadowColor: COLORS.primary
                         }}
@@ -536,7 +539,7 @@ const ThemePaletteModal: React.FC<{
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
             <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-                <TouchableOpacity activeOpacity={1} onPress={onClose} style={[{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.7)' }]} />
+                <TouchableOpacity activeOpacity={1} onPress={onClose} style={[{ ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.overlay }]} />
                 <Animated.View style={[
                     {
                         backgroundColor: '#12161B',
@@ -745,9 +748,9 @@ const MediaSelectionModal: React.FC<{
 
     useEffect(() => {
         if (visible) {
-            translateY.value = withSpring(0, { damping: 20, stiffness: 90 });
+            translateY.value = withSpring(0, { damping: 25, stiffness: 120 });
         } else {
-            translateY.value = withTiming(SCREEN_HEIGHT);
+            translateY.value = withTiming(SCREEN_HEIGHT, { duration: 150 });
         }
     }, [visible]);
 
@@ -760,7 +763,7 @@ const MediaSelectionModal: React.FC<{
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
             <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-                <TouchableOpacity activeOpacity={1} onPress={onClose} style={[{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.7)' }]} />
+                <TouchableOpacity activeOpacity={1} onPress={onClose} style={[{ ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.overlay }]} />
                 <Animated.View style={[
                     {
                         backgroundColor: '#0F1216',
@@ -780,7 +783,10 @@ const MediaSelectionModal: React.FC<{
 
                     <View style={{ flexDirection: 'row', gap: 16 }}>
                         <TouchableOpacity
-                            onPress={() => { onSelectImage(); onClose(); }}
+                            onPress={() => {
+                                onClose();
+                                setTimeout(() => onSelectImage(), 50);
+                            }}
                             style={{
                                 flex: 1,
                                 backgroundColor: 'rgba(255,255,255,0.06)',
@@ -801,7 +807,10 @@ const MediaSelectionModal: React.FC<{
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            onPress={() => { onSelectVideo(); onClose(); }}
+                            onPress={() => {
+                                onClose();
+                                setTimeout(() => onSelectVideo(), 50);
+                            }}
                             style={{
                                 flex: 1,
                                 backgroundColor: 'rgba(255,255,255,0.06)',
@@ -850,109 +859,204 @@ interface MessageItemProps {
     onLongPress: (item: Message) => void;
     onShowViewer: (uri: string, type: 'image' | 'video', timestamp?: string, senderName?: string) => void;
     showAvatar: boolean;
+    positionInGroup: GroupPosition;
+    onReply: (item: Message) => void;
     isGlobalVideoPlaying?: boolean;
     activeVideoUri?: string | null;
     theme: ChatTheme;
     username: string;
 }
 
-const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onLongPress, onShowViewer, showAvatar, isGlobalVideoPlaying, activeVideoUri, theme, username }: MessageItemProps) => {
+const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onLongPress, onShowViewer, showAvatar, positionInGroup, onReply, isGlobalVideoPlaying, activeVideoUri, theme, username }: MessageItemProps) => {
     const router = useRouter();
     const senderId = typeof item.sender === 'object' ? item.sender._id : item.sender;
     const isMe = senderId === currentUserId || senderId === 'me';
     const isThisVideoPlaying = !!(item.video && activeVideoUri === item.video && isGlobalVideoPlaying);
 
-    return (
-        <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage, { width: '100%' }]}>
-            {!isMe && (
-                <View style={{ width: 32 }}>
-                    {showAvatar ? (
-                        <Image
-                            source={{ uri: displayAvatar }}
-                            style={styles.messageAvatar}
-                            cachePolicy="disk"
-                        />
-                    ) : null}
-                </View>
-            )}
-            <TouchableOpacity
-                onLongPress={() => onLongPress(item)}
-                onPress={() => {
-                    const timestamp = new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const senderName = isMe ? 'You' : username;
-                    if (item.image) onShowViewer(item.image, 'image', timestamp, senderName);
-                    else if (item.video) onShowViewer(item.video, 'video', timestamp, senderName);
-                }}
-                activeOpacity={0.8}
-                style={[
-                    styles.messageBubble,
-                    isMe ? { backgroundColor: theme.myBubbleColor, borderBottomRightRadius: 4, ...SHADOWS.aura, shadowColor: theme.auraColor } : { backgroundColor: theme.theirBubbleColor, borderBottomLeftRadius: 4 },
-                    (item.image || item.video) && styles.imageBubble,
-                    item.isDeleted && styles.deletedBubble
-                ]}
-            >
-                {item.isDeleted ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Ionicons name="ban" size={14} color="rgba(255,255,255,0.6)" />
-                        <Text style={[styles.messageText, { color: '#FFFFFF' }, styles.deletedText]}>
-                            This message was deleted
-                        </Text>
-                    </View>
-                ) : (
-                    <>
-                        {item.image && (
-                            <ChatImage
-                                uri={item.image}
-                                messageId={item._id}
-                                initialWidth={item.width}
-                                initialHeight={item.height}
-                            />
-                        )}
-                        {item.video && (
-                            <VideoPreview
-                                thumbnail={item.videoThumbnail}
-                                isPlaying={isThisVideoPlaying}
-                            />
-                        )}
-                        {item.book && (
-                            <TouchableOpacity
-                                onPress={() => router.push({ pathname: '/book-detail', params: { bookId: item.book!._id } })}
-                                style={styles.bookCard}
-                            >
-                                <Image source={{ uri: item.book.image }} style={styles.bookCardImage} contentFit="cover" />
-                                <View style={styles.bookCardContent}>
-                                    <Text style={styles.bookCardTitle} numberOfLines={1}>{item.book.title}</Text>
-                                    <Text style={styles.bookCardAuthor} numberOfLines={1}>{item.book.author || 'Author'}</Text>
-                                    <View style={styles.bookCardViewBtn}>
-                                        <Text style={styles.bookCardViewBtnText}>View Book</Text>
-                                        <Ionicons name="chevron-forward" size={14} color={COLORS.primary} />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        )}
-                        {item.text && <Text style={[styles.messageText, { color: '#FFFFFF' }]}>{item.text}</Text>}
-                    </>
-                )}
+    const translateX = useSharedValue(0);
+    const replyIconOpacity = useSharedValue(0);
+    const replyIconScale = useSharedValue(0);
+    const hasTriggered = useSharedValue(false);
 
-                <View style={{ flexDirection: 'row', alignSelf: 'flex-end', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                    {item.isEdited && !item.isDeleted && (
-                        <Text style={[styles.editedLabel, { color: '#FFFFFF', opacity: 0.6 }]}>Edited</Text>
-                    )}
-                    <Text style={[styles.messageTime, { color: '#FFFFFF', opacity: 0.6 }]}>
-                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                    {isMe && !item.isDeleted && (
-                        <View style={styles.pendingIndicator}>
-                            <StatusTicks
-                                pending={item.pending}
-                                deliveredAt={item.deliveredAt}
-                                readAt={item.readAt}
+    const panGesture = Gesture.Pan()
+        .activeOffsetX([-10, 10])
+        .onUpdate((event) => {
+            const translationX = event.translationX;
+            // Only allow swiping right (common reply gesture)
+            if (translationX > 0) {
+                const dampedX = Math.min(translationX * 0.5, 70); // Damping and max pull
+                translateX.value = dampedX;
+
+                // Show reply icon based on translation
+                replyIconOpacity.value = withTiming(translationX > 30 ? 1 : 0);
+                replyIconScale.value = withSpring(translationX > 50 ? 1.2 : 0.8);
+
+                if (translationX > 60 && !hasTriggered.value) {
+                    hasTriggered.value = true;
+                    runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+                } else if (translationX <= 60) {
+                    hasTriggered.value = false;
+                }
+            }
+        })
+        .onEnd(() => {
+            if (translateX.value > 50) {
+                runOnJS(onReply)(item);
+            }
+            translateX.value = withSpring(0);
+            replyIconOpacity.value = withTiming(0);
+            replyIconScale.value = withTiming(0);
+            hasTriggered.value = false;
+        });
+
+    const animatedMessageStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: translateX.value }]
+    }));
+
+    const animatedIconStyle = useAnimatedStyle(() => ({
+        opacity: replyIconOpacity.value,
+        transform: [{ scale: replyIconScale.value }, { translateX: -30 + translateX.value * 0.4 }]
+    }));
+
+    return (
+        <GestureDetector gesture={panGesture}>
+            <Animated.View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage, { width: '100%', position: 'relative' }, animatedMessageStyle]}>
+                {/* Reply Indicator Background */}
+                <Animated.View style={[{
+                    position: 'absolute',
+                    left: -40,
+                    top: '50%',
+                    marginTop: -12,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                }, animatedIconStyle]}>
+                    <Ionicons name="arrow-undo" size={14} color="#fff" />
+                </Animated.View>
+                {!isMe && (
+                    <View style={{ width: 32 }}>
+                        {showAvatar ? (
+                            <Image
+                                source={{ uri: displayAvatar }}
+                                style={styles.messageAvatar}
+                                cachePolicy="disk"
                             />
+                        ) : null}
+                    </View>
+                )}
+                <TouchableOpacity
+                    onLongPress={() => onLongPress(item)}
+                    onPress={() => {
+                        const timestamp = new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        const senderName = isMe ? 'You' : username;
+                        if (item.image) onShowViewer(item.image, 'image', timestamp, senderName);
+                        else if (item.video) onShowViewer(item.video, 'video', timestamp, senderName);
+                    }}
+                    activeOpacity={0.8}
+                    style={[
+                        styles.messageBubble,
+                        isMe ? {
+                            backgroundColor: theme.myBubbleColor,
+                            ...SHADOWS.aura,
+                            shadowColor: theme.auraColor,
+                            borderTopRightRadius: (positionInGroup === 'start' || positionInGroup === 'single') ? 20 : 4,
+                            borderBottomRightRadius: (positionInGroup === 'end' || positionInGroup === 'single') ? 4 : 20,
+                            borderTopLeftRadius: 20,
+                            borderBottomLeftRadius: 20,
+                        } : {
+                            backgroundColor: theme.theirBubbleColor,
+                            borderTopLeftRadius: (positionInGroup === 'start' || positionInGroup === 'single') ? 20 : 4,
+                            borderBottomLeftRadius: (positionInGroup === 'end' || positionInGroup === 'single') ? 4 : 20,
+                            borderTopRightRadius: 20,
+                            borderBottomRightRadius: 20,
+                        },
+                        (item.image || item.video) && styles.imageBubble,
+                        item.isDeleted && styles.deletedBubble
+                    ]}
+                >
+                    {item.isDeleted ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Ionicons name="ban" size={14} color="rgba(255,255,255,0.6)" />
+                            <Text style={[styles.messageText, { color: '#FFFFFF' }, styles.deletedText]}>
+                                This message was deleted
+                            </Text>
                         </View>
+                    ) : (
+                        <>
+                            {item.replyTo && (
+                                <View style={{
+                                    backgroundColor: COLORS.glassBorder,
+                                    padding: 8,
+                                    borderLeftWidth: 3,
+                                    borderLeftColor: isMe ? 'rgba(255,255,255,0.5)' : theme.myBubbleColor,
+                                    borderRadius: 4,
+                                    marginBottom: 4,
+                                }}>
+                                    <Text style={{ color: isMe ? 'rgba(255,255,255,0.9)' : theme.myBubbleColor, fontWeight: '700', fontSize: 11, marginBottom: 2 }}>
+                                        {typeof item.replyTo.sender === 'object' ? item.replyTo.sender.username : 'User'}
+                                    </Text>
+                                    <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }} numberOfLines={1}>
+                                        {item.replyTo.text || (item.replyTo.image ? 'Image' : 'Media')}
+                                    </Text>
+                                </View>
+                            )}
+                            {item.image && (
+                                <ChatImage
+                                    uri={item.image}
+                                    messageId={item._id}
+                                    initialWidth={item.width}
+                                    initialHeight={item.height}
+                                />
+                            )}
+                            {item.video && (
+                                <VideoPreview
+                                    thumbnail={item.videoThumbnail}
+                                    isPlaying={isThisVideoPlaying}
+                                />
+                            )}
+                            {item.book && (
+                                <TouchableOpacity
+                                    onPress={() => router.push({ pathname: '/book-detail', params: { bookId: item.book!._id } })}
+                                    style={styles.bookCard}
+                                >
+                                    <Image source={{ uri: item.book.image }} style={styles.bookCardImage} contentFit="cover" />
+                                    <View style={styles.bookCardContent}>
+                                        <Text style={styles.bookCardTitle} numberOfLines={1}>{item.book.title}</Text>
+                                        <Text style={styles.bookCardAuthor} numberOfLines={1}>{item.book.author || 'Author'}</Text>
+                                        <View style={styles.bookCardViewBtn}>
+                                            <Text style={styles.bookCardViewBtnText}>View Book</Text>
+                                            <Ionicons name="chevron-forward" size={14} color={COLORS.primary} />
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                            {item.text && <Text style={[styles.messageText, { color: '#FFFFFF' }]}>{item.text}</Text>}
+                        </>
                     )}
-                </View>
-            </TouchableOpacity>
-        </View>
+
+                    <View style={{ flexDirection: 'row', alignSelf: 'flex-end', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                        {item.isEdited && !item.isDeleted && (
+                            <Text style={[styles.editedLabel, { color: '#FFFFFF', opacity: 0.6 }]}>Edited</Text>
+                        )}
+                        <Text style={[styles.messageTime, { color: '#FFFFFF', opacity: 0.6 }]}>
+                            {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                        {isMe && !item.isDeleted && (
+                            <View style={styles.pendingIndicator}>
+                                <StatusTicks
+                                    pending={item.pending}
+                                    deliveredAt={item.deliveredAt}
+                                    readAt={item.readAt}
+                                />
+                            </View>
+                        )}
+                    </View>
+                </TouchableOpacity>
+            </Animated.View>
+        </GestureDetector>
     );
 }, (prevProps, nextProps) => {
     return (
@@ -963,6 +1067,7 @@ const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onL
         prevProps.item.read === nextProps.item.read &&
         prevProps.index === nextProps.index &&
         prevProps.showAvatar === nextProps.showAvatar &&
+        prevProps.positionInGroup === nextProps.positionInGroup &&
         prevProps.isGlobalVideoPlaying === nextProps.isGlobalVideoPlaying &&
         prevProps.activeVideoUri === nextProps.activeVideoUri &&
         prevProps.theme.backgroundColor === nextProps.theme.backgroundColor &&
@@ -990,6 +1095,7 @@ export default function ChatScreen() {
     const [tempImageToCrop, setTempImageToCrop] = useState<string | null>(null);
     const [activeVideoUri, setActiveVideoUri] = useState<string | null>(null);
     const [isGlobalVideoPlaying, setIsGlobalVideoPlaying] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [viewerVisible, setViewerVisible] = useState(false);
     const [viewerMedia, setViewerMedia] = useState<{ uri: string, type: 'image' | 'video', timestamp?: string, senderName?: string } | null>(null);
     const flatListRef = useRef<FlatList>(null);
@@ -1014,16 +1120,18 @@ export default function ChatScreen() {
         if (isSelf) return 'Notes to yourself';
         if (isOnline) return 'Online';
         if (!userStatus.lastActive) return 'Offline';
-        const lastActive = new Date(userStatus.lastActive);
-        if (isNaN(lastActive.getTime())) return 'Offline';
-        const diffMinutes = (Date.now() - lastActive.getTime()) / 1000 / 60;
-        if (diffMinutes < 5) return 'Recently active';
-        return 'Offline';
+        return formatLastSeen(userStatus.lastActive);
     };
 
     const displayStatus = getDisplayStatus();
     const pulseOpacity = useSharedValue(0.4);
     const isTyping = typingStatus[userId!];
+
+    // Memoize processed messages for date headers and avatar visibility
+    const processedMessages = React.useMemo(() => {
+        const currentId = user?._id || user?.id || '';
+        return processMessagesWithDates(conversationMessages, currentId);
+    }, [conversationMessages, user]);
 
 
     const [keyboardVisible, setKeyboardVisible] = useState(false);
@@ -1186,8 +1294,8 @@ export default function ChatScreen() {
     const handlePickImage = async (allowEditing: boolean = false) => {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ['images'],
-                allowsEditing: false, // Use custom cropper instead
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: false,
                 quality: 0.8,
                 base64: false
             });
@@ -1216,20 +1324,17 @@ export default function ChatScreen() {
     };
 
     const handleShowCropOption = () => {
-        Alert.alert(
-            'Edit Image',
-            'Choose an action',
-            [
-                { text: 'Crop (1:1)', onPress: () => handlePickImage(true) },
-                { text: 'Cancel', style: 'cancel' }
-            ]
-        );
+        if (selectedImage) {
+            setTempImageToCrop(selectedImage);
+            setCropperVisible(true);
+            setShowPreview(false);
+        }
     };
 
     const handlePickVideo = async () => {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ['videos'],
+                mediaTypes: ImagePicker.MediaTypeOptions.Videos,
                 allowsEditing: false,
                 quality: 0.8,
             });
@@ -1378,7 +1483,9 @@ export default function ChatScreen() {
 
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         sendTypingStop(userId!);
-        await createAndSendMessage(messageText.trim(), undefined, undefined, undefined);
+        const replyId = replyingTo ? replyingTo._id : undefined;
+        setReplyingTo(null);
+        await createAndSendMessage(messageText.trim(), undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, replyId);
     };
 
     const handleClearPreview = () => {
@@ -1400,7 +1507,8 @@ export default function ChatScreen() {
         localThumbnail?: string,
         width?: number,
         height?: number,
-        fileSizeBytes?: number
+        fileSizeBytes?: number,
+        replyToId?: string
     ) => {
         setSending(true);
         if (text) setMessageText('');
@@ -1420,7 +1528,9 @@ export default function ChatScreen() {
             localThumbnail,
             width,
             height,
-            fileSizeBytes
+            fileSizeBytes,
+            undefined, // book
+            replyToId
         );
         setSending(false);
         if (!result.success) showAlert({ title: 'Error', message: 'Failed to send message', type: 'error' });
@@ -1459,12 +1569,14 @@ export default function ChatScreen() {
             });
         } else {
             showAlert({
-                title: 'Delete Message',
-                message: 'Are you sure you want to delete this message for yourself?',
+                title: 'Message Options',
+                message: 'Choose an action',
                 showCancel: true,
-                confirmText: 'Delete for Me',
-                onConfirm: () => { deleteMessageForMe(item._id, token!); },
-                type: 'warning'
+                confirmText: 'Reply',
+                onConfirm: () => setReplyingTo(item),
+                confirmText2: 'Delete for Me',
+                onConfirm2: () => { deleteMessageForMe(item._id, token!); },
+                type: 'info'
             });
         }
     }, [user, token, showAlert]);
@@ -1484,59 +1596,48 @@ export default function ChatScreen() {
         typingTimeoutRef.current = setTimeout(() => { sendTypingStop(userId!); typingTimeoutRef.current = null; }, 2000);
     };
 
-    const renderMessage = useCallback(({ item, index }: ListRenderItemInfo<Message>) => {
-        const currentUserId = user?._id || user?.id || '';
-        const senderId = typeof item.sender === 'object' ? item.sender._id : item.sender;
-        const isMe = senderId === currentUserId || senderId === 'me';
+    const renderMessage = useCallback(({ item, index }: ListRenderItemInfo<ProcessedItem>) => {
+        if ('type' in item && item.type === 'date-separator') {
+            return (
+                <View style={{
+                    alignSelf: 'center',
+                    marginVertical: 20,
+                    backgroundColor: 'rgba(14, 27, 36, 0.4)',
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.06)',
+                }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '600', letterSpacing: 0.5 }}>{item.date}</Text>
+                </View>
+            );
+        }
 
-        // Correct avatar logic for inverted list - only show avatar if DIFFERENT sender from the NEXT message (which is visually 'below' in inverted)
-        // Inverted: Next item in array = Visually ABOVE. Previous item in array = Visually BELOW.
-        // We want avatar at the BOTTOM of the group.
-        // In inverted list, index 0 is bottom-most.
-        // So we show avatar if index is 0 OR if the previous item in array (visually below) has different sender.
-        // Wait, inverted logic:
-        // Array: [Newest(0), Older(1), Oldest(2)]
-        // Visual:
-        // [Newest(0)]
-        // [Older(1)]
-        // [Oldest(2)]
-        //
-        // Typically avatars are shown on the LAST message of a group (the bottom one).
-        // Since list is inverted, index 0 is at the bottom of the screen.
-        // We show avatar if:
-        // 1. It's the very first item (index 0)
-        // 2. OR the item BEFORE it in the array (which is visually below it? No. Inverted list renders 0 at bottom.)
-        // Actually, for inverted list:
-        // 0 (Bottom) -> Show avatar if the message *after* it in array (visually above) is different? No.
-        // We want avatar on bottom message of group.
-        // That means we show avatar if the message *before* it in the array (visually below) is different sender.
-        // Wait, flatlist renders 0 at bottom.
-        // 0: Me (Bottom) -> Avatar
-        // 1: Me (Middle) -> No Avatar
-        // 2: Them (Top) -> Avatar
-        //
-        // Correct logic: Show avatar if the msg with index-1 (visually below) has different sender.
-
-        const prevMessage = conversationMessages[index - 1]; // Visually below
-        const prevSenderId = prevMessage ? (typeof prevMessage.sender === 'object' ? prevMessage.sender._id : prevMessage.sender) : null;
-        const showAvatar = !isMe && (!prevMessage || prevSenderId !== senderId);
+        // Cast to Message safely as we handled separator
+        const messageItem = item as Message & { showAvatar?: boolean, positionInGroup?: GroupPosition };
+        const currentId = user?._id || user?.id || '';
+        const showAvatar = messageItem.showAvatar || false;
+        const positionInGroup = messageItem.positionInGroup || 'single';
 
         return (
             <MessageItem
-                item={item}
+                item={messageItem}
                 index={index}
-                currentUserId={currentUserId}
+                currentUserId={currentId}
                 displayAvatar={displayAvatar}
                 onLongPress={handleLongPress}
                 onShowViewer={handleShowViewer}
                 showAvatar={showAvatar}
+                positionInGroup={positionInGroup}
+                onReply={(msg) => setReplyingTo(msg)}
                 isGlobalVideoPlaying={isGlobalVideoPlaying}
                 activeVideoUri={activeVideoUri}
                 theme={currentTheme}
                 username={username}
             />
         );
-    }, [user, displayAvatar, handleLongPress, conversationMessages, currentTheme]);
+    }, [displayAvatar, handleLongPress, currentTheme, username, isGlobalVideoPlaying, activeVideoUri]);
 
     const insets = useSafeAreaInsets();
 
@@ -1583,6 +1684,7 @@ export default function ChatScreen() {
                 onCancel={() => {
                     setCropperVisible(false);
                     setTempImageToCrop(null);
+                    setShowPreview(true);
                 }}
                 onCrop={handleCropComplete}
                 aspectRatio={[1, 1]}
@@ -1596,14 +1698,15 @@ export default function ChatScreen() {
                     <View style={{ flex: 1 }}>
                         <FlatList
                             ref={flatListRef}
-                            data={conversationMessages}
+                            data={processedMessages}
                             renderItem={renderMessage}
                             keyExtractor={(item) => item._id}
                             extraData={currentTheme}
-                            contentContainerStyle={[styles.messagesList, { paddingBottom: 20, paddingTop: Platform.OS === 'ios' ? 120 : 100 }]}
                             inverted
+                            contentContainerStyle={{ paddingBottom: 30, paddingTop: Platform.OS === 'ios' ? 110 : 90 }}
                             showsVerticalScrollIndicator={false}
                             keyboardShouldPersistTaps="handled"
+                            style={{ flex: 1 }}
                             keyboardDismissMode="interactive"
                             removeClippedSubviews={Platform.OS === 'android'}
                             initialNumToRender={20}
@@ -1630,7 +1733,33 @@ export default function ChatScreen() {
 
                     {/* Input Wrapper - Floating Capsule */}
                     <View style={styles.inputWrapper}>
-                        <View style={styles.inputContainer}>
+                        {replyingTo && (
+                            <View style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                paddingHorizontal: 16,
+                                paddingVertical: 8,
+                                backgroundColor: 'rgba(255,255,255,0.05)',
+                                borderTopLeftRadius: 16,
+                                borderTopRightRadius: 16,
+                                borderBottomWidth: 1,
+                                borderColor: 'rgba(255,255,255,0.1)'
+                            }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '700', marginBottom: 2 }}>
+                                        Replying to {typeof replyingTo.sender === 'object' ? replyingTo.sender.username : (replyingTo.sender === 'me' ? 'Yourself' : 'User')}
+                                    </Text>
+                                    <Text style={{ color: COLORS.textSecondary, fontSize: 12 }} numberOfLines={1}>
+                                        {replyingTo.text || (replyingTo.image ? 'Image' : replyingTo.video ? 'Video' : 'Message')}
+                                    </Text>
+                                </View>
+                                <TouchableOpacity onPress={() => setReplyingTo(null)} style={{ padding: 4 }}>
+                                    <Ionicons name="close-circle" size={20} color={COLORS.textMuted} />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        <View style={[styles.inputContainer, replyingTo && { borderTopLeftRadius: 0, borderTopRightRadius: 0 }]}>
                             <TouchableOpacity onPress={handlePickMedia} style={styles.iconButton}>
                                 <Ionicons name="add-circle-outline" size={26} color={COLORS.primary} />
                             </TouchableOpacity>
@@ -1663,12 +1792,6 @@ export default function ChatScreen() {
                         <TouchableOpacity onPress={handleClearPreview} style={styles.closeButton}>
                             <Ionicons name="close" size={28} color="#fff" />
                         </TouchableOpacity>
-
-                        {selectedImage && (
-                            <TouchableOpacity onPress={handleShowCropOption} style={[styles.closeButton, { marginLeft: 'auto' }]}>
-                                <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
-                            </TouchableOpacity>
-                        )}
                     </View>
 
                     <View style={styles.previewImageContainer}>
@@ -1682,8 +1805,15 @@ export default function ChatScreen() {
                     </View>
 
                     <View style={styles.previewFooter}>
+                        {selectedImage && (
+                            <TouchableOpacity onPress={handleShowCropOption} style={[styles.previewSendButton, { backgroundColor: 'rgba(255,255,255,0.1)', marginRight: 12 }]}>
+                                <Ionicons name="crop" size={22} color="#fff" />
+                                <Text style={{ color: '#fff', marginLeft: 8, fontWeight: '700' }}>Crop</Text>
+                            </TouchableOpacity>
+                        )}
                         <TouchableOpacity onPress={handleConfirmSendMedia} style={styles.previewSendButton} disabled={sending}>
                             {sending ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="send" size={24} color="#fff" />}
+                            {!sending && <Text style={{ color: '#fff', marginLeft: 8, fontWeight: '700' }}>Send</Text>}
                         </TouchableOpacity>
                     </View>
                 </View>

@@ -28,6 +28,7 @@ export interface Message {
         author?: string;
         image: string;
     };
+    replyTo?: Message;
     [key: string]: any;
 }
 
@@ -64,7 +65,8 @@ interface MessageState {
         width?: number,
         height?: number,
         fileSizeBytes?: number,
-        book?: { _id: string; title: string; author?: string; image: string }
+        book?: { _id: string; title: string; author?: string; image: string },
+        replyTo?: string | null
     ) => Promise<{ success: boolean; message?: Message; error?: string }>;
     addReceivedMessage: (message: Message, currentUserId: string) => void;
     fetchUnreadCount: (token: string) => Promise<{ success: boolean; error?: string }>;
@@ -190,7 +192,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         width?: number,
         height?: number,
         fileSizeBytes?: number,
-        book?: { _id: string; title: string; author?: string; image: string }
+        book?: { _id: string; title: string; author?: string; image: string },
+        replyTo?: string | null
     ) => {
         const { messages } = get();
         const tempId = Date.now().toString();
@@ -209,6 +212,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             createdAt: new Date().toISOString(),
             pending: true,
             book,
+            // Optimistic replyTo handling is tricky without full object, might default to null locally until fetch
+            // or we could pass the replyTo OBJECT if we want perfect optimistic UI
         };
 
         const userMessages = messages[receiverId] || [];
@@ -244,7 +249,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ text, image, video, videoThumbnail, fileSizeBytes, book }),
+                body: JSON.stringify({ text, image, video, videoThumbnail, fileSizeBytes, book, replyTo }),
             });
 
             const data = await response.json();

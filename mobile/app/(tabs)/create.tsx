@@ -509,7 +509,7 @@ export default function CreateTab() {
                                 size={32}
                                 color={COLORS.primary}
                             />
-                            <View style={{ flex: 1, paddingHorizontal: 10 }}>
+                            <View style={{ alignItems: 'center' }}>
                                 <Text style={styles.fileName} numberOfLines={1} ellipsizeMode="middle">
                                     {file ? file.name : "Upload Manuscript"}
                                 </Text>

@@ -422,22 +422,31 @@ async function seed() {
             const userB = createdUsers[i + 1];
             const convId = (Message as any).getConversationId(userA._id, userB._id);
 
-            const numMsgs = Math.floor(Math.random() * 3) + 3;
-            for (let j = 0; j < numMsgs; j++) {
-                const isUserA = Math.random() > 0.5;
-                const sender = isUserA ? userA : userB;
-                const receiver = isUserA ? userB : userA;
+            const numMsgs = Math.floor(Math.random() * 5) + 5; // More messages for grouping
+            let lastSender = Math.random() > 0.5 ? userA : userB;
+            let previousMessageId: any = null;
 
-                const hasImage = Math.random() > 0.7;
-                await Message.create({
+            for (let j = 0; j < numMsgs; j++) {
+                // 70% chance to stay with same sender to test grouping
+                const sender = Math.random() > 0.3 ? lastSender : (lastSender === userA ? userB : userA);
+                const receiver = sender === userA ? userB : userA;
+                lastSender = sender;
+
+                const hasImage = Math.random() > 0.8;
+                const isReply = j > 0 && Math.random() > 0.6 && previousMessageId;
+
+                const message = await Message.create({
                     sender: sender._id,
                     receiver: receiver._id,
                     text: CHAT_MESSAGES[Math.floor(Math.random() * CHAT_MESSAGES.length)],
                     image: hasImage ? `https://picsum.photos/seed/msg_${messageCount}/400/400` : undefined,
                     conversationId: convId,
                     read: Math.random() > 0.3,
-                    createdAt: getRandomPastDate(10)
+                    replyTo: isReply ? previousMessageId : undefined,
+                    createdAt: getRandomPastDate(5) // More recent
                 });
+
+                previousMessageId = message._id;
                 messageCount++;
             }
         }

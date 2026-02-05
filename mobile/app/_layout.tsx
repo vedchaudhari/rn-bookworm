@@ -8,6 +8,7 @@ LogBox.ignoreLogs(['expo-notifications: Android Push notifications']);
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import ErrorBoundary from "../components/ErrorBoundary";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useAuthStore } from "../store/authContext";
 import { useSocialStore } from "../store/socialStore";
@@ -203,36 +204,42 @@ export default function RootLayout() {
     }
 
     return (
-        <ErrorBoundary>
-            <SafeAreaProvider>
-                <Stack
-                    screenOptions={{
-                        headerShown: false,
-                        contentStyle: { backgroundColor: COLORS.background },
-                        headerStyle: { backgroundColor: COLORS.background },
-                        headerTintColor: COLORS.textPrimary,
-                        headerShadowVisible: false,
-                        animation: 'slide_from_right',
-                    }}
-                >
-                    {!hasCompletedOnboarding ? (
-                        <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-                    ) : !isAuthenticated ? (
-                        <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
-                    ) : (
-                        <>
-                            <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-                            <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
-                            <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
-                            <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
-                            <Stack.Screen name="book-detail" options={{ headerShown: false }} />
-                        </>
-                    )}
-                </Stack>
-                <StatusBar style="light" />
-                <GlobalAlert />
-                <Toast />
-            </SafeAreaProvider>
-        </ErrorBoundary>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <ErrorBoundary>
+                <SafeAreaProvider>
+                    <Stack
+                        screenOptions={{
+                            headerShown: false,
+                            contentStyle: { backgroundColor: COLORS.background },
+                            headerStyle: { backgroundColor: COLORS.background },
+                            headerTintColor: COLORS.textPrimary,
+                            headerShadowVisible: false,
+                            animation: 'slide_from_right',
+                        }}
+                    >
+                        {!hasCompletedOnboarding ? (
+                            <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+                        ) : !isAuthenticated ? (
+                            <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
+                        ) : (
+                            <>
+                                <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+                                <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
+                                <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
+                                <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
+                                <Stack.Screen name="book-detail" options={{ headerShown: false }} />
+                                <Stack.Screen name="chat" options={{ headerShown: false }} />
+                                <Stack.Screen name="author-dashboard" options={{ headerShown: false }} />
+                                <Stack.Screen name="user-profile" options={{ headerShown: false }} />
+                                <Stack.Screen name="followers-list" options={{ headerShown: false }} />
+                            </>
+                        )}
+                    </Stack>
+                    <StatusBar style="light" />
+                    <GlobalAlert />
+                    <Toast />
+                </SafeAreaProvider>
+            </ErrorBoundary>
+        </GestureHandlerRootView>
     );
 }

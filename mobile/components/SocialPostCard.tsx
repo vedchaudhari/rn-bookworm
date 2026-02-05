@@ -17,6 +17,7 @@ import { useUIStore } from '../store/uiStore';
 import { useSocialStore } from '../store/socialStore';
 import { useEffect } from 'react';
 import ProgressiveImage from './ProgressiveImage';
+import ShareSheet from './ShareSheet';
 
 interface Book {
     _id: string;
@@ -121,6 +122,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
 
     const isOwner = (user?._id || user?.id)?.toString() === ((post.user as any)?._id || (post.user as any)?.id || (typeof post.user === 'string' ? post.user : null))?.toString();
     const [showDropdown, setShowDropdown] = React.useState(false);
+    const [shareVisible, setShareVisible] = React.useState(false);
 
     const handleDelete = () => {
         setShowDropdown(false);
@@ -180,14 +182,19 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.headerLeft}
-                    onPress={() => router.push({ pathname: '/user-profile', params: { userId: post.user._id } })}
+                    onPress={() => {
+                        const userId = post.user?._id;
+                        if (userId) {
+                            router.push({ pathname: '/user-profile', params: { userId } });
+                        }
+                    }}
                 >
                     <ProgressiveImage
-                        source={{ uri: post.user.profileImage }}
+                        source={{ uri: post.user?.profileImage || 'https://via.placeholder.com/100/1a1a2e/00e5ff?text=User' }}
                         style={styles.avatar}
                         contentFit="cover"
                     />
-                    <Text style={styles.username}>{post.user.username}</Text>
+                    <Text style={styles.username}>{post.user?.username || 'Unknown User'}</Text>
                 </TouchableOpacity>
 
                 <View style={{ zIndex: 1001 }}>
@@ -260,6 +267,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
             </TouchableOpacity>
 
             {/* 3. Actions Row */}
+            {/* 3. Actions Row */}
             <View style={styles.actionRow}>
                 <View style={styles.leftActions}>
                     <LikeButton
@@ -276,7 +284,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
                     >
                         <Ionicons name="chatbubble-outline" size={22} color={COLORS.textPrimary} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton}>
+                    <TouchableOpacity style={styles.actionButton} onPress={() => setShareVisible(true)}>
                         <Ionicons name="paper-plane-outline" size={22} color={COLORS.textPrimary} />
                     </TouchableOpacity>
                 </View>
@@ -288,10 +296,21 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
                 />
             </View>
 
+            <ShareSheet
+                visible={shareVisible}
+                onClose={() => setShareVisible(false)}
+                content={{
+                    type: 'book',
+                    data: post
+                }}
+            />
+
             {/* 4. Likes Count Label */}
-            {syncedLikeCount > 0 ? (
-                <Text style={styles.likesText}>{syncedLikeCount.toLocaleString()} likes</Text>
-            ) : null}
+            {
+                syncedLikeCount > 0 ? (
+                    <Text style={styles.likesText}>{syncedLikeCount.toLocaleString()} likes</Text>
+                ) : null
+            }
 
             {/* 5. Content Strip (Rating + Title/Caption) */}
             <View style={styles.ratingStrip}>
@@ -318,7 +337,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, index, onDelete }
 
             {/* 6. Date */}
             <Text style={styles.timeAgo}>{formatPublishDate(post.createdAt)}</Text>
-        </Animated.View>
+        </Animated.View >
     );
 };
 

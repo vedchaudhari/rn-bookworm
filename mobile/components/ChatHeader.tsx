@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import Animated from 'react-native-reanimated';
+import Animated, { withRepeat, withSequence, withTiming, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import COLORS from '../constants/colors';
 import { SPACING, SHADOWS } from '../constants/styleConstants';
@@ -19,6 +19,37 @@ interface ChatHeaderProps {
     onClearChat: () => void;
     onOpenPalette: () => void;
 }
+
+const TypingDot = ({ delay }: { delay: number }) => {
+    const translateY = useSharedValue(0);
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            translateY.value = withRepeat(
+                withSequence(
+                    withTiming(-4, { duration: 400 }),
+                    withTiming(0, { duration: 400 })
+                ),
+                -1,
+                true
+            );
+        }, delay);
+        return () => clearTimeout(timeout);
+    }, []);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: translateY.value }],
+    }));
+
+    return (
+        <Animated.View style={[{
+            width: 3.5,
+            height: 3.5,
+            borderRadius: 1.75,
+            backgroundColor: COLORS.primary,
+            marginHorizontal: 1
+        }, animatedStyle]} />
+    );
+};
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({
     username,
@@ -72,7 +103,24 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
             <View style={[styles.headerInfo, { flex: 1, marginLeft: 12 }]}>
                 <Text style={styles.headerName} numberOfLines={1}>{isSelf ? 'Saved Messages' : username}</Text>
                 {isTyping && !isSelf ? (
-                    <Text style={[styles.headerStatus, { color: COLORS.primary, textTransform: 'none' }]}>Typing...</Text>
+                    <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: 10,
+                        borderWidth: 0.5,
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        alignSelf: 'flex-start'
+                    }}>
+                        <Text style={[styles.headerStatus, { color: COLORS.primary, textTransform: 'none', marginRight: 4 }]}>Typing</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <TypingDot delay={0} />
+                            <TypingDot delay={200} />
+                            <TypingDot delay={400} />
+                        </View>
+                    </View>
                 ) : (
                     <Text style={styles.headerStatus}>{displayStatus}</Text>
                 )}

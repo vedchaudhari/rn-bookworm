@@ -96,7 +96,7 @@ router.get("/presigned-url", protectRoute, async (req: Request, res: Response) =
 router.post("/send/:receiverId", protectRoute, async (req: Request, res: Response) => {
     try {
         const { receiverId } = req.params;
-        const { text, image, video, videoThumbnail, fileSizeBytes, book } = req.body as SendMessageBody;
+        const { text, image, video, videoThumbnail, fileSizeBytes, book, replyTo } = req.body as SendMessageBody & { replyTo?: string };
         const senderId = req.user!._id;
 
         // Validate receiverId format
@@ -141,11 +141,19 @@ router.post("/send/:receiverId", protectRoute, async (req: Request, res: Respons
             fileSizeBytes,
             conversationId,
             book,
+            replyTo,
         });
 
         await newMessage.save();
         await newMessage.populate("sender", "username profileImage");
         await newMessage.populate("receiver", "username profileImage");
+        if (replyTo) {
+            await newMessage.populate({
+                path: 'replyTo',
+                select: 'sender text image video book',
+                populate: { path: 'sender', select: 'username' }
+            });
+        }
 
         // Sign the media URLs if they exist before emitting and returning
         await signMessageMedia(newMessage);
@@ -216,7 +224,12 @@ router.get("/conversation/:userId", protectRoute, async (req: Request, res: Resp
             .skip(skip)
             .limit(limit)
             .populate("sender", "username profileImage")
-            .populate("receiver", "username profileImage");
+            .populate("receiver", "username profileImage")
+            .populate({
+                path: 'replyTo',
+                select: 'sender text image video book',
+                populate: { path: 'sender', select: 'username' }
+            });
 
         const totalMessages = await Message.countDocuments({ conversationId });
 

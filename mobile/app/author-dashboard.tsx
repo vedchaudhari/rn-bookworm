@@ -28,7 +28,7 @@ export default function AuthorDashboard() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    const { token } = useAuthStore();
+    const { token, user } = useAuthStore();
     const { showAlert } = useUIStore();
     const router = useRouter();
 
@@ -38,7 +38,7 @@ export default function AuthorDashboard() {
 
     const fetchMyBooks = async () => {
         try {
-            const response = await fetch(`${API_URL}/api/books/user`, {
+            const response = await fetch(`${API_URL}/api/books/user/${user?.id || user?._id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
@@ -71,7 +71,7 @@ export default function AuthorDashboard() {
                         <View style={styles.dotSeparator} />
                         <Text style={[
                             styles.statusBadge,
-                            { color: item.publishStatus === 'published' ? COLORS.success : COLORS.warning }
+                            { backgroundColor: COLORS.surfaceHighlight, color: item.publishStatus === 'published' ? COLORS.success : COLORS.warning }
                         ]}>
                             {item.publishStatus.toUpperCase()}
                         </Text>
@@ -117,7 +117,7 @@ export default function AuthorDashboard() {
     return (
         <SafeScreen top={false}>
             {/* Using the new AppHeader for the premium look */}
-            <AppHeader showSearch={true} showBack={false} />
+            <AppHeader showSearch={true} showBack={true} />
 
             <View style={styles.container}>
                 <View style={styles.header}>
@@ -151,7 +151,7 @@ export default function AuthorDashboard() {
                                 <View style={styles.buttonContainer}>
                                     <PremiumButton
                                         title="Create New Book"
-                                        onPress={() => router.push('/(tabs)/create')}
+                                        onPress={() => router.push('/create')}
                                         style={{ width: '100%' }}
                                     />
                                 </View>

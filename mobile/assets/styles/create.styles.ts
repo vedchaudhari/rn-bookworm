@@ -307,10 +307,12 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         marginBottom: 4,
+        textAlign: 'center',
     },
     fileSize: {
         color: COLORS.textSecondary,
         fontSize: 12,
+        textAlign: 'center',
     },
     removeFile: {
         padding: SPACING.xs,

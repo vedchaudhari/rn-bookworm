@@ -33,13 +33,17 @@ const ReadingActivityCard = ({ session, onPress }: ReadingActivityCardProps) => 
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    // Handle null bookId gracefully
+    const bookCover = session.bookId?.coverImage || 'https://via.placeholder.com/150x225/1a1a2e/00e5ff?text=No+Cover';
+    const bookTitle = session.bookId?.title || 'Unknown Book';
+
     return (
         <TouchableOpacity onPress={onPress} activeOpacity={0.7} disabled={!onPress}>
             <GlassCard style={styles.card}>
                 <View style={styles.container}>
                     {/* Book Cover */}
                     <Image
-                        source={{ uri: session.bookId.coverImage }}
+                        source={{ uri: bookCover }}
                         style={styles.cover}
                         contentFit="cover"
                         transition={300}
@@ -48,7 +52,7 @@ const ReadingActivityCard = ({ session, onPress }: ReadingActivityCardProps) => 
                     {/* Session Details */}
                     <View style={styles.details}>
                         <Text style={styles.title} numberOfLines={1}>
-                            {session.bookId.title}
+                            {bookTitle}
                         </Text>
                         <Text style={styles.date}>
                             {formatDate(session.startTime)} • {formatTime(session.startTime)}

@@ -1,4 +1,4 @@
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet, ListRenderItemInfo } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet, ListRenderItemInfo, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -9,6 +9,7 @@ import { useMessageStore } from '../../store/messageStore';
 import { useAuthStore } from '../../store/authContext';
 import SafeScreen from '../../components/SafeScreen';
 import GlassCard from '../../components/GlassCard';
+import { SPACING, SHADOWS } from '../../constants/styleConstants';
 
 interface Conversation {
     conversationId: string;
@@ -28,6 +29,7 @@ interface Conversation {
 export default function Messages() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const { conversations, fetchConversations, unreadCount } = useMessageStore();
     const { token, user } = useAuthStore();
@@ -53,6 +55,14 @@ export default function Messages() {
             loadConversations();
         }, [token])
     );
+
+    const filteredConversations = conversations.filter(conv => {
+        const otherUser = typeof conv.otherUser === 'object' ? conv.otherUser : { username: '' };
+        const username = otherUser.username || '';
+        const lastMsg = conv.lastMessage?.text || '';
+        return username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            lastMsg.toLowerCase().includes(searchQuery.toLowerCase());
+    });
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -101,6 +111,8 @@ export default function Messages() {
                 <GlassCard style={[styles.conversationCard, (item.unreadCount || 0) > 0 ? styles.unreadConversation : {}]}>
                     <View style={styles.avatarContainer}>
                         <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+                        {/* Mock Online Status - in a real app this would come from the user object */}
+                        {!self && <View style={[styles.statusDot, { position: 'absolute', bottom: 2, right: 2, backgroundColor: '#10B981', borderWidth: 2, borderColor: COLORS.background }]} />}
                         {self && (
                             <View style={styles.selfBadge}>
                                 <Ionicons name="bookmark" size={10} color={COLORS.white} />
@@ -150,8 +162,27 @@ export default function Messages() {
                     <Text style={styles.headerTitle}>Messages</Text>
                     {unreadCount > 0 && (<View style={styles.headerBadge}><Text style={styles.headerBadgeText}>{unreadCount}</Text></View>)}
                 </View>
+
+                <View style={styles.searchContainer}>
+                    <GlassCard style={styles.searchGlass}>
+                        <Ionicons name="search" size={18} color={COLORS.textMuted} />
+                        <TextInput
+                            placeholder="Search conversations..."
+                            placeholderTextColor={COLORS.textMuted}
+                            style={styles.searchInput}
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                        />
+                        {searchQuery !== '' && (
+                            <TouchableOpacity onPress={() => setSearchQuery('')}>
+                                <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+                            </TouchableOpacity>
+                        )}
+                    </GlassCard>
+                </View>
+
                 <FlatList
-                    data={conversations}
+                    data={filteredConversations}
                     renderItem={renderConversation}
                     keyExtractor={(item, index) => `${item.conversationId || item._id || 'conv'}-${index}`}
                     contentContainerStyle={[styles.listContent, { paddingBottom: TAB_BAR_SPACE }]}
@@ -173,28 +204,32 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: COLORS.background },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, gap: 8 },
-    headerTitle: { fontSize: 24, fontWeight: '900', color: COLORS.textPrimary, letterSpacing: -0.5 },
+    headerTitle: { fontSize: 26, fontWeight: '900', color: COLORS.textPrimary, letterSpacing: -0.5 },
     headerBadge: { backgroundColor: COLORS.primary, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
     headerBadgeText: { color: '#fff', fontSize: 11, fontWeight: '900' },
+    searchContainer: { paddingHorizontal: 20, marginBottom: 16 },
+    searchGlass: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, gap: 10 },
+    searchInput: { flex: 1, color: COLORS.textPrimary, fontSize: 15, fontWeight: '500', padding: 0 },
     listContent: { paddingBottom: 120 },
-    conversationCard: { flexDirection: 'row', padding: 16, marginHorizontal: 20, gap: 16, alignItems: 'center' },
-    unreadConversation: { backgroundColor: COLORS.surfaceHighlight, borderColor: COLORS.primaryLight + '44' },
+    conversationCard: { flexDirection: 'row', padding: 16, marginHorizontal: 20, gap: 16, alignItems: 'center', borderRadius: 24 },
+    unreadConversation: { backgroundColor: 'rgba(59, 130, 246, 0.08)', borderColor: 'rgba(59, 130, 246, 0.3)' },
     avatarContainer: { position: 'relative' },
-    avatar: { width: 50, height: 50, borderRadius: 25, borderWidth: 1, borderColor: COLORS.glassBorderLight },
-    selfBadge: { position: 'absolute', bottom: -2, right: -2, backgroundColor: COLORS.primary, width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.surfaceHighlight },
+    avatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    statusDot: { width: 14, height: 14, borderRadius: 7 },
+    selfBadge: { position: 'absolute', bottom: -2, right: -2, backgroundColor: COLORS.primary, width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.background },
     conversationContent: { flex: 1, justifyContent: 'center' },
     conversationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-    username: { fontSize: 16, fontWeight: '600', color: COLORS.textPrimary },
-    usernameUnread: { fontWeight: '800', color: COLORS.white },
+    username: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
+    usernameUnread: { fontWeight: '900', color: COLORS.white },
     time: { fontSize: 12, color: COLORS.textMuted, fontWeight: '500' },
     timeUnread: { color: COLORS.primaryLight, fontWeight: '700' },
     messagePreview: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     lastMessage: { flex: 1, fontSize: 14, color: COLORS.textSecondary, fontWeight: '400' },
     messageUnread: { color: COLORS.textPrimary, fontWeight: '600' },
     mediaMessage: { flex: 1, fontSize: 14, color: COLORS.textMuted, fontStyle: 'italic' },
-    unreadBadge: { backgroundColor: COLORS.primary, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, minWidth: 20, alignItems: 'center' },
-    unreadBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
-    emptyContainer: { alignItems: 'center', padding: 60, marginTop: 80 },
+    unreadBadge: { backgroundColor: COLORS.primary, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, minWidth: 20, alignItems: 'center', ...SHADOWS.aura, shadowColor: COLORS.primary },
+    unreadBadgeText: { color: '#fff', fontSize: 11, fontWeight: '900' },
+    emptyContainer: { alignItems: 'center', padding: 60, marginTop: 40 },
     emptyText: { fontSize: 20, fontWeight: '800', color: COLORS.textPrimary, marginTop: 20 },
     emptySubtext: { fontSize: 15, color: COLORS.textSecondary, marginTop: 8, textAlign: 'center' },
 });

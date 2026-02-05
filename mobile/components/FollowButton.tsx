@@ -53,7 +53,11 @@ export default function FollowButton({ userId, initialFollowing, onFollowChange,
                 style,
             ]}
         >
-            <Text style={[styles.buttonText, isFollowing ? styles.followingText : styles.followText]}>
+            <Text
+                style={[styles.buttonText, isFollowing ? styles.followingText : styles.followText]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+            >
                 {isFollowing ? 'Following' : 'Follow'}
             </Text>
         </TouchableOpacity>
@@ -62,7 +66,7 @@ export default function FollowButton({ userId, initialFollowing, onFollowChange,
 
 const styles = StyleSheet.create({
     button: {
-        height: 44,
+        paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 12,
         alignItems: 'center',
@@ -76,17 +80,18 @@ const styles = StyleSheet.create({
     },
     followingButton: {
         backgroundColor: COLORS.surface,
-        borderColor: COLORS.glassBorderLight,
+        borderColor: COLORS.glassBorder,
     },
     compactButton: {
-        height: 36,
-        paddingHorizontal: 16,
+        paddingVertical: 6,
+        paddingHorizontal: 12, // Reduced from 16 to prevent wrapping
         borderRadius: 10,
     },
     buttonText: {
         fontWeight: '800',
         fontSize: 14,
         letterSpacing: 0.3,
+        lineHeight: 20,
     },
     followText: {
         color: COLORS.white,

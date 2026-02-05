@@ -103,15 +103,18 @@ export default function CommentSection({ bookId }: CommentSectionProps) {
 
     const renderComment = ({ item }: { item: Comment }) => (
         <View style={styles.commentItem}>
-            <Image source={{ uri: item.user.profileImage }} style={styles.avatar} />
+            <Image
+                source={{ uri: item.user?.profileImage || 'https://via.placeholder.com/100/1a1a2e/00e5ff?text=User' }}
+                style={styles.avatar}
+            />
             <View style={styles.commentContent}>
-                <Text style={styles.username}>{item.user.username}</Text>
+                <Text style={styles.username}>{item.user?.username || 'Unknown User'}</Text>
                 <Text style={styles.commentText}>{item.text}</Text>
                 <Text style={styles.commentDate}>
                     {new Date(item.createdAt).toLocaleDateString()}
                 </Text>
             </View>
-            {item.user._id === user?._id && (
+            {item.user?._id === user?._id && (
                 <TouchableOpacity
                     onPress={() => handleDeleteComment(item._id)}
                     style={styles.deleteButton}

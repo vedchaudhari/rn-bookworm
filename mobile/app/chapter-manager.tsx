@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     iconBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8 },
     emptyContainer: { alignItems: 'center', justifyContent: 'center', marginTop: 100 },
     emptyText: { color: COLORS.textMuted, textAlign: 'center', marginTop: 16, fontSize: 16 },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: 20 },
+    modalOverlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'center', padding: 20 },
     modalContent: { padding: 24, borderRadius: 24 },
     modalTitle: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 8 },
     modalSubtitle: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 20 },

@@ -314,7 +314,7 @@ export default function Profile() {
                         <View style={styles.avatarGlowRing}>
                             <Image source={{ uri: currentUser?.profileImage }} style={styles.avatarImage} />
                             {uploadingImage && (
-                                <View style={[styles.avatarImage, { position: 'absolute', backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }]}>
+                                <View style={[styles.avatarImage, { position: 'absolute', backgroundColor: COLORS.overlay, justifyContent: 'center', alignItems: 'center' }]}>
                                     <ActivityIndicator color={COLORS.white} />
                                 </View>
                             )}

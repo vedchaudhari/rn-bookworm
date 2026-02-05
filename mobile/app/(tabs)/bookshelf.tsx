@@ -64,6 +64,8 @@ export default function BookshelfScreen() {
     const [activeTab, setActiveTab] = useState<TabType>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [showFilters, setShowFilters] = useState(false);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [isFilterLoading, setIsFilterLoading] = useState(false);
 
     const {
         items,
@@ -86,16 +88,27 @@ export default function BookshelfScreen() {
         fetchStats();
     }, []);
 
-    // Reload when tab changes
+    // Reload when tab changes (skip on initial mount)
     useEffect(() => {
-        if (activeTab !== 'all') {
-            const tab = TABS.find(t => t.key === activeTab);
-            if (tab?.status) {
-                fetchBookshelf({ status: tab.status, offset: 0 });
+        if (isInitialLoad) return;
+
+        const loadTabData = async () => {
+            setIsFilterLoading(true);
+            try {
+                if (activeTab !== 'all') {
+                    const tab = TABS.find(t => t.key === activeTab);
+                    if (tab?.status) {
+                        await fetchBookshelf({ status: tab.status, offset: 0 });
+                    }
+                } else {
+                    await fetchBookshelf({ offset: 0 });
+                }
+            } finally {
+                setIsFilterLoading(false);
             }
-        } else {
-            fetchBookshelf({ offset: 0 });
-        }
+        };
+
+        loadTabData();
     }, [activeTab]);
 
     const loadInitialData = async () => {
@@ -103,6 +116,8 @@ export default function BookshelfScreen() {
             await fetchBookshelf({ offset: 0 });
         } catch (error) {
             console.error('Failed to load bookshelf:', error);
+        } finally {
+            setIsInitialLoad(false);
         }
     };
 
@@ -123,6 +138,11 @@ export default function BookshelfScreen() {
     const handleAddBook = () => {
         router.push('/create' as any);
         AccessibilityInfo.announceForAccessibility('Navigate to create to add books');
+    };
+
+    const handleBrowse = () => {
+        router.push('/explore' as any);
+        AccessibilityInfo.announceForAccessibility('Navigate to explore to browse books');
     };
 
     const handleStartReading = (item: any) => {
@@ -294,7 +314,7 @@ export default function BookshelfScreen() {
                 {!searchQuery && (
                     <GlazedButton
                         title="Browse Books"
-                        onPress={handleAddBook}
+                        onPress={handleBrowse}
                         style={styles.emptyButton}
                     />
                 )}
@@ -370,38 +390,141 @@ export default function BookshelfScreen() {
             <View style={styles.container}>
                 {renderError()}
 
-                <FlatList
-                    data={filteredItems}
-                    keyExtractor={(item, index) => `${item._id || 'item'}-${index}`}
-                    renderItem={({ item, index }) => (
-                        <Animated.View entering={FadeInDown.delay(index * 100).duration(600).springify()}>
-                            <BookShelfCard
-                                item={item}
-                                onPress={() => handleBookPress(item)}
-                                onStartReading={() => handleStartReading(item)}
-                                onAddNote={() => handleAddNote(item)}
-                            />
-                        </Animated.View>
-                    )}
-                    ListHeaderComponent={renderHeader}
-                    ListEmptyComponent={renderEmpty}
-                    ListFooterComponent={renderFooter}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={isRefreshing}
-                            onRefresh={handleRefresh}
-                            tintColor={COLORS.primary}
+                {/* Static Header with Stats */}
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>My Bookshelf</Text>
+                    <TouchableOpacity
+                        onPress={() => setShowFilters(!showFilters)}
+                        accessibilityLabel="Toggle filters"
+                        accessibilityHint="Shows or hides filter options"
+                    >
+                        <Ionicons
+                            name={showFilters ? 'filter' : 'filter-outline'}
+                            size={COMPONENT_SIZES.icon.large}
+                            color={COLORS.primary}
                         />
-                    }
-                    onEndReached={handleLoadMore}
-                    onEndReachedThreshold={0.5}
-                    contentContainerStyle={styles.listContent}
-                    showsVerticalScrollIndicator={false}
-                    removeClippedSubviews={true}
-                    maxToRenderPerBatch={10}
-                    updateCellsBatchingPeriod={50}
-                    windowSize={10}
-                />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Static Stats Cards */}
+                {stats && (
+                    <View style={styles.statsContainer}>
+                        <GlassCard style={styles.statCard}>
+                            <Text style={styles.statValue}>{stats.totalBooks}</Text>
+                            <Text style={styles.statLabel}>Total Books</Text>
+                        </GlassCard>
+                        <GlassCard style={styles.statCard}>
+                            <Text style={styles.statValue}>{stats.currentlyReading}</Text>
+                            <Text style={styles.statLabel}>Reading</Text>
+                        </GlassCard>
+                        <GlassCard style={styles.statCard}>
+                            <Text style={styles.statValue}>{stats.completed}</Text>
+                            <Text style={styles.statLabel}>Completed</Text>
+                        </GlassCard>
+                    </View>
+                )}
+
+                {/* Static Search Bar */}
+                <View style={styles.searchContainer}>
+                    <Ionicons
+                        name="search"
+                        size={COMPONENT_SIZES.icon.medium}
+                        color={COLORS.textMuted}
+                        style={styles.searchIcon}
+                    />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search books, authors, tags..."
+                        placeholderTextColor={COLORS.textMuted}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        accessibilityLabel="Search bookshelf"
+                        accessibilityHint="Type to filter books by title, author, or tags"
+                    />
+                    {searchQuery.length > 0 && (
+                        <TouchableOpacity
+                            onPress={() => setSearchQuery('')}
+                            accessibilityLabel="Clear search"
+                            style={styles.clearButton}
+                        >
+                            <Ionicons name="close-circle" size={COMPONENT_SIZES.icon.medium} color={COLORS.textMuted} />
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                {/* Static Tabs */}
+                <View style={styles.tabsContainer}>
+                    <FlatList
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        data={TABS}
+                        keyExtractor={(item) => item.key}
+                        renderItem={({ item: tab }) => (
+                            <TouchableOpacity
+                                style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+                                onPress={() => handleTabChange(tab.key)}
+                                accessibilityRole="tab"
+                                accessibilityState={{ selected: activeTab === tab.key }}
+                                accessibilityLabel={tab.label}
+                            >
+                                <Ionicons
+                                    name={tab.icon}
+                                    size={COMPONENT_SIZES.icon.small}
+                                    color={activeTab === tab.key ? COLORS.primary : COLORS.textMuted}
+                                    style={styles.tabIcon}
+                                />
+                                <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+                                    {tab.label}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                        contentContainerStyle={styles.tabsList}
+                    />
+                </View>
+
+                {/* Dynamic Book List - Only this part reloads */}
+                <View style={{ flex: 1, opacity: isFilterLoading ? 0.5 : 1 }}>
+                    <FlatList
+                        data={filteredItems}
+                        keyExtractor={(item, index) => `${item._id || 'item'}-${index}`}
+                        renderItem={({ item, index }) => (
+                            isInitialLoad ? (
+                                <Animated.View entering={FadeInDown.delay(index * 100).duration(600).springify()}>
+                                    <BookShelfCard
+                                        item={item}
+                                        onPress={() => handleBookPress(item)}
+                                        onStartReading={() => handleStartReading(item)}
+                                        onAddNote={() => handleAddNote(item)}
+                                    />
+                                </Animated.View>
+                            ) : (
+                                <BookShelfCard
+                                    item={item}
+                                    onPress={() => handleBookPress(item)}
+                                    onStartReading={() => handleStartReading(item)}
+                                    onAddNote={() => handleAddNote(item)}
+                                />
+                            )
+                        )}
+                        ListEmptyComponent={renderEmpty}
+                        ListFooterComponent={renderFooter}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={isRefreshing}
+                                onRefresh={handleRefresh}
+                                tintColor={COLORS.primary}
+                            />
+                        }
+                        onEndReached={handleLoadMore}
+                        onEndReachedThreshold={0.5}
+                        contentContainerStyle={styles.bookListContent}
+                        showsVerticalScrollIndicator={false}
+                        removeClippedSubviews={true}
+                        maxToRenderPerBatch={10}
+                        updateCellsBatchingPeriod={50}
+                        windowSize={10}
+                    />
+                </View>
 
                 {/* Floating Add Button */}
                 <TouchableOpacity
@@ -438,6 +561,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: PADDING.screen.horizontal,
         paddingBottom: 100,
     },
+    bookListContent: {
+        paddingHorizontal: PADDING.screen.horizontal,
+        paddingBottom: 100,
+    },
 
     // Header
     header: {
@@ -446,6 +573,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: SPACING.xxl,
         marginBottom: MARGIN.section.medium,
+        paddingHorizontal: PADDING.screen.horizontal,
     },
     headerTitle: {
         ...TYPOGRAPHY.h1,
@@ -458,6 +586,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginBottom: MARGIN.item.large,
         gap: SPACING.md,
+        paddingHorizontal: PADDING.screen.horizontal,
     },
     statCard: {
         flex: 1,
@@ -487,6 +616,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: SPACING.lg,
         paddingVertical: SPACING.md,
         marginBottom: MARGIN.item.medium,
+        marginHorizontal: PADDING.screen.horizontal,
     },
     searchIcon: {
         marginRight: SPACING.md,
@@ -504,6 +634,7 @@ const styles = StyleSheet.create({
     // Tabs
     tabsContainer: {
         marginBottom: MARGIN.item.medium,
+        paddingHorizontal: PADDING.screen.horizontal,
     },
     tabsList: {
         gap: SPACING.md,
@@ -585,6 +716,20 @@ const styles = StyleSheet.create({
     footerLoader: {
         paddingVertical: SPACING.xxl,
         alignItems: 'center',
+    },
+
+    // Filter Loading
+    filterLoadingContainer: {
+        paddingVertical: SPACING.xxl,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 150,
+    },
+    filterLoadingText: {
+        marginTop: SPACING.md,
+        fontSize: FONT_SIZE.sm,
+        color: COLORS.textMuted,
+        fontWeight: '600',
     },
 
     // FAB

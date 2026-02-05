@@ -23,6 +23,7 @@ export interface IMessage {
         author?: string;
         image: string;
     };
+    replyTo?: mongoose.Types.ObjectId;
 }
 
 export interface IMessageDocument extends IMessage, Document {
@@ -105,6 +106,11 @@ const messageSchema = new Schema<IMessageDocument>(
             title: String,
             author: String,
             image: String,
+        },
+        replyTo: {
+            type: Schema.Types.ObjectId,
+            ref: "Message",
+            required: false,
         },
     },
     { timestamps: true }

@@ -106,7 +106,7 @@ export default function Notifications() {
                 router.push('/rewards');
                 break;
             case 'GOAL_COMPLETED':
-                router.push('/author-dashboard');
+                router.push('/streaks');
                 break;
             default:
                 break;
