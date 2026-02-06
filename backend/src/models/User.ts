@@ -28,7 +28,6 @@ export interface IUser {
     subscriptionTier?: 'monthly' | 'yearly';
     subscriptionExpiry?: Date;
     isPrivate: boolean;
-    // expoPushToken is currently unused (PushNotifications disabled)
     expoPushToken?: string | null;
     notificationsEnabled: boolean;
 }
@@ -134,7 +133,6 @@ const userSchema = new Schema<IUserDocument>(
             type: Boolean,
             default: false
         },
-        // [DISABLED] - Currently unused
         expoPushToken: {
             type: String,
             default: null

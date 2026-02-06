@@ -14,6 +14,7 @@ import * as VideoThumbnails from 'expo-video-thumbnails';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import * as Notifications from 'expo-notifications';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
@@ -29,8 +30,6 @@ import styles from '../assets/styles/chat.styles';
 import ChatHeader from '../components/ChatHeader';
 import ImageCropper from '../components/ImageCropper';
 
-
-
 // Premium Media Viewer Component
 interface MediaViewerProps {
     visible: boolean;
@@ -42,7 +41,23 @@ interface MediaViewerProps {
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, media, onPlayingChange }) => {
-    const { showAlert } = useUIStore();
+    const { showAlert, setActiveScreen, setActiveChatId } = useUIStore();
+    const { userId } = useLocalSearchParams<{ userId: string }>();
+
+    // Track active screen and chat for foreground suppression
+    useEffect(() => {
+        setActiveScreen('chat');
+        if (userId) {
+            setActiveChatId(userId);
+            // Also dismiss all notifications because user is now active in a specific chat
+            Notifications.dismissAllNotificationsAsync().catch((err: any) => console.error('[Push] Dismissal error:', err));
+        }
+
+        return () => {
+            setActiveScreen(null);
+            setActiveChatId(null);
+        };
+    }, [userId]);
     const scale = useSharedValue(1);
     const opacity = useSharedValue(0);
     const savedScale = useSharedValue(1);

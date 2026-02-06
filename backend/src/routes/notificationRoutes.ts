@@ -135,9 +135,7 @@ router.post("/register-token", protectRoute, async (req: Request, res: Response)
     }
 });
 
-/*
 // Test Push Notification
-// [DISABLED]
 router.post("/test", protectRoute, async (req: Request, res: Response) => {
     try {
         const userId = req.user!._id;
@@ -155,7 +153,6 @@ router.post("/test", protectRoute, async (req: Request, res: Response) => {
         res.status(500).json({ message: "Internal server error" });
     }
 });
-*/
 
 router.get("/test/:userId", asyncHandler(async (req: Request, res: Response) => {
     const { userId } = req.params;

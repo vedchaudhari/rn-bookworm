@@ -1,4 +1,5 @@
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet, ListRenderItemInfo } from 'react-native';
+import * as ExpoNotifications from 'expo-notifications';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -56,6 +57,9 @@ export default function Notifications() {
             if (token && unreadCount > 0) {
                 markAllAsRead(token);
             }
+
+            // Dismiss all system-level notifications as user is now looking at them
+            ExpoNotifications.dismissAllNotificationsAsync().catch((err: any) => console.error('[Push] Dismissal error:', err));
 
             return () => {
                 setActiveScreen(null);

@@ -16,14 +16,16 @@ Notifications.setNotificationHandler({
         shouldPlaySound: false,
         shouldSetBadge: true,
         shouldShowBanner: false,
-        shouldShowList: true,
+        shouldShowList: false, // Don't show in notification tray when app is active
     }),
 });
 
 export async function registerForPushNotificationsAsync(token: string) {
+    /*
     if (Constants.executionEnvironment === 'storeClient') {
         return null;
     }
+    */
 
     if (!Device.isDevice) {
         console.warn('⚠️ [Push] You are on a simulator. Push notifications may not appear visually, but we will still attempt to register a token for testing.');
@@ -88,10 +90,12 @@ export async function registerForPushNotificationsAsync(token: string) {
  * Setup listeners for when notifications are received or interacted with
  */
 export function setupPushNotificationListeners(router: any) {
+    /*
     if (Constants.executionEnvironment === 'storeClient') {
         // console.log('ℹ️ [Push] Skipping listeners in Expo Go to avoid SDK warnings.');
         return () => { };
     }
+    */
 
     try {
         // Standard listeners for real push notifications
