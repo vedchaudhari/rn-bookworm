@@ -23,7 +23,7 @@ import GlobalAlert from "../components/GlobalAlert";
 import Toast from "../components/Toast";
 import { useUIStore } from "../store/uiStore";
 import { registerForPushNotificationsAsync, setupPushNotificationListeners } from "../lib/pushNotifications";
-import { usePermissions } from "../hooks/usePermissions";
+// import { usePermissions } from "../hooks/usePermissions";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -225,23 +225,26 @@ export default function RootLayout() {
                         }}
                     >
                         <Stack.Screen name="index" options={{ headerShown: false }} />
-                        {!hasCompletedOnboarding ? (
-                            <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-                        ) : !isAuthenticated ? (
-                            <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
-                        ) : (
-                            <>
-                                <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-                                <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
-                                <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
-                                <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
-                                <Stack.Screen name="book-detail" options={{ headerShown: false }} />
-                                <Stack.Screen name="chat" options={{ headerShown: false }} />
-                                <Stack.Screen name="author-dashboard" options={{ headerShown: false }} />
-                                <Stack.Screen name="user-profile" options={{ headerShown: false }} />
-                                <Stack.Screen name="followers-list" options={{ headerShown: false }} />
-                            </>
-                        )}
+
+                        {/* 
+                            STABILITY FIX:
+                            We keep all major route groups loaded in the Stack definition.
+                            This prevents React Navigation from "loosing context" or crashing
+                            when 'isAuthenticated' changes and we perform a redirect.
+                            Access control is handled by the `useEffect` redirector above.
+                        */}
+                        <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+                        <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
+                        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+
+                        <Stack.Screen name="create-note" options={{ presentation: 'modal' }} />
+                        <Stack.Screen name="book-progress/[id]" options={{ headerShown: false }} />
+                        <Stack.Screen name="book-edit" options={{ presentation: 'modal', headerShown: false }} />
+                        <Stack.Screen name="book-detail" options={{ headerShown: false }} />
+                        <Stack.Screen name="chat" options={{ headerShown: false }} />
+                        <Stack.Screen name="author-dashboard" options={{ headerShown: false }} />
+                        <Stack.Screen name="user-profile" options={{ headerShown: false }} />
+                        <Stack.Screen name="followers-list" options={{ headerShown: false }} />
                     </Stack>
                     <StatusBar style="light" />
                     <GlobalAlert />

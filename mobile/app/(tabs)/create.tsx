@@ -321,7 +321,7 @@ export default function CreateTab() {
 
         } catch (error: any) {
             console.error("Error creating post: ", error);
-            showAlert({ title: "Error", message: error.message || "Something went wrong", type: "error" });
+            showAlert({ title: "Error", message: error.message || "We couldn't create your post. Please check your connection and try again.", type: "error" });
         } finally {
             setLoading(false);
         }

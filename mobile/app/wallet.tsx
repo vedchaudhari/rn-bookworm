@@ -39,7 +39,7 @@ export default function WalletScreen() {
         if (result.success) {
             showAlert({ title: 'Success', message: 'Thank you for your purchase! Your balance has been updated.', type: 'success' });
         } else {
-            showAlert({ title: 'Purchase Failed', message: result.error || 'Something went wrong', type: 'error' });
+            showAlert({ title: 'Purchase Failed', message: result.error || 'We couldn\'t process your purchase. Please try again.', type: 'error' });
         }
     };
 

@@ -39,13 +39,22 @@ export default function UserProfile() {
 
     const isOwnProfile = (currentUser?._id || (currentUser as any)?.id) === userId;
 
-    const fetchData = async () => {
+    // Use a ref to track mounting state for async operations
+    const isMounted = React.useRef(true);
+
+    useEffect(() => {
+        return () => { isMounted.current = false; };
+    }, []);
+
+    const fetchData = React.useCallback(async () => {
         if (!userId || !token) return;
         try {
             const [userData, booksData] = await Promise.all([
                 apiClient.get<any>(`/api/users/${userId}`),
                 apiClient.get<any>(`/api/books/user/${userId}`)
             ]);
+
+            if (!isMounted.current) return;
 
             const userProfile = userData?.user || (userData?._id ? userData : null);
 
@@ -66,12 +75,14 @@ export default function UserProfile() {
                 setBooks(uniqueBooks as Book[]);
             }
         } catch (error) {
-            console.error('Error fetching profile:', error);
+            if (isMounted.current) console.error('Error fetching profile:', error);
         } finally {
-            setLoading(false);
-            setRefreshing(false);
+            if (isMounted.current) {
+                setLoading(false);
+                setRefreshing(false);
+            }
         }
-    };
+    }, [userId, token]);
 
     const handleUpdateProfileImage = async () => {
         try {
@@ -130,7 +141,11 @@ export default function UserProfile() {
         }
     };
 
-    useEffect(() => { fetchData(); }, [userId, token]);
+
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
     const handleRefresh = () => { setRefreshing(true); fetchData(); };
     const handleFollowersPress = () => { router.push({ pathname: '/followers-list', params: { userId, username: user?.username, type: 'followers' } }); };
     const handleFollowingPress = () => { router.push({ pathname: '/followers-list', params: { userId, username: user?.username, type: 'following' } }); };

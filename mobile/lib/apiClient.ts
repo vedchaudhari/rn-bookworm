@@ -50,7 +50,7 @@ class ApiClient {
                 }
 
                 if (error.response && error.response.data) {
-                    const message = (error.response.data as any).message || (error.response.data as any).error || 'Request failed';
+                    const message = (error.response.data as any).message || (error.response.data as any).error || 'Unable to complete your request. Please try again.';
                     return Promise.reject(new Error(message));
                 }
 

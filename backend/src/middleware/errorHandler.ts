@@ -60,7 +60,7 @@ export const errorHandler = (
     res.status(statusCode).json({
         success: false,
         error: statusCode === 500 ? "Internal Server Error" : (err.name || "Error"),
-        message: statusCode === 500 && isProd ? "Something went wrong on the server" : message,
+        message: statusCode === 500 && isProd ? "An internal server error occurred. Please try again later." : message,
         stack: isProd ? undefined : err.stack
     });
 };

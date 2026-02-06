@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiClient } from "../lib/apiClient";
 import { API_URL } from "../constants/api";
-
+import { Keyboard } from "react-native";
 interface User {
     id: string;
     _id?: string; // Kept for compatibility if needed
@@ -238,8 +238,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     logout: async () => {
         try {
 
-            // 1. Clear storage
-            await AsyncStorage.multiRemove(["token", "user", "onboarding_completed"]);
+            // 1. Clear storage (BUT keep onboarding state)
+            await AsyncStorage.multiRemove(["token", "user"]);
+
+            // Dismiss keyboard to prevent Android UI crashes during nav
+            Keyboard.dismiss();
 
             // 2. Reset all global stores to prevent cross-account data leakage
             // Using dynamic imports to avoid circular dependencies

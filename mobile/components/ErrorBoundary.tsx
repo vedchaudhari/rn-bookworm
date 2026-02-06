@@ -41,7 +41,7 @@ class ErrorBoundary extends Component<Props, State> {
                         <View style={styles.iconCircle}>
                             <Ionicons name="bug-outline" size={60} color={COLORS.primary} />
                         </View>
-                        <Text style={styles.title}>Oops! Something went wrong.</Text>
+                        <Text style={styles.title}>We encountered an unexpected issue</Text>
                         <Text style={styles.subtitle}>
                             An unexpected error occurred. The developers have been notified.
                         </Text>
