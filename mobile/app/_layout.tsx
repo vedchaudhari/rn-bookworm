@@ -31,7 +31,6 @@ export default function RootLayout() {
     const { checkAuth, user, token, isCheckingAuth, isAuthLoading, hasCompletedOnboarding } = useAuthStore();
     const { hydrate } = useSocialStore();
     const isAuthenticated = !!(user && token);
-    usePermissions(isAuthenticated);
 
     const [fontsLoaded] = useFonts({
         "JetBrainsMono-Medium": require("../assets/fonts/JetBrainsMono-Medium.ttf"),
@@ -59,7 +58,8 @@ export default function RootLayout() {
             registerForPushNotificationsAsync(token).catch(err => console.error('[Push] Registration error:', err));
             fetchNotifUnread(token).catch(console.error);
             fetchMsgUnread(token).catch(console.error);
-        } else if (!isCheckingAuth) {
+        } else if (!isCheckingAuth || !token) {
+            // Immediate cleanup on logout or missing token
             disconnect();
             resetMessages();
             setCurrentUserId(null);

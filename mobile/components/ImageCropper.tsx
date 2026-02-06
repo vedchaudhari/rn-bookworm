@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Dimensions, ImageBackground, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Dimensions, Image, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -42,10 +42,15 @@ export default function ImageCropper({ visible, imageUri, onCancel, onCrop, aspe
 
     useEffect(() => {
         if (imageUri) {
-            // Get original image dimensions
-            // In a real app, you might want to pre-calculate this or use a library
-            // For now, we'll assume the image fills the container or use its aspect ratio
-            setLoading(false);
+            setLoading(true);
+            Image.getSize(imageUri, (width, height) => {
+                setImageSize({ width, height });
+                setLoading(false);
+            }, (error) => {
+                console.error("Failed to get image size", error);
+                setLoading(false);
+            });
+
             // Reset transforms
             scale.value = 1;
             translateX.value = 0;
@@ -108,14 +113,39 @@ export default function ImageCropper({ visible, imageUri, onCancel, onCrop, aspe
                 actions.push({ rotate: rotation });
             }
 
-            // Simplified: Just 1:1 center crop for demonstration
-            // (In next iteration, we can make this precise)
+            // Calculate safe crop based on actual image dimensions
+            const imgWidth = imageSize.width;
+            const imgHeight = imageSize.height;
+
+            if (imgWidth === 0 || imgHeight === 0) {
+                // Fallback if size wasn't loaded
+                onCrop(imageUri);
+                return;
+            }
+
+            // Determine crop size relative to image
+            // This is a simplified "center crop" logic that respects the requested aspect ratio
+            // and ensures we don't go out of bounds.
+
+            const targetRatio = aspectRatio[0] / aspectRatio[1];
+            let cropWidth = imgWidth;
+            let cropHeight = imgWidth / targetRatio;
+
+            if (cropHeight > imgHeight) {
+                cropHeight = imgHeight;
+                cropWidth = imgHeight * targetRatio;
+            }
+
+            // Center the crop
+            const originX = (imgWidth - cropWidth) / 2;
+            const originY = (imgHeight - cropHeight) / 2;
+
             actions.push({
                 crop: {
-                    originX: 0,
-                    originY: 0,
-                    width: 1000, // Placeholder
-                    height: 1000,
+                    originX: Math.max(0, originX),
+                    originY: Math.max(0, originY),
+                    width: Math.min(imgWidth, cropWidth),
+                    height: Math.min(imgHeight, cropHeight),
                 }
             });
 

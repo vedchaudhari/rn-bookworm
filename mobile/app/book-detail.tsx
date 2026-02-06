@@ -13,6 +13,7 @@ import { apiClient } from '../lib/apiClient';
 import { useUIStore } from '../store/uiStore';
 import { useBookshelfStore } from '../store/bookshelfStore';
 import { useMessageStore } from '../store/messageStore';
+import { useSocialStore } from '../store/socialStore';
 import LikeButton from '../components/LikeButton';
 import CommentSection from '../components/CommentSection';
 import FollowButton from '../components/FollowButton';
@@ -66,6 +67,7 @@ export default function BookDetailScreen() {
     const { token, user } = useAuthStore();
     const { balance, sendTip, fetchBalance } = useCurrencyStore();
     const { conversations, fetchConversations, sendMessage } = useMessageStore();
+    const { followingList, fetchFollowing } = useSocialStore();
     const { showAlert } = useUIStore();
     const router = useRouter();
 
@@ -262,6 +264,9 @@ export default function BookDetailScreen() {
                                 if (!token) {
                                     showAlert({ title: 'Login Required', message: 'Please login to share!', type: 'info' });
                                     return;
+                                }
+                                if (user?._id) {
+                                    fetchFollowing(user._id);
                                 }
                                 fetchConversations(token);
                                 setShowShareModal(true);
@@ -534,38 +539,57 @@ export default function BookDetailScreen() {
                         <Text style={styles.modalSubtitle}>Select a friend to share "{book?.title}"</Text>
 
                         <ScrollView style={{ maxHeight: 300 }}>
-                            {conversations.length > 0 ? (
-                                conversations.map((conv, index) => {
-                                    const otherUserInfo = typeof conv.otherUser === 'string' ? null : conv.otherUser;
-                                    const otherUserId = typeof conv.otherUser === 'string' ? conv.otherUser : conv.otherUser._id;
+                            {(() => {
+                                // Merge conversations and following list
+                                const allFriends = [
+                                    ...conversations.map(conv => {
+                                        const otherUserInfo = typeof conv.otherUser === 'string' ? null : conv.otherUser;
+                                        const otherUserId = typeof conv.otherUser === 'string' ? conv.otherUser : conv.otherUser._id;
+                                        return {
+                                            _id: otherUserId,
+                                            username: otherUserInfo?.username || 'Friend',
+                                            profileImage: otherUserInfo?.profileImage || ''
+                                        };
+                                    }),
+                                    ...followingList.map(f => ({
+                                        _id: f._id,
+                                        username: f.username,
+                                        profileImage: f.profileImage
+                                    }))
+                                ];
 
-                                    return (
+                                // Deduplicate by ID
+                                const uniqueFriends = Array.from(new Map(allFriends.map(f => [f._id, f])).values());
+
+                                if (uniqueFriends.length > 0) {
+                                    return uniqueFriends.map((friend, index) => (
                                         <TouchableOpacity
-                                            key={conv._id || index}
+                                            key={friend._id || index}
                                             style={styles.friendItem}
-                                            onPress={() => handleShareToChat(otherUserId)}
+                                            onPress={() => handleShareToChat(friend._id)}
                                             disabled={sharingTo !== null}
                                         >
                                             <Image
-                                                source={{ uri: otherUserInfo?.profileImage || '' }}
+                                                source={{ uri: friend.profileImage }}
                                                 style={styles.friendAvatar}
                                             />
                                             <Text style={styles.friendName}>
-                                                {otherUserInfo?.username || 'Friend'}
+                                                {friend.username}
                                             </Text>
-                                            {sharingTo === otherUserId ? (
+                                            {sharingTo === friend._id ? (
                                                 <ActivityIndicator size="small" color={COLORS.primary} />
                                             ) : (
                                                 <Ionicons name="send" size={20} color={COLORS.primary} />
                                             )}
                                         </TouchableOpacity>
-                                    );
-                                })
-                            ) : (
-                                <View style={{ padding: 20, alignItems: 'center' }}>
-                                    <Text style={{ color: COLORS.textSecondary }}>No recent conversations found.</Text>
-                                </View>
-                            )}
+                                    ));
+                                }
+                                return (
+                                    <View style={{ padding: 20, alignItems: 'center' }}>
+                                        <Text style={{ color: COLORS.textSecondary }}>No friends found.</Text>
+                                    </View>
+                                );
+                            })()}
                         </ScrollView>
                     </GlassCard>
                 </View>

@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-import { API_URL } from '../constants/api';
-import { Socket } from 'socket.io-client';
+import { apiClient } from '../lib/apiClient';
 
 export interface Message {
     _id: string;
@@ -94,54 +93,19 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     // Fetch all conversations
     fetchConversations: async (token: string) => {
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-
-            const response = await fetch(`${API_URL}/api/messages/conversations`, {
-                headers: { 'Authorization': `Bearer ${token}` },
-                signal: controller.signal,
-            }).finally(() => clearTimeout(timeoutId));
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                const errorMsg = data.message || `HTTP error! status: ${response.status}`;
-                throw new Error(errorMsg);
-            }
-
+            const data = await apiClient.get<{ conversations: Conversation[] }>('/api/messages/conversations');
             set({ conversations: data.conversations });
             return { success: true };
         } catch (error: any) {
             console.error('Error fetching conversations:', error);
-
-            // Differentiate error types
-            let errorMessage = 'Failed to fetch conversations';
-            if (error.name === 'AbortError') {
-                errorMessage = 'Request timeout. Please check your connection.';
-            } else if (error.message === 'Network request failed') {
-                errorMessage = 'No internet connection';
-            }
-
-            return { success: false, error: errorMessage };
+            return { success: false, error: error.message || 'Failed to fetch conversations' };
         }
     },
 
     // Fetch messages for a conversation
     fetchMessages: async (userId: string, token: string, page: number = 1) => {
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-            const response = await fetch(`${API_URL}/api/messages/conversation/${userId}?page=${page}`, {
-                headers: { 'Authorization': `Bearer ${token}` },
-                signal: controller.signal,
-            }).finally(() => clearTimeout(timeoutId));
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || `HTTP error! status: ${response.status}`);
-            }
+            const data = await apiClient.get<any>(`/api/messages/conversation/${userId}`, { page });
 
             if (page === 1) {
                 set(state => {
@@ -166,15 +130,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             return { success: true, hasMore: data.currentPage < data.totalPages };
         } catch (error: any) {
             console.error('Error fetching messages:', error);
-
-            let errorMessage = 'Failed to load messages';
-            if (error.name === 'AbortError') {
-                errorMessage = 'Request timeout';
-            } else if (error.message === 'Network request failed') {
-                errorMessage = 'No internet connection';
-            }
-
-            return { success: false, error: errorMessage };
+            return { success: false, error: error.message || 'Failed to load messages' };
         }
     },
 
@@ -212,8 +168,6 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             createdAt: new Date().toISOString(),
             pending: true,
             book,
-            // Optimistic replyTo handling is tricky without full object, might default to null locally until fetch
-            // or we could pass the replyTo OBJECT if we want perfect optimistic UI
         };
 
         const userMessages = messages[receiverId] || [];
@@ -243,17 +197,9 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         }
 
         try {
-            const response = await fetch(`${API_URL}/api/messages/send/${receiverId}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ text, image, video, videoThumbnail, fileSizeBytes, book, replyTo }),
+            const data = await apiClient.post<Message>(`/api/messages/send/${receiverId}`, {
+                text, image, video, videoThumbnail, fileSizeBytes, book, replyTo
             });
-
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
 
             set(state => {
                 const currentMessages = state.messages[receiverId] || [];
@@ -380,13 +326,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     // Fetch unread count
     fetchUnreadCount: async (token: string) => {
         try {
-            const response = await fetch(`${API_URL}/api/messages/unread-count`, {
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
-
+            const data = await apiClient.get<any>('/api/messages/unread-count');
             set({ unreadCount: data.unreadCount });
             return { success: true };
         } catch (error: any) {
@@ -398,10 +338,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     // Mark conversation as read
     markAsRead: async (userId: string, token: string) => {
         try {
-            await fetch(`${API_URL}/api/messages/mark-read/${userId}`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
+            await apiClient.put(`/api/messages/mark-read/${userId}`);
 
             const { conversations } = get();
             const updated = conversations.map(conv =>
@@ -436,22 +373,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         set({ messages: { ...messages, [activeConversation]: updatedMessages } });
 
         try {
-            const response = await fetch(`${API_URL}/api/messages/edit/${messageId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ text }),
-            });
-
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
-
+            await apiClient.patch(`/api/messages/edit/${messageId}`, { text });
             return { success: true };
         } catch (error: any) {
             console.error('Error editing message:', error);
-            // Rollback on error? Usually better to just show error toast
             return { success: false, error: error.message };
         }
     },
@@ -465,12 +390,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         set({ messages: { ...messages, [activeConversation]: updatedMessages } });
 
         try {
-            const response = await fetch(`${API_URL}/api/messages/delete-me/${messageId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-
-            if (!response.ok) throw new Error('Failed to delete message locally');
+            await apiClient.delete(`/api/messages/delete-me/${messageId}`);
             return { success: true };
         } catch (error: any) {
             console.error('Error deleting message for me:', error);
@@ -489,12 +409,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         set({ messages: { ...messages, [activeConversation]: updatedMessages } });
 
         try {
-            const response = await fetch(`${API_URL}/api/messages/delete-everyone/${messageId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-
-            if (!response.ok) throw new Error('Failed to delete message for everyone');
+            await apiClient.delete(`/api/messages/delete-everyone/${messageId}`);
             return { success: true };
         } catch (error: any) {
             console.error('Error deleting message for everyone:', error);
@@ -508,12 +423,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         set({ messages: { ...messages, [otherUserId]: [] } });
 
         try {
-            const response = await fetch(`${API_URL}/api/messages/clear/${otherUserId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-
-            if (!response.ok) throw new Error('Failed to clear chat history');
+            await apiClient.delete(`/api/messages/clear/${otherUserId}`);
             return { success: true };
         } catch (error: any) {
             console.error('Error clearing chat history:', error);

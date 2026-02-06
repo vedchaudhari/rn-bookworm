@@ -12,6 +12,11 @@ import BookshelfItem from '../models/BookshelfItem';
 import ReadingSession from '../models/ReadingSession';
 import UserStreak from '../models/UserStreak';
 import Notification from '../models/Notification';
+import Chapter from '../models/Chapter';
+import BookNote from '../models/BookNote';
+import Achievement from '../models/Achievement';
+import DailyChallenge from '../models/DailyChallenge';
+import ReadingGoal from '../models/ReadingGoal';
 
 // Load env vars
 dotenv.config({ path: path.join(__dirname, '../../.env') });
@@ -188,6 +193,11 @@ async function seed() {
             ReadingSession.deleteMany({ userId: { $in: seededUserIds } }),
             UserStreak.deleteMany({ userId: { $in: seededUserIds } }),
             Notification.deleteMany({ user: { $in: seededUserIds } }),
+            Chapter.deleteMany({ bookId: { $in: (await Book.find({ user: { $in: seededUserIds } })).map(b => b._id) } }),
+            BookNote.deleteMany({ userId: { $in: seededUserIds } }),
+            Achievement.deleteMany({ user: { $in: seededUserIds } }),
+            DailyChallenge.deleteMany({ userId: { $in: seededUserIds } }),
+            ReadingGoal.deleteMany({ user: { $in: seededUserIds } }),
             User.deleteMany({ _id: { $in: seededUserIds } })
         ]);
         console.log('Cleanup complete.');
@@ -250,7 +260,13 @@ async function seed() {
                 createdAt: userJoinedDate,
                 lastActiveDate: new Date(),
                 expoPushToken: hasToken ? generateRealisticToken() : null,
-                notificationsEnabled: hasToken ? (Math.random() > 0.1) : false // 90% of token holders have notifications enabled
+                notificationsEnabled: hasToken ? (Math.random() > 0.1) : false,
+                isPro: Math.random() > 0.8, // 20% pro users
+                subscriptionTier: Math.random() > 0.8 ? (Math.random() > 0.5 ? 'monthly' : 'yearly') : null,
+                inkDropTransactions: [
+                    { amount: 100, source: 'Welcome Gift', timestamp: userJoinedDate },
+                    { amount: 50, source: 'Daily Streak', timestamp: new Date() }
+                ]
             });
 
             // Create corresponding streak object
@@ -268,20 +284,24 @@ async function seed() {
         }
         console.log(`${createdUsers.length} users and streaks established with historical start dates.`);
 
-        console.log('Creating follows...');
         let followCount = 0;
         for (const follower of createdUsers) {
-            for (const following of createdUsers) {
-                if (follower._id.toString() !== following._id.toString()) {
-                    try {
-                        await Follow.findOneAndUpdate(
-                            { follower: follower._id, following: following._id },
-                            { status: 'accepted' },
-                            { upsert: true, new: true }
-                        );
-                        followCount++;
-                    } catch (e) { /* Ignore duplicate errors */ }
-                }
+            // Each user follows 5-8 random users
+            const numToFollow = Math.floor(Math.random() * 4) + 5;
+            const shuffled = [...createdUsers]
+                .filter(u => u._id.toString() !== follower._id.toString())
+                .sort(() => 0.5 - Math.random())
+                .slice(0, numToFollow);
+
+            for (const following of shuffled) {
+                try {
+                    await Follow.findOneAndUpdate(
+                        { follower: follower._id, following: following._id },
+                        { status: 'accepted' },
+                        { upsert: true, new: true }
+                    );
+                    followCount++;
+                } catch (e) { /* Ignore duplicate errors */ }
             }
         }
         console.log(`Created ${followCount} social connections.`);
@@ -314,6 +334,19 @@ async function seed() {
                 });
                 allCreatedBooks.push(book);
                 bookCount++;
+
+                // Create 5 chapters for each book
+                for (let ch = 1; ch <= 5; ch++) {
+                    await Chapter.create({
+                        bookId: book._id,
+                        authorId: randomUserProfile._id,
+                        chapterNumber: ch,
+                        title: `Chapter ${ch}: ${ch === 1 ? 'An Unexpected Beginning' : 'Rising Actions'}`,
+                        content: `## Chapter ${ch}\n\nThis is the content for chapter ${ch} of **${template.title}**. \n\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.\n\n### The Plot Thickens\n\nMore details about the story in ${genre} style...`,
+                        isPublished: true,
+                        publishedAt: bookCreatedDate
+                    });
+                }
 
                 // Randomize likes for this book
                 const numLikes = Math.floor(Math.random() * 8) + 1;
@@ -372,6 +405,26 @@ async function seed() {
                     priority: 'medium',
                     createdAt: shelfJoinedDate
                 });
+
+                // Create some notes for currently_reading/completed books
+                if (status !== 'want_to_read' && Math.random() > 0.4) {
+                    const numNotes = Math.floor(Math.random() * 3) + 1;
+                    for (let n = 0; n < numNotes; n++) {
+                        await BookNote.create({
+                            userId: user._id,
+                            bookId: book._id,
+                            bookshelfItemId: shelfItem._id,
+                            type: n === 0 ? 'highlight' : 'note',
+                            highlightedText: n === 0 ? "Life is a choice between two unknowns." : "This particular paragraph touched my soul.",
+                            userNote: n === 0 ? null : "Reminds me of my childhood in the village.",
+                            pageNumber: Math.floor(Math.random() * book.totalPages) + 1,
+                            color: n === 0 ? '#FFFF00' : '#87CEEB',
+                            visibility: Math.random() > 0.3 ? 'public' : 'private',
+                            createdAt: getRandomPastDate(5)
+                        });
+                    }
+                }
+
                 shelfCount++;
 
                 // Create reading sessions for currently_reading and completed books
@@ -494,7 +547,73 @@ async function seed() {
         }
         console.log(`Created ${notifCount} notifications.`);
 
-        console.log('\n--- SEEDING SUMMARY ---');
+        console.log('Finalizing user achievements, goals, and challenges...');
+        for (const user of createdUsers) {
+            // Create a Reading Goal
+            const targetBooks = Math.floor(Math.random() * 10) + 5;
+            const currentBooks = Math.floor(Math.random() * 4);
+            const endDate = new Date();
+            endDate.setMonth(endDate.getMonth() + 1);
+
+            await ReadingGoal.create({
+                user: user._id,
+                targetBooks,
+                currentBooks,
+                period: 'monthly',
+                status: 'active',
+                startDate: new Date(),
+                endDate
+            });
+
+            // Create Achievements
+            const types: any[] = ["FIRST_POST", "BOOK_LOVER_5", "STREAK_3", "EXPLORER"];
+            for (const type of types) {
+                const unlocked = Math.random() > 0.3;
+                await Achievement.create({
+                    user: user._id,
+                    type,
+                    progress: unlocked ? 1 : 0,
+                    unlocked,
+                    unlockedAt: unlocked ? getRandomPastDate(10) : undefined
+                });
+            }
+
+            // Create Daily Challenges (recent and history)
+            const challengeTypes: any[] = ['read_posts', 'like_posts', 'comment', 'recommend_book'];
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            // Today's challenge
+            await DailyChallenge.create({
+                userId: user._id,
+                challengeType: challengeTypes[Math.floor(Math.random() * challengeTypes.length)],
+                targetCount: 5,
+                currentProgress: Math.floor(Math.random() * 6),
+                rewardInkDrops: 50,
+                status: 'active',
+                challengeDate: todayStr,
+                expiresAt: new Date(new Date().setHours(23, 59, 59, 999))
+            });
+
+            // Historical challenges
+            for (let d = 1; d <= 3; d++) {
+                const historyDate = new Date();
+                historyDate.setDate(historyDate.getDate() - d);
+                const dateStr = historyDate.toISOString().split('T')[0];
+                const completed = Math.random() > 0.5;
+
+                await DailyChallenge.create({
+                    userId: user._id,
+                    challengeType: challengeTypes[Math.floor(Math.random() * challengeTypes.length)],
+                    targetCount: 5,
+                    currentProgress: completed ? 5 : 2,
+                    rewardInkDrops: 50,
+                    status: completed ? 'completed' : 'expired',
+                    completedAt: completed ? historyDate : null,
+                    challengeDate: dateStr,
+                    expiresAt: new Date(historyDate.setHours(23, 59, 59, 999))
+                });
+            }
+        }
         console.log(`Users: ${createdUsers.length}`);
         console.log(`Books: ${bookCount}`);
         console.log(`Likes: ${likeCountTotal}`);

@@ -1,3 +1,30 @@
+import { Platform } from 'react-native';
+
+export function resolveImageUrl(url: string): string {
+    if (!url) return '';
+    if (typeof url !== 'string') return url;
+
+    let resolvedUrl = url;
+
+    // If it's a relative path, prefix it with API_URL
+    if (!resolvedUrl.startsWith('http')) {
+        const { API_URL } = require('../constants/api');
+        resolvedUrl = `${API_URL}${resolvedUrl.startsWith('/') ? '' : '/'}${resolvedUrl}`;
+    }
+
+    // On Android Emulator, localhost must be replaced with 10.0.2.2
+    if (Platform.OS === 'android' && resolvedUrl.includes('localhost')) {
+        resolvedUrl = resolvedUrl.replace('localhost', '10.0.2.2');
+    }
+
+    // Also handle 127.0.0.1
+    if (Platform.OS === 'android' && resolvedUrl.includes('127.0.0.1')) {
+        resolvedUrl = resolvedUrl.replace('127.0.0.1', '10.0.2.2');
+    }
+
+    return resolvedUrl;
+}
+
 // this function will convert the createdAt to this format: "May 2023"
 export function formatMemberSince(dateString: string | Date): string {
     const date = new Date(dateString);

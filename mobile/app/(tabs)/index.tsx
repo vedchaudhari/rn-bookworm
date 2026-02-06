@@ -15,6 +15,7 @@ import BannerAdComponent from '../../components/ads/BannerAd';
 import SafeScreen from "../../components/SafeScreen";
 import SkeletonLoader from '../../components/SkeletonLoader';
 import AppHeader from '../../components/AppHeader';
+import { usePermissions } from '../../hooks/usePermissions';
 
 import SocialPostCard from '../../components/SocialPostCard';
 import EmptyState from '../../components/EmptyState';
@@ -40,7 +41,10 @@ interface Book {
 export const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
 export default function Home() {
-    const { token, isCheckingAuth, logout } = useAuthStore();
+    const { token, isCheckingAuth, user } = useAuthStore();
+    const isAuthenticated = !!(user && token);
+    usePermissions(isAuthenticated);
+
     const [books, setBooks] = useState<Book[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);

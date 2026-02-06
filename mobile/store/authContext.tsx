@@ -91,6 +91,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 token: data.token,
                 user: normalizedUser,
                 isLoading: false,
+                isAuthLoading: false,
+                isCheckingAuth: false
             });
 
             // Sync with apiClient
@@ -169,6 +171,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     login: async (email: string, password: string) => {
         set({ isLoading: true })
         try {
+            console.log("Attempting login...");
             const data = await apiClient.post<{ token: string; user: any }>(
                 `/api/auth/login`,
                 { email, password }
@@ -182,15 +185,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({
                 token: data.token,
                 user: normalizedUser,
-                isLoading: false
+                isLoading: false,
+                isAuthLoading: false, // Ensure loading is off after manual login
+                isCheckingAuth: false
             });
 
+            console.log("✅ Login successful, state updated");
             // Sync with apiClient
             apiClient.setAuthToken(data.token);
 
             return { success: true };
 
         } catch (error: any) {
+            console.error("❌ Login failed:", error);
             set({ isLoading: false });
             return { success: false, error: error.message };
         }
@@ -232,7 +239,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
 
             // 1. Clear storage
-            await AsyncStorage.multiRemove(["token", "user"]);
+            await AsyncStorage.multiRemove(["token", "user", "onboarding_completed"]);
 
             // 2. Reset all global stores to prevent cross-account data leakage
             // Using dynamic imports to avoid circular dependencies

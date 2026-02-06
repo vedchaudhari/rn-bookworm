@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { useAuthStore } from '../store/authContext';
+import ProgressiveImage from './ProgressiveImage';
 import React from 'react';
-import { Image } from 'expo-image';
 import { formatMemberSince } from '../lib/utils';
 import COLORS from '../constants/colors';
 import { SPACING, FONT_SIZE } from '../constants/styleConstants';
@@ -13,7 +13,7 @@ export default function ProfileHeader() {
 
     return (
         <View style={styles.profileHeader}>
-            <Image
+            <ProgressiveImage
                 source={{ uri: user.profileImage || 'https://via.placeholder.com/150/1a1a2e/00e5ff?text=User' }}
                 style={styles.profileImage}
             />

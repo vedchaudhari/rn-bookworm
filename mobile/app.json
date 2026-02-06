@@ -62,6 +62,14 @@
         {
           "cameraPermission": "Allow ReadSphere to access your camera to scan book barcodes."
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow ReadSphere to access your photos to set profile pictures and share book covers.",
+          "savePhotosPermission": "Allow ReadSphere to save images to your library.",
+          "isAudioEnabled": false
+        }
       ]
     ],
     "experiments": {

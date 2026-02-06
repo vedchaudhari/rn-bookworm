@@ -42,7 +42,9 @@ export default function Onboarding() {
     const { completeOnboarding } = useAuthStore();
 
     const viewableItemsChanged = useRef(({ viewableItems }: any) => {
-        setCurrentIndex(viewableItems[0].index);
+        if (viewableItems[0]) {
+            setCurrentIndex(viewableItems[0].index);
+        }
     }).current;
 
     const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
@@ -53,7 +55,6 @@ export default function Onboarding() {
         } else {
             // Finish Onboarding
             await completeOnboarding();
-            // Note: Declarative navigation will handle the move to /auth
         }
     };
 

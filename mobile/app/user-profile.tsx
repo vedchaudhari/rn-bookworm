@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, RefreshContr
 import React, { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import ProgressiveImage from '../components/ProgressiveImage';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import COLORS from '../constants/colors';
@@ -138,7 +138,7 @@ export default function UserProfile() {
 
     const renderBookItem = ({ item }: ListRenderItemInfo<Book>) => (
         <TouchableOpacity style={styles.bookItem} onPress={() => router.push({ pathname: '/book-detail', params: { bookId: item._id } })}>
-            <Image source={{ uri: item.image }} style={styles.bookImage} contentFit="cover" transition={300} />
+            <ProgressiveImage source={{ uri: item.image }} style={styles.bookImage} contentFit="cover" transition={300} />
         </TouchableOpacity>
     );
 
@@ -163,7 +163,7 @@ export default function UserProfile() {
                 >
                     <View style={styles.profileHeaderCentered}>
                         <TouchableOpacity style={styles.avatarWrapper} onPress={isOwnProfile ? handleUpdateProfileImage : undefined} activeOpacity={isOwnProfile ? 0.7 : 1}>
-                            <Image source={{ uri: user?.profileImage }} style={styles.avatarLarge} />
+                            <ProgressiveImage source={{ uri: user?.profileImage }} style={styles.avatarLarge} />
                             {isOwnProfile && <View style={styles.editIconBadge}><Ionicons name="camera" size={12} color="#fff" /></View>}
                             <View style={styles.activeGlow} />
                         </TouchableOpacity>

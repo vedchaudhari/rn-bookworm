@@ -410,11 +410,8 @@ router.post('/:bookId/upload', protectRoute, upload.single('manuscript'), async 
             skipped: chapters.length - createdChapters.length
         });
     } catch (error: any) {
-        // Cleanup file on error ONLY if not in successful PDF mode (though logic handles return before here)
-        // Ideally checking if response was sent, but here simply:
+        // Ultimate fallback cleanup: ensure any remaining temp file is removed
         if (filePath && fs.existsSync(filePath)) {
-            // Basic safety: if we crashed, try to cleanup unless we just saved a PDF
-            // Since we return early for PDF, this catch block implies failure BEFORE PDF success
             cleanupUploadedFile(filePath);
         }
 

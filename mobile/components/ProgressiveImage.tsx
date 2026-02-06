@@ -3,6 +3,8 @@ import { StyleSheet, View } from 'react-native';
 import { Image, ImageProps } from 'expo-image';
 import COLORS from '../constants/colors';
 
+import { resolveImageUrl } from '../lib/utils';
+
 interface ProgressiveImageProps extends ImageProps {
     containerStyle?: any;
 }
@@ -13,6 +15,14 @@ const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
     containerStyle,
     ...props
 }) => {
+    // Resolve URL for Android Emulator if source is a URI object
+    const resolvedSource = React.useMemo(() => {
+        if (source && typeof source === 'object' && 'uri' in source && typeof source.uri === 'string') {
+            return { ...source, uri: resolveImageUrl(source.uri) };
+        }
+        return source;
+    }, [source]);
+
     const flattened = (StyleSheet.flatten(style) || {}) as any;
 
     // Layout props to move to the container
@@ -43,7 +53,7 @@ const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
             containerStyle,
         ]}>
             <Image
-                source={source}
+                source={resolvedSource}
                 style={[styles.image, imageStyleMerged]}
                 transition={500}
                 cachePolicy="memory-disk"

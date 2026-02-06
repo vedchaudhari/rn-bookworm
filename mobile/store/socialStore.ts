@@ -21,6 +21,7 @@ interface BookMetrics {
 interface SocialState {
     likedBooks: Set<string>;
     followedUsers: Set<string>;
+    followingList: any[];
     bookMetrics: Record<string, BookMetrics>;
     isHydrated: boolean;
     hydrate: () => Promise<void>;
@@ -31,6 +32,7 @@ interface SocialState {
     toggleFollow: (userId: string, token: string) => Promise<{ success: boolean; following?: boolean; status?: string; error?: string }>;
     checkFollowStatus: (userId: string, token: string) => Promise<boolean>;
     setFollowStatus: (userId: string, following: boolean) => void;
+    fetchFollowing: (userId: string) => Promise<void>;
     addComment: (bookId: string, text: string, token: string) => Promise<{ success: boolean; comment?: any; error?: string }>;
     deleteComment: (commentId: string, token: string) => Promise<{ success: boolean; error?: string }>;
     reset: () => Promise<void>;
@@ -39,6 +41,7 @@ interface SocialState {
 export const useSocialStore = create<SocialState>((set, get) => ({
     likedBooks: new Set(),
     followedUsers: new Set(),
+    followingList: [],
     bookMetrics: {},
     isHydrated: false,
 
@@ -224,6 +227,16 @@ export const useSocialStore = create<SocialState>((set, get) => ({
         set({ followedUsers: newFollowedUsers });
         get().persist();
     },
+    fetchFollowing: async (userId: string) => {
+        try {
+            const data = await apiClient.get<any>(`/api/social/following/${userId}`);
+            if (data && data.following) {
+                set({ followingList: data.following });
+            }
+        } catch (error) {
+            console.error('Error fetching following list:', error);
+        }
+    },
 
     addComment: async (bookId: string, text: string, token: string) => {
         try {
@@ -246,7 +259,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     },
 
     reset: async () => {
-        set({ likedBooks: new Set(), followedUsers: new Set() });
+        set({ likedBooks: new Set(), followedUsers: new Set(), followingList: [] });
         try {
             await AsyncStorage.multiRemove(['likedBooks', 'followedUsers']);
         } catch (error) {
