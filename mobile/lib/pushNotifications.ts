@@ -114,16 +114,6 @@ export function setupPushNotificationListeners(router: any) {
                 if (activeConversation === String(data.senderId) && token) {
                     console.log('[Push] Foreground message for active chat - refreshing...');
                     useMessageStore.getState().fetchMessages(String(data.senderId), token);
-                } else {
-                    // Fallback: If socket hasn't caught it yet, show a toast
-                    // useUIStore will handle internal suppression if activeChatId matches
-                    useUIStore.getState().showToast({
-                        title: `New Message from ${data.senderName || 'User'}`,
-                        message: String(data.text || "📷 Image"),
-                        type: 'message',
-                        relatedScreen: 'chat',
-                        relatedChatId: String(data.senderId)
-                    });
                 }
             }
         });
