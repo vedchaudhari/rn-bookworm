@@ -60,7 +60,7 @@ export const useUIStore = create<UIState>((set, get) => ({
             relatedScreen === activeScreen &&
             (!relatedChatId || relatedChatId === activeChatId)
         ) {
-            console.log('[Toast] Suppressed - user is viewing this screen/chat:', { relatedScreen, relatedChatId });
+
             return;
         }
 

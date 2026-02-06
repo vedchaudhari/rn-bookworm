@@ -117,12 +117,7 @@ export const useReadingSessionStore = create<ReadingSessionState>((set, get) => 
         set({ isStartingSession: true, error: null });
 
         try {
-            console.log('[startSession] Sending payload:', {
-                bookId,
-                bookshelfItemId,
-                startPage,
-                deviceType: 'mobile',
-            });
+
 
             const response = await readingSessionApi.startSession({
                 bookId,

@@ -112,7 +112,7 @@ router.post("/register-token", protectRoute, async (req: Request, res: Response)
         const { token } = req.body;
         const userId = req.user!._id;
 
-        console.log(`[Token Register] Received token for user ${userId}: ${token?.substring(0, 20)}...`);
+
 
         if (!token) {
             console.warn(`[Token Register] Failed: No token provided in request for user ${userId}`);
@@ -159,7 +159,7 @@ router.post("/test", protectRoute, async (req: Request, res: Response) => {
 
 router.get("/test/:userId", asyncHandler(async (req: Request, res: Response) => {
     const { userId } = req.params;
-    console.log(`[Test Notif] Manually triggering notification for user: ${userId}`);
+
 
     const notification = await createNotification({
         user: userId,
@@ -172,7 +172,7 @@ router.get("/test/:userId", asyncHandler(async (req: Request, res: Response) => 
     });
 
     if (notification) {
-        console.log(`[Test Notif] Success: Notification created and queued for user ${userId}`);
+
         res.json({ message: "Test notification triggered!", notification });
     } else {
         console.error(`[Test Notif] Failed: Could not create notification for user ${userId}`);

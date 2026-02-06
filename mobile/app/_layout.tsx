@@ -171,9 +171,11 @@ export default function RootLayout() {
     // Snap Redirector:
     // This ensures the navigator actually JUMPS to the correct stack
     // when the state changes (login, logout, onboarding finish).
+    const [isAppReady, setIsAppReady] = useState(false);
+
     useEffect(() => {
         if (!isAuthLoading && !isCheckingAuth && fontsLoaded) {
-            const timer = setTimeout(() => {
+            const timer = setTimeout(async () => {
                 let target = '/(tabs)';
                 if (!hasCompletedOnboarding) {
                     target = '/onboarding';
@@ -185,16 +187,21 @@ export default function RootLayout() {
                 router.replace(target as any);
 
                 // PRODUCTION-GRADE SMOOTHING:
-                // We hide the splash screen only AFTER the replacement command
-                // has been issued. We add a small 100ms buffer to allow the
-                // navigator to mount the new screen tree and avoid a "white flash".
-                setTimeout(() => {
-                    SplashScreen.hideAsync();
-                }, 100);
+                // We hide the splash screen only ONCE when the app is first ready.
+                if (!isAppReady) {
+                    setTimeout(async () => {
+                        try {
+                            await SplashScreen.hideAsync();
+                            setIsAppReady(true);
+                        } catch (e) {
+                            console.warn('Error hiding splash screen:', e);
+                        }
+                    }, 100);
+                }
             }, 10);
             return () => clearTimeout(timer);
         }
-    }, [isAuthenticated, hasCompletedOnboarding, isAuthLoading, isCheckingAuth, fontsLoaded]);
+    }, [isAuthenticated, hasCompletedOnboarding, isAuthLoading, isCheckingAuth, fontsLoaded, isAppReady]);
 
     // ====================================================================
     // AUTH GATE: Prevent navigation rendering until auth state is resolved
@@ -217,6 +224,7 @@ export default function RootLayout() {
                             animation: 'slide_from_right',
                         }}
                     >
+                        <Stack.Screen name="index" options={{ headerShown: false }} />
                         {!hasCompletedOnboarding ? (
                             <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
                         ) : !isAuthenticated ? (

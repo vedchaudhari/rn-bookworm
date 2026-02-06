@@ -49,7 +49,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     // Connect to WebSocket
     connect: (userId: string) => {
         if (!userId) {
-            console.log('⚠️ Cannot connect socket: No userId provided');
+            console.warn('⚠️ Cannot connect socket: No userId provided');
             return;
         }
 
@@ -58,7 +58,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         let activeSocket = existingSocket;
 
         if (!activeSocket) {
-            console.log('🔌 Initializing new socket connection...');
+
             activeSocket = io(API_URL, {
                 transports: ['websocket'],
                 reconnection: true,
@@ -71,12 +71,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             });
 
             activeSocket.on('connect', () => {
-                console.log('✅ Socket connected successfully!', activeSocket?.id);
+
                 if (disconnectTimer) {
                     clearTimeout(disconnectTimer);
                     disconnectTimer = null;
                 }
-                console.log('[Store] Authenticating socket with userId:', userId);
+
                 activeSocket?.emit('authenticate', userId);
                 set({ lastAuthenticatedUserId: userId } as any);
                 set({ isConnected: true });
@@ -87,7 +87,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             });
 
             activeSocket.on('disconnect', (reason: string) => {
-                console.log('⚠️  Socket disconnected. Reason:', reason);
+
                 if (reason === 'io client disconnect') {
                     set({ isConnected: false });
                     return;
@@ -100,7 +100,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             });
 
             activeSocket.on('notification', (notification: Notification) => {
-                console.log('📬 New notification received:', notification);
+
                 set(state => {
                     const combined = [notification, ...state.notifications];
                     const deduped = Array.from(new Map(combined.map(n => [n._id, n])).values());
@@ -131,7 +131,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             });
 
             activeSocket.on('typing_start', ({ senderId }: { senderId: string }) => {
-                console.log('[Store] Received typing_start from:', senderId);
+
                 set((state) => ({
                     typingStatus: { ...state.typingStatus, [senderId]: true }
                 }));
@@ -145,12 +145,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
             set({ socket: activeSocket });
         } else {
-            console.log(`🔌 Using existing socket [${activeSocket.id || 'not connected'}]`);
-            if (!activeSocket.connected) {
-                console.log('🔄 Reconnecting existing socket...');
-                activeSocket.connect();
-            }
-            console.log('[Store] Re-authenticating with userId:', userId);
+
             activeSocket.emit('authenticate', userId);
             set({ lastAuthenticatedUserId: userId } as any);
         }
@@ -162,7 +157,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             const senderId = typeof message.sender === 'object' ? message.sender._id : message.sender;
             // If WE are the receiver, immediately tell server we got it
             if (senderId !== userId) {
-                console.log('[Store] Globally acknowledging delivery of message:', message._id);
+
                 activeSocket?.emit('message_delivered', {
                     messageId: message._id,
                     senderId: senderId
@@ -172,7 +167,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
         activeSocket.off('pending_delivery');
         activeSocket.on('pending_delivery', (messages: { messageId: string, senderId: string }[]) => {
-            console.log(`[Store] Syncing ${messages.length} pending deliveries...`);
+
             messages.forEach(m => {
                 activeSocket?.emit('message_delivered', {
                     messageId: m.messageId,
@@ -186,7 +181,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     disconnect: () => {
         const { socket } = get();
         if (socket) {
-            console.log('🔌 Disconnecting socket manually');
+
             socket.off('connect');
             socket.off('disconnect');
             socket.off('notification');
@@ -335,7 +330,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     sendTypingStart: (receiverId: string) => {
         const { socket } = get();
         if (socket) {
-            console.log('[Store] Sending typing_start to:', receiverId);
+
             socket.emit('typing_start', { receiverId });
         }
     },

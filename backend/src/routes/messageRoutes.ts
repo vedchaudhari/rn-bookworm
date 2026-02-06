@@ -372,7 +372,7 @@ router.get("/conversations", protectRoute, async (req: Request, res: Response) =
         // Filter out any null entries from deleted users
         const validConversations = conversations.filter(c => c !== null);
 
-        console.log(`[Messages] Found ${validConversations.length} conversations for user ${userId}`);
+
 
         // 2. Cache result
         await redis.set(CACHE_KEYS.CONVERSATIONS(userId.toString()), validConversations, { ex: TTL.CONVERSATIONS });

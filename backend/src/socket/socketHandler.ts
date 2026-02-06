@@ -39,7 +39,7 @@ const cleanupUserSockets = async (userId: string, io: Server) => {
         }
 
         if (deadSockets.length > 0) {
-            console.log(`[Socket] Pruning ${deadSockets.length} zombie sockets for user ${userId}`);
+
             await Promise.all([
                 ...deadSockets.map(sid => redis.srem(CACHE_KEYS.USER_SOCKETS(userId), sid)),
                 ...deadSockets.map(sid => redis.del(CACHE_KEYS.SOCKET_TO_USER(sid)))
@@ -50,7 +50,7 @@ const cleanupUserSockets = async (userId: string, io: Server) => {
         if (liveSockets.length === 0) {
             await redis.srem(CACHE_KEYS.ONLINE_USERS, userId);
             io.emit("user_status", { userId, status: "offline", lastActive: new Date() });
-            console.log(`[Socket] User ${userId} marked offline after zombie pruning`);
+
         }
 
         return liveSockets.length;
@@ -71,7 +71,7 @@ export const setupSocketIO = (io: Server) => {
                 // Join user's personal room for multi-device sync
                 socket.join(userId);
 
-                console.log(`[Socket] User ${userId} authenticated on socket ${socket.id}`);
+
 
                 // Clear any pending disconnect timer for this user if they reconnect quickly
                 if (disconnectTimers.has(userId)) {
@@ -105,7 +105,7 @@ export const setupSocketIO = (io: Server) => {
                 }).select("_id sender");
 
                 if (undeliveredMessages.length > 0) {
-                    console.log(`[Socket] Pushing ${undeliveredMessages.length} pending deliveries to user ${userId}`);
+
                     socket.emit("pending_delivery", undeliveredMessages.map((m: any) => ({
                         messageId: m._id,
                         senderId: m.sender
@@ -145,12 +145,12 @@ export const setupSocketIO = (io: Server) => {
                     message.deliveredAt = new Date();
                     await message.save();
 
-                    console.log(`[Socket] Message ${message._id} marked delivered for recipient ${socket.userId}`);
+
 
                     // Invalidate sender's conversation cache so they see the double tick next time they log in or fetch
                     const conversationId = Message.getConversationId(data.senderId, socket.userId);
                     await redis.del(CACHE_KEYS.MESSAGES(conversationId, data.senderId));
-                    console.log(`[Socket] Invalidated cache for sender ${data.senderId}`);
+
 
                     // Notify original sender
                     io.to(data.senderId).emit("message_delivered", {
@@ -190,11 +190,9 @@ export const setupSocketIO = (io: Server) => {
                     }
                 );
 
-                console.log(`[Socket] Marked all as read in ${data.conversationId} for ${socket.userId}`);
 
-                // Invalidate sender's conversation cache
-                await redis.del(CACHE_KEYS.MESSAGES(data.conversationId, data.senderId));
-                console.log(`[Socket] Invalidated cache for sender ${data.senderId} after READ`);
+
+
 
                 // Notify sender
                 io.to(data.senderId).emit("message_read", {
@@ -212,7 +210,7 @@ export const setupSocketIO = (io: Server) => {
                 const userId = socket.userId || await redis.get<string>(CACHE_KEYS.SOCKET_TO_USER(socket.id));
 
                 if (userId) {
-                    console.log(`[Redis] User ${userId} socket ${socket.id} disconnected`);
+
 
                     await redis.srem(CACHE_KEYS.USER_SOCKETS(userId), socket.id);
                     await redis.del(CACHE_KEYS.SOCKET_TO_USER(socket.id));
@@ -234,7 +232,7 @@ export const setupSocketIO = (io: Server) => {
                                 if (currentSockets === 0) {
                                     await redis.srem(CACHE_KEYS.ONLINE_USERS, userId);
                                     io.emit("user_status", { userId, status: "offline", lastActive: new Date() });
-                                    console.log(`[Redis] User ${userId} marked as offline`);
+
                                 }
                             } catch (error) {
                                 console.error(`[Redis] Error in disconnect grace period for user ${userId}:`, error);

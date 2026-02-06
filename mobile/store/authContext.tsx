@@ -120,7 +120,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 try {
                     cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : null;
                 } catch (e) {
-                    console.log("Failed to parse cached user");
+
                 }
 
                 if (!cachedUser) {
@@ -161,7 +161,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             });
 
         } catch (error: any) {
-            console.log("Auth check error:", error);
+            console.error("Auth check error:", error);
             // On 401, apiClient handles it. On other errors, we keep cached state
         } finally {
             set({ isCheckingAuth: false, isAuthLoading: false });
@@ -171,7 +171,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     login: async (email: string, password: string) => {
         set({ isLoading: true })
         try {
-            console.log("Attempting login...");
+
             const data = await apiClient.post<{ token: string; user: any }>(
                 `/api/auth/login`,
                 { email, password }
@@ -190,7 +190,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 isCheckingAuth: false
             });
 
-            console.log("✅ Login successful, state updated");
+
             // Sync with apiClient
             apiClient.setAuthToken(data.token);
 
@@ -246,44 +246,44 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             try {
                 const { useSocialStore } = await import('./socialStore');
                 useSocialStore.getState().reset();
-            } catch (e) { console.log('Store reset failed: Social'); }
+            } catch (e) { console.error('Store reset failed: Social'); }
 
             try {
                 const { useBookshelfStore } = await import('./bookshelfStore');
                 useBookshelfStore.getState().reset();
-            } catch (e) { console.log('Store reset failed: Bookshelf'); }
+            } catch (e) { console.error('Store reset failed: Bookshelf'); }
 
             try {
                 const { useMessageStore } = await import('./messageStore');
                 useMessageStore.getState().reset();
-            } catch (e) { console.log('Store reset failed: Message'); }
+            } catch (e) { console.error('Store reset failed: Message'); }
 
             try {
                 const { useNotificationStore } = await import('./notificationStore');
                 useNotificationStore.getState().reset();
-            } catch (e) { console.log('Store reset failed: Notification'); }
+            } catch (e) { console.error('Store reset failed: Notification'); }
 
             try {
                 const { useReadingSessionStore } = await import('./readingSessionStore');
                 useReadingSessionStore.getState().reset();
-            } catch (e) { console.log('Store reset failed: ReadingSession'); }
+            } catch (e) { console.error('Store reset failed: ReadingSession'); }
 
             try {
                 const { useGamificationStore } = await import('./gamificationStore');
                 useGamificationStore.getState().reset();
-            } catch (e) { console.log('Store reset failed: Gamification'); }
+            } catch (e) { console.error('Store reset failed: Gamification'); }
 
             try {
                 const { useBookNoteStore } = await import('./bookNoteStore');
                 useBookNoteStore.getState().reset();
-            } catch (e) { console.log('Store reset failed: BookNote'); }
+            } catch (e) { console.error('Store reset failed: BookNote'); }
 
             try {
                 const { useCurrencyStore } = await import('./currencyStore');
                 if (typeof useCurrencyStore.getState().reset === 'function') {
                     useCurrencyStore.getState().reset();
                 }
-            } catch (e) { console.log('Store reset failed: Currency'); }
+            } catch (e) { console.error('Store reset failed: Currency'); }
 
             set({ token: null, user: null });
 

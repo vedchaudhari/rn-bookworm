@@ -307,7 +307,7 @@ router.put("/profile", protectRoute, asyncHandler(async (req: Request, res: Resp
         updatedUser.profileImage !== profileImage) {
         try {
             await deleteFileFromS3(updatedUser.profileImage);
-            console.log(`[S3] Deleted old profile image for user ${userId} during generic profile update`);
+
         } catch (err) {
             console.error('[S3] Generic update cleanup failed:', err);
         }
@@ -349,7 +349,7 @@ router.put("/update-profile-image", protectRoute, asyncHandler(async (req: Reque
         user.profileImage !== profileImage) {
         try {
             await deleteFileFromS3(user.profileImage);
-            console.log(`[S3] Deleted old profile image for user ${userId}`);
+
         } catch (deleteError) {
             // Log but don't fail the update
             console.error('[S3] Failed to delete old profile image:', deleteError);

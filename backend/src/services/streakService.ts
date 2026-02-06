@@ -129,7 +129,7 @@ export class StreakService {
             longestStreak: streak.longestStreak
         });
 
-        console.log(`[Streaks] Check-in successful for user ${userId}. New streak: ${streak.currentStreak}`);
+
 
         // Award Ink Drops
         if (inkDropsEarned > 0) {
@@ -161,7 +161,7 @@ export class StreakService {
         // If we get here, the streak is broken (last checkin was < yesterday)
         // We must mark it as broken.
 
-        console.log(`[Streaks] Found broken streak for user ${streak.userId}. Resetting...`);
+
 
         // If it was a meaningful streak, allow restore
         if (streak.currentStreak > 0) {

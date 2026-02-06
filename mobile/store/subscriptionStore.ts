@@ -74,7 +74,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
             // const purchaseResult = await Purchases.purchasePackage(package);
 
             // For now, simulate purchase (REMOVE IN PRODUCTION)
-            console.log('Purchasing subscription:', productId);
+
 
             // Simulate successful purchase
             const tier: SubscriptionTier = productId.includes('monthly') ? 'monthly' : 'yearly';
@@ -99,7 +99,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
             // TODO: Implement RevenueCat restore
             // const customerInfo = await Purchases.restorePurchases();
 
-            console.log('Restoring purchases...');
+
             return { success: true, message: 'No previous purchases found' };
         } catch (error: any) {
             console.error('Restore error:', error);
