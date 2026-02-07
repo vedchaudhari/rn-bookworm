@@ -4,7 +4,6 @@ import cors from "cors";
 import "dotenv/config";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import job from "./lib/cron";
 
 import authRoutes from "./routes/authRoutes";
 import bookRoutes from "./routes/bookRoutes";
@@ -72,9 +71,6 @@ setupSocketIO(io);
 // Make io accessible to routes
 app.set("io", io);
 
-// Start Cron Jobs
-// job.start();
-
 // middleware
 app.use(express.json({ limit: "50mb" }));
 app.use(cors());
@@ -116,13 +112,6 @@ app.use(errorHandler);
 
 // Rate Limiter Configuration
 const limiter = rateLimit({
-    // TODO: Switch back to RedisStore once Upstash compatibility adapter is implemented
-    /*
-    store: new RedisStore({
-        // @ts-ignore - Upstash Redis client is compatible enough for this usage or will fall back
-        sendCommand: (...args: string[]) => redis.call(args[0], ...args.slice(1)),
-    }),
-    */
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
