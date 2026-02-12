@@ -7,6 +7,7 @@ import {
     RADIUS,
     SHADOWS,
     BORDER_WIDTH,
+    BORDER_RADIUS,
 } from "../../constants/styleConstants";
 
 const { width } = Dimensions.get('window');
@@ -17,21 +18,21 @@ const styles = StyleSheet.create({
     container: {
         width: CARD_WIDTH,
         alignSelf: 'center',
-        backgroundColor: COLORS.cardBg,
+        backgroundColor: COLORS.surfaceSilk, // Slightly more transparent
         marginBottom: SPACING.xxl,
-        borderRadius: RADIUS.card.medium,
+        borderRadius: BORDER_RADIUS.xl, // Match other components
         // Removed overflow: 'hidden' to allow menu dropdowns to be visible
-        borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.glassBorder,
-        ...SHADOWS.strong,
+        borderWidth: 0.5,
+        borderColor: 'rgba(255, 255, 255, 0.08)',
+        ...SHADOWS.light,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: SPACING.md,
-        paddingHorizontal: SPACING.xl,
+        paddingVertical: SPACING.sm, // Tighter vertical
+        paddingHorizontal: SPACING.md,
         justifyContent: 'space-between',
-        backgroundColor: COLORS.cardBg,
+        backgroundColor: 'transparent',
         borderTopLeftRadius: RADIUS.card.medium,
         borderTopRightRadius: RADIUS.card.medium,
     },
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
     leftActions: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xxl,
+        gap: SPACING.lg, // Tighter than xxl
     },
     actionButton: {
         flexDirection: 'row',

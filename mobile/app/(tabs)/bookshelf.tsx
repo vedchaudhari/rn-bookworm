@@ -185,21 +185,35 @@ export default function BookshelfScreen() {
         AccessibilityInfo.announceForAccessibility(`Switched to ${TABS.find(t => t.key === tab)?.label} tab`);
     };
 
-    // Filter items based on search
-    const filteredItems = useMemo(() => {
-        if (!searchQuery.trim()) return items;
+    const [sortBy, setSortBy] = useState<'recent' | 'title' | 'rating'>('recent');
 
-        const query = searchQuery.toLowerCase();
-        return items.filter(item => {
-            const title = item?.bookId?.title?.toLowerCase() || '';
-            const author = item?.bookId?.author?.toLowerCase() || '';
-            const tags = item?.tags || [];
+    // Filter AND Sort items
+    const filteredAndSortedItems = useMemo(() => {
+        let result = items;
 
-            return title.includes(query) ||
-                author.includes(query) ||
-                tags.some(tag => tag.toLowerCase().includes(query));
+        // 1. Filter by Search
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(item => {
+                const title = item?.bookId?.title?.toLowerCase() || '';
+                const author = item?.bookId?.author?.toLowerCase() || '';
+                const tags = item?.tags || [];
+                return title.includes(query) || author.includes(query) || tags.some(tag => tag.toLowerCase().includes(query));
+            });
+        }
+
+        // 2. Sort
+        return [...result].sort((a, b) => {
+            if (sortBy === 'title') {
+                return (a.bookId?.title || '').localeCompare(b.bookId?.title || '');
+            } else if (sortBy === 'rating') {
+                return (b.rating || 0) - (a.rating || 0); // Descending rating
+            } else {
+                // Recent (default) - assuming createdAt or updatedAt exists, fallback to 0
+                return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+            }
         });
-    }, [items, searchQuery]);
+    }, [items, searchQuery, sortBy]);
 
     const renderHeader = () => (
         <View>
@@ -264,6 +278,41 @@ export default function BookshelfScreen() {
                     </TouchableOpacity>
                 )}
             </View>
+
+            {/* Filter & Sort Panel (God Level Glass) */}
+            {showFilters && (
+                <Animated.View entering={FadeInDown.duration(300).springify()} style={styles.filterPanel}>
+                    <GlassCard style={styles.filterCard}>
+                        {/* Sort Section */}
+                        <Text style={styles.filterLabel}>Sort By</Text>
+                        <View style={styles.filterRow}>
+                            <TouchableOpacity style={[styles.filterChip, styles.filterChipActive]}>
+                                <Text style={[styles.filterChipText, styles.filterChipTextActive]}>Recent</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.filterChip}>
+                                <Text style={styles.filterChipText}>Title</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.filterChip}>
+                                <Text style={styles.filterChipText}>Rating</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Divider */}
+                        <View style={styles.filterDivider} />
+
+                        {/* Filter Section (Mock for now) */}
+                        <Text style={styles.filterLabel}>Browse By</Text>
+                        <View style={styles.filterRow}>
+                            <TouchableOpacity style={styles.filterChip}>
+                                <Text style={styles.filterChipText}>Favorites</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.filterChip}>
+                                <Text style={styles.filterChipText}>Notes</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </GlassCard>
+                </Animated.View>
+            )}
 
             {/* Tabs */}
             <View style={styles.tabsContainer}>
@@ -485,7 +534,7 @@ export default function BookshelfScreen() {
                 {/* Dynamic Book List - Only this part reloads */}
                 <View style={{ flex: 1, opacity: isFilterLoading ? 0.5 : 1 }}>
                     <FlatList
-                        data={filteredItems}
+                        data={filteredAndSortedItems}
                         keyExtractor={(item, index) => `${item._id || 'item'}-${index}`}
                         renderItem={({ item, index }) => (
                             isInitialLoad ? (
@@ -785,5 +834,54 @@ const styles = StyleSheet.create({
         fontSize: FONT_SIZE.sm,
         color: COLORS.textMuted,
         fontWeight: '600',
+    },
+
+    // Filter Panel Styles
+    filterPanel: {
+        paddingHorizontal: PADDING.screen.horizontal,
+        marginBottom: MARGIN.item.medium,
+    },
+    filterCard: {
+        padding: SPACING.lg,
+        borderRadius: BORDER_RADIUS.xl,
+        backgroundColor: 'rgba(20, 26, 33, 0.6)', // Semi-transparent
+    },
+    filterLabel: {
+        fontSize: FONT_SIZE.xs,
+        fontWeight: '700',
+        color: COLORS.textMuted,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: SPACING.md,
+    },
+    filterRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: SPACING.sm,
+    },
+    filterChip: {
+        paddingHorizontal: SPACING.lg,
+        paddingVertical: SPACING.sm + 2,
+        borderRadius: BORDER_RADIUS.lg,
+        borderWidth: 1,
+        borderColor: COLORS.surfaceHighlight,
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    },
+    filterChipActive: {
+        backgroundColor: 'rgba(25, 227, 209, 0.15)',
+        borderColor: COLORS.primary,
+    },
+    filterChipText: {
+        fontSize: FONT_SIZE.sm,
+        fontWeight: '600',
+        color: COLORS.textSecondary,
+    },
+    filterChipTextActive: {
+        color: COLORS.primary,
+    },
+    filterDivider: {
+        height: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        marginVertical: SPACING.lg,
     },
 });

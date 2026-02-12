@@ -151,7 +151,10 @@ export default function Home() {
                     data={books}
                     renderItem={renderItem}
                     keyExtractor={(item) => item._id}
-                    contentContainerStyle={[styles.listContainer, { paddingBottom: 160 }]}
+                    contentContainerStyle={[
+                        styles.listContainer,
+                        { paddingBottom: 100 } // Taller tab bar clearance
+                    ]}
                     showsVerticalScrollIndicator={false}
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={() => fetchBooks(1, true)} colors={[COLORS.primary]} tintColor={COLORS.primary} />

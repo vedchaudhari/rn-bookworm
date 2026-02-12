@@ -5,9 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import COLORS from '../constants/colors';
 import { useAuthStore } from '../store/authContext';
 import { useNotificationStore } from '../store/notificationStore';
+import { useMessageStore } from '../store/messageStore';
 import { SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS, TYPOGRAPHY } from '../constants/styleConstants';
 
 interface AppHeaderProps {
@@ -20,20 +22,25 @@ interface AppHeaderProps {
 const AppHeader: React.FC<AppHeaderProps> = ({ showBack, showSearch, title, rightElement }) => {
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const { unreadCount } = useNotificationStore();
+    const { unreadCount: notificationUnreadCount } = useNotificationStore();
+    const { user } = useAuthStore();
 
     return (
         <View style={[styles.outerContainer, { paddingTop: insets.top }]}>
+            {/* God Level Glass Effect */}
+            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+
+            {/* Subtle Gradient Overlay for richness */}
+            <LinearGradient
+                colors={['rgba(25, 227, 209, 0.05)', 'transparent']}
+                style={StyleSheet.absoluteFill}
+            />
+
             {/* Diamond Rim - Elevated Edge Lighting */}
             <View style={styles.diamondRim} />
 
-            <LinearGradient
-                colors={['rgba(25, 227, 209, 0.15)', 'transparent']}
-                style={styles.topGlow}
-            />
-
             <View style={styles.content}>
-                {/* Left Side */}
+                {/* Left Side - Logo or Back */}
                 <View style={styles.leftContainer}>
                     {showBack ? (
                         <TouchableOpacity
@@ -43,21 +50,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({ showBack, showSearch, title, righ
                         >
                             <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
                         </TouchableOpacity>
-                    ) : (showSearch !== false && (
-                        <TouchableOpacity
-                            onPress={() => router.push('/search' as any)}
-                            style={styles.iconButton}
-                            activeOpacity={0.7}
-                        >
-                            <Ionicons name="search" size={20} color={COLORS.textPrimary} />
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* Center Logo or Title */}
-                <View style={styles.logoContainer}>
-                    {title ? (
-                        <Text style={styles.titleText}>{title}</Text>
                     ) : (
                         <Image
                             source={require('../assets/images/icon.png')}
@@ -67,19 +59,45 @@ const AppHeader: React.FC<AppHeaderProps> = ({ showBack, showSearch, title, righ
                     )}
                 </View>
 
-                {/* Right Side */}
+                {/* Right Side - Actions */}
                 <View style={styles.rightContainer}>
                     <View style={styles.rightActions}>
+                        {showSearch !== false && (
+                            <TouchableOpacity
+                                onPress={() => router.push('/search' as any)}
+                                style={styles.iconButton}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons name="search" size={20} color={COLORS.textPrimary} />
+                            </TouchableOpacity>
+                        )}
+
                         <TouchableOpacity
                             onPress={() => router.push('/notifications' as any)}
                             style={styles.iconButton}
                             activeOpacity={0.7}
                         >
                             <Ionicons name="notifications-outline" size={20} color={COLORS.textPrimary} />
-                            {unreadCount > 0 && (
+                            {notificationUnreadCount > 0 && (
                                 <View style={styles.badge}>
-                                    <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                                    <Text style={styles.badgeText}>{notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}</Text>
                                 </View>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => router.push('/profile')}
+                            style={styles.iconButton}
+                            activeOpacity={0.7}
+                        >
+                            {user?.profileImage ? (
+                                <Image
+                                    source={{ uri: user.profileImage }}
+                                    style={{ width: '100%', height: '100%', borderRadius: BORDER_RADIUS.circular }}
+                                    contentFit="cover"
+                                />
+                            ) : (
+                                <Ionicons name="person-circle-outline" size={24} color={COLORS.textPrimary} />
                             )}
                         </TouchableOpacity>
                         {rightElement}
@@ -95,9 +113,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({ showBack, showSearch, title, righ
 
 const styles = StyleSheet.create({
     outerContainer: {
-        backgroundColor: COLORS.surfaceSilk,
+        backgroundColor: 'transparent',
         zIndex: 1000,
-        ...SHADOWS.godLevel,
+        // ...SHADOWS.godLevel, // Removed heavy shadow, transparency handles separation
     },
     diamondRim: {
         height: 1.2,
@@ -137,45 +155,32 @@ const styles = StyleSheet.create({
     rightActions: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.lg,
+        gap: SPACING.md,
     },
     logo: {
-        width: 140,
-        height: 48,
-        // Neon Teal pop
-        shadowColor: COLORS.primary,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.8,
-        shadowRadius: 12,
+        width: 120,
+        height: 40,
     },
     iconButton: {
-        width: 44,
-        height: 44,
-        borderRadius: BORDER_RADIUS.circular,
-        backgroundColor: 'rgba(20, 26, 33, 0.8)',
+        width: 40,
+        height: 40,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(25, 227, 209, 0.3)', // Neon Teal edge
-        // Deep shadow for buttons
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.5,
-        shadowRadius: 8,
-        elevation: 8,
+        // Removed heavy container styling for a cleaner, professional feel
+        // We rely on the icon itself. If they need a hit slop, the size handles it.
     },
     badge: {
         position: 'absolute',
-        top: 6,
-        right: 6,
+        top: 2,
+        right: 2,
         backgroundColor: COLORS.primary,
-        borderRadius: 7,
-        minWidth: 16,
-        height: 16,
+        borderRadius: 6,
+        minWidth: 14,
+        height: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#111',
+        borderWidth: 1.5,
+        borderColor: COLORS.surfaceSilk, // Match background to create a 'cutout' effect
     },
     badgeText: {
         color: '#000',

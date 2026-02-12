@@ -42,38 +42,36 @@ const styles = StyleSheet.create({
     },
     searchContainer: {
         marginTop: SPACING.xl,
-        marginHorizontal: SPACING.xxl,
+        marginHorizontal: SPACING.xl,
         marginBottom: MARGIN.item.large,
-        backgroundColor: COLORS.surface,
-        borderRadius: RADIUS.card.medium,
-        borderWidth: BORDER_WIDTH.thin,
-        borderColor: COLORS.glassBorder,
-        ...SHADOWS.medium,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)', // Subtle glass
+        borderRadius: BORDER_RADIUS.xl,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
         overflow: 'hidden',
     },
     searchInputRow: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: SPACING.xl,
-        height: COMPONENT_SIZES.input.standard,
+        height: 44, // Standard mobile input height
     },
     searchIcon: {
-        marginRight: SPACING.lg,
-        opacity: OPACITY.muted,
+        marginRight: SPACING.md,
+        opacity: 0.5,
     },
     searchInput: {
         flex: 1,
         fontSize: FONT_SIZE.base,
         color: COLORS.textPrimary,
-        fontWeight: '600',
+        fontWeight: '500',
+        height: '100%',
     },
     searchTypeToggle: {
         flexDirection: 'row',
-        padding: SPACING.xs,
+        padding: 4,
         gap: GAP.sm,
-        backgroundColor: COLORS.surfaceHighlight,
-        borderTopWidth: BORDER_WIDTH.thin,
-        borderTopColor: COLORS.glassBorder,
+        backgroundColor: 'transparent',
     },
     typeBtn: {
         flex: 1,
@@ -85,7 +83,9 @@ const styles = StyleSheet.create({
         gap: GAP.sm,
     },
     typeBtnActive: {
-        backgroundColor: COLORS.primary,
+        backgroundColor: 'rgba(25, 227, 209, 0.15)', // Subtle tint instead of solid block
+        borderWidth: 1,
+        borderColor: COLORS.primary,
     },
     typeText: {
         fontSize: FONT_SIZE.xs,
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
         color: COLORS.textMuted,
     },
     typeTextActive: {
-        color: COLORS.white,
+        color: COLORS.primary,
     },
     genreListContent: {
         paddingHorizontal: SPACING.xxl,
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
         color: COLORS.textPrimary,
     },
     listContent: {
-        paddingHorizontal: SPACING.xxl,
+        paddingHorizontal: SPACING.xl,
         paddingBottom: 100,
     },
     columnWrapper: {

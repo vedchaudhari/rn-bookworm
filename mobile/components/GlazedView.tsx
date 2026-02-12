@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
         borderWidth: BORDER_WIDTH.thin,
         borderColor: COLORS.surfaceLight,
         overflow: 'hidden',
-        ...SHADOWS.strong,
+        ...SHADOWS.light,
     },
     topHighlight: {
         position: 'absolute',

@@ -47,21 +47,21 @@ interface SocialPostCardProps {
 const localStyles = StyleSheet.create({
     card: {
         backgroundColor: COLORS.surfaceSilk,
-        borderRadius: BORDER_RADIUS.xxl, // More rounded for luxury feel
+        borderRadius: BORDER_RADIUS.xl, // Slightly less rounded for a mature look
         marginHorizontal: SPACING.xl,
         marginBottom: SPACING.xxl,
         overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: COLORS.glassBorder,
-        ...SHADOWS.godLevel, // Absolute depth
+        borderWidth: 0.5, // Thinner border
+        borderColor: 'rgba(255, 255, 255, 0.08)', // Very subtle border
+        ...SHADOWS.light, // Much lighter shadow for modern flat-ish look
     },
     bookTitle: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: '900',
+        fontSize: FONT_SIZE.lg, // Adjusted for balance
+        fontWeight: '800',
         color: COLORS.textPrimary,
         marginBottom: SPACING.xs,
-        letterSpacing: 0.8, // Editorial/Magazine style
-        lineHeight: 28,
+        letterSpacing: 0.3,
+        lineHeight: 24,
     },
     authorName: {
         fontSize: FONT_SIZE.base,
