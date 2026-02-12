@@ -20,7 +20,12 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.readsphere.app",
       "googleServicesFile": "./google-services.json",
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "androidNavigationBar": {
+        "visible": "immersive",
+        "barStyle": "dark-content",
+        "backgroundColor": "#0A0908"
+      }
     },
     "web": {
       "output": "static",

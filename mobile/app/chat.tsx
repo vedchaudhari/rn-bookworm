@@ -78,6 +78,24 @@ const PremiumMediaViewer: React.FC<MediaViewerProps> = ({ visible, onClose, medi
     const handleSave = async () => {
         if (!media) return;
         try {
+            // Check and request MediaLibrary permission
+            const { status: existingStatus } = await MediaLibrary.getPermissionsAsync();
+            let finalStatus = existingStatus;
+
+            if (existingStatus !== 'granted') {
+                const { status } = await MediaLibrary.requestPermissionsAsync();
+                finalStatus = status;
+            }
+
+            if (finalStatus !== 'granted') {
+                showAlert({
+                    title: 'Permission Required',
+                    message: 'Please grant media library access in Settings to save images.',
+                    type: 'warning'
+                });
+                return;
+            }
+
             let fileUri = media.uri;
 
             // If it's a remote URL, we need to download it first
@@ -346,12 +364,13 @@ const StatusTicks = React.memo(({ deliveredAt, readAt, pending }: { deliveredAt?
 
     useEffect(() => {
         // Only run animations if component is mounted
+        // Use very fast transitions for instant visual feedback
         if (isRead) {
-            blueOpacity.value = withTiming(1, { duration: 450 });
+            blueOpacity.value = withTiming(1, { duration: 150 }); // Reduced from 450ms to 150ms
         }
         if (isDelivered) {
-            secondTickScale.value = withSpring(1, { damping: 15, stiffness: 120 });
-            secondTickTranslateX.value = withSpring(0, { damping: 15, stiffness: 120 });
+            secondTickScale.value = withSpring(1, { damping: 20, stiffness: 200 }); // Faster spring
+            secondTickTranslateX.value = withSpring(0, { damping: 20, stiffness: 200 });
         }
     }, [isRead, isDelivered]);
 
@@ -1308,6 +1327,24 @@ export default function ChatScreen() {
 
     const handlePickImage = async (allowEditing: boolean = false) => {
         try {
+            // Check and request permission
+            const { status: existingStatus } = await ImagePicker.getMediaLibraryPermissionsAsync();
+            let finalStatus = existingStatus;
+
+            if (existingStatus !== 'granted') {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                finalStatus = status;
+            }
+
+            if (finalStatus !== 'granted') {
+                showAlert({
+                    title: 'Permission Required',
+                    message: 'Please grant photos access in Settings to select images.',
+                    type: 'warning'
+                });
+                return;
+            }
+
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: false,
@@ -1348,6 +1385,24 @@ export default function ChatScreen() {
 
     const handlePickVideo = async () => {
         try {
+            // Check and request permission
+            const { status: existingStatus } = await ImagePicker.getMediaLibraryPermissionsAsync();
+            let finalStatus = existingStatus;
+
+            if (existingStatus !== 'granted') {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                finalStatus = status;
+            }
+
+            if (finalStatus !== 'granted') {
+                showAlert({
+                    title: 'Permission Required',
+                    message: 'Please grant photos access in Settings to select videos.',
+                    type: 'warning'
+                });
+                return;
+            }
+
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Videos,
                 allowsEditing: false,

@@ -188,14 +188,8 @@ export default function Home() {
                     }
                 />
 
-                {/* Floating Add Button */}
-                <TouchableOpacity
-                    style={styles.fab}
-                    onPress={() => router.push('/create' as any)}
-                >
-                    <Ionicons name="add" size={30} color={COLORS.white} />
-                </TouchableOpacity>
             </View>
         </SafeScreen>
+
     );
 }

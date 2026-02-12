@@ -149,6 +149,10 @@ export function setupPushNotificationListeners(router: any) {
                 });
             } else if (data?.type === 'LIKE' || data?.type === 'COMMENT' || data?.type === 'FOLLOW') {
                 router.push('/(tabs)/notifications');
+            } else {
+                // Fallback: redirect to feed screen for any unhandled notification types
+                console.log('[Push] Unhandled notification type, redirecting to feed:', data?.type);
+                router.push('/(tabs)');
             }
         });
 

@@ -1,6 +1,8 @@
 import { SplashScreen, Stack, useRouter } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AppState, AppStateStatus, LogBox } from 'react-native';
+import { AppState, AppStateStatus, LogBox, Platform } from 'react-native';
+import * as NavigationBar from 'expo-navigation-bar';
+
 import SafeScreen from "../components/SafeScreen";
 
 // Suppress expo-notifications warning in Expo Go (Android)
@@ -174,6 +176,15 @@ export default function RootLayout() {
     const [isAppReady, setIsAppReady] = useState(false);
 
     useEffect(() => {
+        if (Platform.OS === 'android') {
+            NavigationBar.setBehaviorAsync('overlay-swipe');
+            NavigationBar.setVisibilityAsync('hidden');
+        }
+
+    }, []);
+
+    useEffect(() => {
+
         if (!isAuthLoading && !isCheckingAuth && fontsLoaded) {
             const timer = setTimeout(async () => {
                 let target = '/(tabs)';

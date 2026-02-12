@@ -86,6 +86,24 @@ export default function UserProfile() {
 
     const handleUpdateProfileImage = async () => {
         try {
+            // Check and request permission
+            const { status: existingStatus } = await ImagePicker.getMediaLibraryPermissionsAsync();
+            let finalStatus = existingStatus;
+
+            if (existingStatus !== 'granted') {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                finalStatus = status;
+            }
+
+            if (finalStatus !== 'granted') {
+                showAlert({
+                    title: 'Permission Required',
+                    message: 'Please grant photos access in Settings to update your profile picture.',
+                    type: 'warning'
+                });
+                return;
+            }
+
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: false, // Use our custom cropper instead

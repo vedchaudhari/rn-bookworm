@@ -14,7 +14,8 @@ interface SafeScreenProps {
 export default function SafeScreen({ children, top = true, bottom = true, isTabScreen = false, style }: SafeScreenProps) {
     const insets = useSafeAreaInsets();
 
-    const TAB_BAR_HEIGHT = 64;
+    const TAB_BAR_HEIGHT = 60;
+
     const TAB_BAR_BOTTOM = Math.max(insets.bottom, 16);
     const TAB_BAR_SPACE = isTabScreen ? TAB_BAR_HEIGHT + TAB_BAR_BOTTOM + 20 : insets.bottom;
 

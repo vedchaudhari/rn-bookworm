@@ -33,6 +33,7 @@ export default function CreateTab() {
     // Scanner State
     const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [scanned, setScanned] = useState(false);
+    const [permission, requestPermission] = useCameraPermissions();
 
     const insets = useSafeAreaInsets();
     const { token } = useAuthStore();
@@ -41,6 +42,30 @@ export default function CreateTab() {
 
     const [isSearchingScan, setIsSearchingScan] = useState(false);
     const [scanMessage, setScanMessage] = useState<string | null>(null);
+
+    const handleOpenScanner = async () => {
+        // Check and request camera permission before opening scanner
+        if (!permission) {
+            // Permission info is still loading
+            return;
+        }
+
+        if (!permission.granted) {
+            const { granted } = await requestPermission();
+            if (!granted) {
+                showAlert({
+                    title: "Camera Permission Required",
+                    message: "Please enable camera access in settings to scan book barcodes.",
+                    type: "warning"
+                });
+                return;
+            }
+        }
+
+        // Permission granted, open scanner
+        setIsScannerOpen(true);
+        setScanned(false);
+    };
 
     const handleBarcodeScanned = async ({ type, data }: { type: string, data: string }) => {
         if (scanned || isSearchingScan) return;
@@ -119,6 +144,24 @@ export default function CreateTab() {
 
     const pickImage = async () => {
         try {
+            // Check and request permission
+            const { status: existingStatus } = await ImagePicker.getMediaLibraryPermissionsAsync();
+            let finalStatus = existingStatus;
+
+            if (existingStatus !== 'granted') {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                finalStatus = status;
+            }
+
+            if (finalStatus !== 'granted') {
+                showAlert({
+                    title: 'Permission Required',
+                    message: 'Please grant photos access in Settings to select book cover images.',
+                    type: 'warning'
+                });
+                return;
+            }
+
             let result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['images'],
                 allowsEditing: false, // Disabled native editor for smoother flow
@@ -364,10 +407,7 @@ export default function CreateTab() {
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                onPress={() => {
-                                    setIsScannerOpen(true);
-                                    setScanned(false);
-                                }}
+                                onPress={handleOpenScanner}
                                 style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surfaceLight, padding: 8, borderRadius: 8 }}
                             >
                                 <Ionicons name="scan-outline" size={20} color={COLORS.primary} />

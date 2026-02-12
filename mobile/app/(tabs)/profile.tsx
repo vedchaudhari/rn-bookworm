@@ -158,6 +158,23 @@ export default function Profile() {
 
     const handleChangeProfileImage = async () => {
         try {
+            // Check and request permission
+            const { status: existingStatus } = await ImagePicker.getMediaLibraryPermissionsAsync();
+            let finalStatus = existingStatus;
+
+            if (existingStatus !== 'granted') {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                finalStatus = status;
+            }
+
+            if (finalStatus !== 'granted') {
+                showAlert({
+                    title: 'Permission Required',
+                    message: 'Please grant photos access in Settings to change your profile picture.',
+                    type: 'warning'
+                });
+                return;
+            }
 
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: 'images',
