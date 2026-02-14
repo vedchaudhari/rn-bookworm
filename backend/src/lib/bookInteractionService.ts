@@ -11,7 +11,7 @@ import BookshelfItem from "../models/BookshelfItem";
  * 
  * @param books The array of book documents (mongoose documents or plain objects)
  * @param userId The current user's ID (to check isLiked and isBookmarked)
- * @returns Array of books with `likeCount`, `commentCount`, `isLiked`, and `isBookmarked` properties
+ * @returns Array of books with `likeCount`, `commentCount`, `isLiked`, and `isBookmarked` properties 
  */
 export const enrichBooksWithInteractions = async (
     books: IBookDocument[] | any[],

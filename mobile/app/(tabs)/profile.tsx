@@ -91,7 +91,7 @@ export default function Profile() {
             if (!refreshing) setLoading(true);
 
             const [booksRes, statsRes] = await Promise.all([
-                fetch(`${API_URL}/api/books/user`, {
+                fetch(`${API_URL}/api/books/user/${userId}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 }),
                 fetch(`${API_URL}/api/social/follow-counts/${userId}`, {
