@@ -25,7 +25,7 @@ const protectRoute = async (req: Request, res: Response, next: NextFunction) => 
             return res.status(401).json({ message: "No authentication token, access denied" });
         }
 
-        // Defensive: Remove 'Bearer ' (case insensitive) and trim whitespace
+        // Defensive: Remove 'Bearer ' (case insensitive) & trim whitespace
         // Also removes quotes if present
         const token = authHeader
             .replace(/^Bearer\s+/i, "")
