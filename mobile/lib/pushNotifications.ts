@@ -21,11 +21,10 @@ Notifications.setNotificationHandler({
 });
 
 export async function registerForPushNotificationsAsync(token: string) {
-    /*
     if (Constants.executionEnvironment === 'storeClient') {
+        console.log('ℹ️ [Push] Skipping registration in Expo Go.');
         return null;
     }
-    */
 
     if (!Device.isDevice) {
         console.warn('⚠️ [Push] You are on a simulator. Push notifications may not appear visually, but we will still attempt to register a token for testing.');
@@ -87,15 +86,73 @@ export async function registerForPushNotificationsAsync(token: string) {
 }
 
 /**
+ * Handle notification response (tap)
+ */
+const handleNotificationResponse = (response: Notifications.NotificationResponse, router: any) => {
+    const data = response.notification.request.content.data;
+    console.log('[Push] Notification response received:', data);
+
+    // Access store state directly to check if we are already in this conversation
+    const activeConversation = useMessageStore.getState().activeConversation;
+
+    if (data?.type === 'MESSAGE' && data.senderId) {
+        const targetUserId = String(data.senderId);
+
+        // If we are already in the chat with this user, do not push a new screen
+        if (activeConversation === targetUserId) {
+            console.log('[Push] Already in active conversation with', targetUserId, '- skipping navigation');
+            return;
+        }
+
+        // Push to chat
+        router.push({
+            pathname: '/chat',
+            params: {
+                userId: targetUserId,
+                username: String(data.senderName || 'Chat'),
+                profileImage: String(data.profileImage || '')
+            }
+        });
+    } else if (data?.type === 'NEW_POST' && data.bookId) {
+        router.push({
+            pathname: '/book/[id]',
+            params: { id: String(data.bookId) }
+        });
+    } else if (data?.type === 'LIKE' || data?.type === 'COMMENT' || data?.type === 'FOLLOW') {
+        router.push('/(tabs)/notifications');
+    } else {
+        // Fallback: redirect to feed screen for any unhandled notification types
+        console.log('[Push] Unhandled notification type, redirecting to feed:', data?.type);
+        router.push('/(tabs)');
+    }
+};
+
+/**
+ * Check if app was opened by a notification (Cold Start)
+ */
+export const checkInitialNotification = async (router: any) => {
+    if (Constants.executionEnvironment === 'storeClient') return;
+
+    try {
+        const response = await Notifications.getLastNotificationResponseAsync();
+        if (response) {
+            console.log('[Push] App opened via notification (Cold Start)');
+            // Small delay to ensure navigation is ready
+            setTimeout(() => handleNotificationResponse(response, router), 500);
+        }
+    } catch (error) {
+        console.warn('[Push] Error checking initial notification:', error);
+    }
+};
+
+/**
  * Setup listeners for when notifications are received or interacted with
  */
 export function setupPushNotificationListeners(router: any) {
-    /*
     if (Constants.executionEnvironment === 'storeClient') {
         // console.log('ℹ️ [Push] Skipping listeners in Expo Go to avoid SDK warnings.');
         return () => { };
     }
-    */
 
     try {
         // Standard listeners for real push notifications
@@ -109,8 +166,6 @@ export function setupPushNotificationListeners(router: any) {
                 const activeConversation = useMessageStore.getState().activeConversation;
                 const token = useAuthStore.getState().token;
 
-                // If we are currently looking at this conversation, refresh it to ensure
-                // we have the latest messages even if socket failed to deliver
                 if (activeConversation === String(data.senderId) && token) {
                     console.log('[Push] Foreground message for active chat - refreshing...');
                     useMessageStore.getState().fetchMessages(String(data.senderId), token);
@@ -119,41 +174,7 @@ export function setupPushNotificationListeners(router: any) {
         });
 
         const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-            const data = response.notification.request.content.data;
-            console.log('[Push] Notification response received:', data);
-
-            // Access store state directly to check if we are already in this conversation
-            const activeConversation = useMessageStore.getState().activeConversation;
-
-            if (data?.type === 'MESSAGE' && data.senderId) {
-                const targetUserId = String(data.senderId);
-
-                // If we are already in the chat with this user, do not push a new screen
-                if (activeConversation === targetUserId) {
-                    console.log('[Push] Already in active conversation with', targetUserId, '- skipping navigation');
-                    return;
-                }
-
-                router.push({
-                    pathname: '/chat',
-                    params: {
-                        userId: targetUserId,
-                        username: String(data.senderName || 'Chat'),
-                        profileImage: String(data.profileImage || '')
-                    }
-                });
-            } else if (data?.type === 'NEW_POST' && data.bookId) {
-                router.push({
-                    pathname: '/book/[id]',
-                    params: { id: String(data.bookId) }
-                });
-            } else if (data?.type === 'LIKE' || data?.type === 'COMMENT' || data?.type === 'FOLLOW') {
-                router.push('/(tabs)/notifications');
-            } else {
-                // Fallback: redirect to feed screen for any unhandled notification types
-                console.log('[Push] Unhandled notification type, redirecting to feed:', data?.type);
-                router.push('/(tabs)');
-            }
+            handleNotificationResponse(response, router);
         });
 
         return () => {

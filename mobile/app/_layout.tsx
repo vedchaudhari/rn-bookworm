@@ -24,12 +24,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import GlobalAlert from "../components/GlobalAlert";
 import Toast from "../components/Toast";
 import { useUIStore } from "../store/uiStore";
-import { registerForPushNotificationsAsync, setupPushNotificationListeners } from "../lib/pushNotifications";
+import { registerForPushNotificationsAsync, setupPushNotificationListeners, checkInitialNotification } from "../lib/pushNotifications";
 // import { usePermissions } from "../hooks/usePermissions";
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+    const router = useRouter();
     const { checkAuth, user, token, isCheckingAuth, isAuthLoading, hasCompletedOnboarding } = useAuthStore();
     const { hydrate } = useSocialStore();
     const isAuthenticated = !!(user && token);
@@ -123,6 +124,10 @@ export default function RootLayout() {
 
     // Push Notification Listeners
     useEffect(() => {
+        // 1. Check if app was opened via notification (Cold Start)
+        checkInitialNotification(router);
+
+        // 2. Setup listeners for foreground/background interactions
         const cleanup = setupPushNotificationListeners(router);
         return () => {
             if (cleanup) cleanup();
@@ -167,8 +172,6 @@ export default function RootLayout() {
         };
     }, [user?._id, user?.id, token, isCheckingAuth]);
 
-    const router = useRouter();
-    // isAuthenticated is already defined above near line 31
 
     // Snap Redirector:
     // This ensures the navigator actually JUMPS to the correct stack
@@ -176,11 +179,8 @@ export default function RootLayout() {
     const [isAppReady, setIsAppReady] = useState(false);
 
     useEffect(() => {
-        if (Platform.OS === 'android') {
-            NavigationBar.setBehaviorAsync('overlay-swipe');
-            NavigationBar.setVisibilityAsync('hidden');
-        }
-
+        // NavigationBar.setBehaviorAsync('overlay-swipe') and setVisibilityAsync('hidden') 
+        // are not supported with Expo SDK 54's mandatory edge-to-edge layout.
     }, []);
 
     useEffect(() => {

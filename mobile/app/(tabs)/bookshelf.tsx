@@ -135,10 +135,6 @@ export default function BookshelfScreen() {
         router.push(`/book-progress/${item._id}` as any);
     };
 
-    const handleAddBook = () => {
-        router.push('/create' as any);
-        AccessibilityInfo.announceForAccessibility('Navigate to create to add books');
-    };
 
     const handleBrowse = () => {
         router.push('/explore' as any);
@@ -575,16 +571,6 @@ export default function BookshelfScreen() {
                     />
                 </View>
 
-                {/* Floating Add Button */}
-                <TouchableOpacity
-                    style={styles.fab}
-                    onPress={handleAddBook}
-                    accessibilityLabel="Add new book"
-                    accessibilityHint="Opens book creation to add books to your shelf"
-                    accessibilityRole="button"
-                >
-                    <Ionicons name="add" size={COMPONENT_SIZES.icon.large} color={COLORS.white} />
-                </TouchableOpacity>
             </View>
         </SafeScreen>
     );
@@ -781,25 +767,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
 
-    // FAB
-    fab: {
-        position: 'absolute',
-        bottom: 110,
-        right: SPACING.xxl,
-        width: 62,
-        height: 62,
-        borderRadius: 31,
-        backgroundColor: COLORS.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        elevation: 12,
-        shadowColor: COLORS.primary,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.6,
-        shadowRadius: 15,
-        borderWidth: 1.5,
-        borderColor: 'rgba(255, 255, 255, 0.3)',
-    },
 
     // Placeholder card (temporary)
     cardPlaceholder: {

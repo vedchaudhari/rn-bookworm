@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, withSpring, runOnJS, useAnimatedKeyboard } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, withSpring, runOnJS, useAnimatedKeyboard, useDerivedValue, interpolate, Extrapolation } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatLastSeen } from '../lib/utils';
 import { processMessagesWithDates, ProcessedItem, GroupPosition } from '../lib/messageUtils';
@@ -355,41 +355,7 @@ const VideoPreview: React.FC<VideoPreviewProps> = React.memo(({ thumbnail, style
 ));
 
 const StatusTicks = React.memo(({ deliveredAt, readAt, pending }: { deliveredAt?: string, readAt?: string, pending?: boolean }) => {
-    const isRead = !!readAt;
-    const isDelivered = !!deliveredAt || !!readAt;
-
-    const blueOpacity = useSharedValue(isRead ? 1 : 0);
-    const secondTickScale = useSharedValue(isDelivered ? 1 : 0);
-    const secondTickTranslateX = useSharedValue(isDelivered ? 0 : -8);
-
-    useEffect(() => {
-        // Only run animations if component is mounted
-        // Use very fast transitions for instant visual feedback
-        if (isRead) {
-            blueOpacity.value = withTiming(1, { duration: 150 }); // Reduced from 450ms to 150ms
-        }
-        if (isDelivered) {
-            secondTickScale.value = withSpring(1, { damping: 20, stiffness: 200 }); // Faster spring
-            secondTickTranslateX.value = withSpring(0, { damping: 20, stiffness: 200 });
-        }
-    }, [isRead, isDelivered]);
-
-    const blueTickStyle = useAnimatedStyle(() => ({
-        opacity: blueOpacity.value,
-        position: 'absolute',
-        right: 0,
-        top: 0,
-    }));
-
-    const secondTickStyle = useAnimatedStyle(() => ({
-        transform: [
-            { scale: secondTickScale.value },
-            { translateX: secondTickTranslateX.value }
-        ],
-        opacity: secondTickScale.value,
-        marginLeft: -10,
-    }));
-
+    // 1. Pending State (Static Spinner or Icon)
     if (pending) {
         return (
             <ActivityIndicator
@@ -400,25 +366,25 @@ const StatusTicks = React.memo(({ deliveredAt, readAt, pending }: { deliveredAt?
         );
     }
 
-    return (
-        <View style={{ flexDirection: 'row', alignItems: 'center', height: 16 }}>
-            {/* First Tick */}
-            <View style={{ width: 14 }}>
-                <Ionicons name="checkmark" size={16} color="rgba(255,255,255,0.7)" />
-                <Animated.View style={blueTickStyle}>
-                    <Ionicons name="checkmark" size={16} color="#34B7F1" />
-                </Animated.View>
-            </View>
+    const isRead = !!readAt;
+    const isDelivered = !!deliveredAt || isRead;
 
-            {/* Second Tick */}
-            <Animated.View style={secondTickStyle}>
-                <View style={{ width: 14 }}>
-                    <Ionicons name="checkmark" size={16} color="rgba(255,255,255,0.7)" />
-                    <Animated.View style={blueTickStyle}>
-                        <Ionicons name="checkmark" size={16} color="#34B7F1" />
-                    </Animated.View>
-                </View>
-            </Animated.View>
+    // 2. Sent (Single Tick)
+    if (!isDelivered) {
+        return (
+            <View style={{ width: 16, alignItems: 'center' }}>
+                <Ionicons name="checkmark" size={16} color="rgba(255,255,255,0.7)" />
+            </View>
+        );
+    }
+
+    // 3. Delivered/Read (Double Tick)
+    // Blue if read, White/Grey if delivered
+    const tickColor = isRead ? "#34B7F1" : "rgba(255,255,255,0.7)";
+
+    return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', width: 22 }}>
+            <Ionicons name="checkmark-done" size={18} color={tickColor} />
         </View>
     );
 });
@@ -908,8 +874,13 @@ const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onL
     const isThisVideoPlaying = !!(item.video && activeVideoUri === item.video && isGlobalVideoPlaying);
 
     const translateX = useSharedValue(0);
-    const replyIconOpacity = useSharedValue(0);
-    const replyIconScale = useSharedValue(0);
+    // Use derived values instead of separate shared values for better performance
+    const replyIconOpacity = useDerivedValue(() => {
+        return interpolate(translateX.value, [0, 30], [0, 1], Extrapolation.CLAMP);
+    });
+    const replyIconScale = useDerivedValue(() => {
+        return interpolate(translateX.value, [0, 50], [0.8, 1.2], Extrapolation.CLAMP);
+    });
     const hasTriggered = useSharedValue(false);
 
     const panGesture = Gesture.Pan()
@@ -918,15 +889,13 @@ const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onL
             const translationX = event.translationX;
             // Only allow swiping right (common reply gesture)
             if (translationX > 0) {
-                const dampedX = Math.min(translationX * 0.5, 70); // Damping and max pull
-                translateX.value = dampedX;
-
-                // Show reply icon based on translation
-                replyIconOpacity.value = withTiming(translationX > 30 ? 1 : 0);
-                replyIconScale.value = withSpring(translationX > 50 ? 1.2 : 0.8);
+                // Direct assignment for 1:1 finger tracking (Rule 3)
+                // Damping and max pull
+                translateX.value = Math.min(translationX * 0.5, 70);
 
                 if (translationX > 60 && !hasTriggered.value) {
                     hasTriggered.value = true;
+                    // Keep haptics but ensure it runs on JS thread
                     runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
                 } else if (translationX <= 60) {
                     hasTriggered.value = false;
@@ -937,9 +906,8 @@ const MessageItem = React.memo(({ item, index, currentUserId, displayAvatar, onL
             if (translateX.value > 50) {
                 runOnJS(onReply)(item);
             }
-            translateX.value = withSpring(0);
-            replyIconOpacity.value = withTiming(0);
-            replyIconScale.value = withTiming(0);
+            // Only use spring on release (Rule 3)
+            translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
             hasTriggered.value = false;
         });
 
@@ -1158,7 +1126,6 @@ export default function ChatScreen() {
     };
 
     const displayStatus = getDisplayStatus();
-    const pulseOpacity = useSharedValue(0.4);
     const isTyping = typingStatus[userId!];
 
     // Memoize processed messages for date headers and avatar visibility
@@ -1287,10 +1254,6 @@ export default function ChatScreen() {
     }, []);
 
     useEffect(() => {
-        if (isOnline) {
-            pulseOpacity.value = withRepeat(withSequence(withTiming(1, { duration: 1000 }), withTiming(0.4, { duration: 1000 })), -1, true);
-        } else { pulseOpacity.value = 0; }
-
         loadMessages();
         markAsRead(userId!, token!);
 
@@ -1318,7 +1281,7 @@ export default function ChatScreen() {
         };
     }, [userId, socket, isOnline, handleNewMessage, handleMessageEdited, handleMessageDeleted, handleMessagesRead, handleMessageDelivered]);
 
-    const animatedStatusStyle = useAnimatedStyle(() => ({ opacity: pulseOpacity.value }));
+    const animatedStatusStyle = useAnimatedStyle(() => ({ opacity: isOnline ? 1 : 0.4 }));
     const loadMessages = async () => { await fetchMessages(userId!, token!); };
 
     const handlePickMedia = () => {
@@ -1779,10 +1742,10 @@ export default function ChatScreen() {
                             style={{ flex: 1 }}
                             keyboardDismissMode="interactive"
                             removeClippedSubviews={Platform.OS === 'android'}
-                            initialNumToRender={20}
-                            maxToRenderPerBatch={10}
-                            windowSize={15}
-                            updateCellsBatchingPeriod={50}
+                            initialNumToRender={15}
+                            maxToRenderPerBatch={5}
+                            windowSize={5}
+                            updateCellsBatchingPeriod={100}
                             onEndReachedThreshold={0.5}
                             scrollEventThrottle={16}
                             ListEmptyComponent={

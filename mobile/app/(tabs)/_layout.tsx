@@ -35,7 +35,19 @@ export default function TabLayout() {
                 tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.4)', // More subtle inactive
                 tabBarShowLabel: false, // Instagram style: no labels
                 tabBarBackground: () => (
-                    <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+                    <View style={StyleSheet.absoluteFill}>
+                        <BlurView
+                            intensity={Platform.OS === 'ios' ? 85 : 95}
+                            tint="dark"
+                            style={StyleSheet.absoluteFill}
+                        />
+                        <View style={[
+                            StyleSheet.absoluteFill,
+                            {
+                                backgroundColor: Platform.OS === 'ios' ? 'rgba(10, 15, 20, 0.2)' : 'rgba(20, 26, 33, 0.7)',
+                            }
+                        ]} />
+                    </View>
                 ),
                 tabBarStyle: {
                     position: 'absolute',
@@ -43,15 +55,17 @@ export default function TabLayout() {
                     left: 0,
                     right: 0,
                     backgroundColor: 'transparent',
-                    height: 85,
-                    borderTopWidth: 0,
+                    height: 65 + insets.bottom + 10,
+                    borderTopWidth: 0.6,
+                    borderTopColor: 'rgba(255, 255, 255, 0.15)',
                     elevation: 0,
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: -10 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 20,
+                    shadowOpacity: 0.15,
+                    shadowRadius: 30,
                     paddingBottom: insets.bottom + 10,
                     paddingTop: 10,
+                    overflow: 'visible',
                 },
 
                 tabBarItemStyle: {
@@ -99,19 +113,21 @@ export default function TabLayout() {
                     title: "Create",
                     tabBarIcon: ({ focused }) => (
                         <View style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: 24,
+                            width: 56,
+                            height: 56,
+                            borderRadius: 28,
                             backgroundColor: COLORS.primary,
                             justifyContent: 'center',
                             alignItems: 'center',
-                            marginBottom: 0,
+                            top: -15, // Lift the button
                             ...SHADOWS.medium,
                             shadowColor: COLORS.primary,
+                            borderWidth: 4,
+                            borderColor: '#121212', // Match background for separation
                         }}>
                             <Ionicons
                                 name="add"
-                                size={32}
+                                size={36}
                                 color={COLORS.black}
                             />
                         </View>
