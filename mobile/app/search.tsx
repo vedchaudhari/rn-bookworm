@@ -35,9 +35,16 @@ export default function GlobalSearch() {
         try {
             const data = await apiClient.get<any>('/api/discovery/search', {
                 q: query,
-                type: (type === 'all' ? undefined : type) as any
+                type: type === 'all' ? undefined : type
             });
-            setResults(data.books || []);
+
+            // Format results into a single list with types for the flatlist
+            const combinedResults = [
+                ...(data.books || []).map((b: any) => ({ ...b, itemType: 'book' })),
+                ...(data.users || []).map((u: any) => ({ ...u, itemType: 'user' }))
+            ];
+
+            setResults(combinedResults);
         } catch (error) {
             console.error('Search error:', error);
         } finally {
@@ -45,25 +52,48 @@ export default function GlobalSearch() {
         }
     };
 
-    const renderItem = ({ item, index }: { item: any; index: number }) => (
-        <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
-            <TouchableOpacity
-                style={styles.card}
-                onPress={() => router.push({ pathname: '/book-detail', params: { bookId: item._id } })}
-            >
-                <Image source={{ uri: item.image }} style={styles.bookImage} contentFit="cover" />
-                <View style={styles.bookInfo}>
-                    <Text style={styles.bookTitle}>{item.title}</Text>
-                    <Text style={styles.bookAuthor}>{item.author || 'Author'}</Text>
-                    <View style={styles.badgeRow}>
-                        <View style={styles.genreBadge}>
-                            <Text style={styles.genreText}>{item.genre || 'General'}</Text>
+    const renderItem = ({ item, index }: { item: any; index: number }) => {
+        if (item.itemType === 'user') {
+            return (
+                <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+                    <TouchableOpacity
+                        style={styles.userCard}
+                        onPress={() => router.push({ pathname: '/user-profile', params: { userId: item._id } })}
+                    >
+                        <Image source={{ uri: item.profileImage }} style={styles.userImage} contentFit="cover" />
+                        <View style={styles.userInfo}>
+                            <Text style={styles.userName}>{item.username}</Text>
+                            <Text style={styles.userBio} numberOfLines={1}>{item.bio || 'Bookworm Explorer'}</Text>
+                            <View style={styles.userBadge}>
+                                <Text style={styles.userBadgeText}>LEVEL {item.level || 1}</Text>
+                            </View>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+                    </TouchableOpacity>
+                </Animated.View>
+            );
+        }
+
+        return (
+            <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+                <TouchableOpacity
+                    style={styles.card}
+                    onPress={() => router.push({ pathname: '/book-detail', params: { bookId: item._id } })}
+                >
+                    <Image source={{ uri: item.image }} style={styles.bookImage} contentFit="cover" />
+                    <View style={styles.bookInfo}>
+                        <Text style={styles.bookTitle}>{item.title}</Text>
+                        <Text style={styles.bookAuthor}>{item.author || 'Author'}</Text>
+                        <View style={styles.badgeRow}>
+                            <View style={styles.genreBadge}>
+                                <Text style={styles.genreText}>{item.genre || 'General'}</Text>
+                            </View>
                         </View>
                     </View>
-                </View>
-            </TouchableOpacity>
-        </Animated.View>
-    );
+                </TouchableOpacity>
+            </Animated.View>
+        );
+    };
 
     return (
         <SafeScreen top={false} bottom={false}>
@@ -87,6 +117,30 @@ export default function GlobalSearch() {
                         </TouchableOpacity>
                     )}
                 </View>
+
+                {/* Type Filter Tabs */}
+                {query.length > 0 && (
+                    <View style={styles.tabs}>
+                        <TouchableOpacity
+                            onPress={() => setType('all')}
+                            style={[styles.tab, type === 'all' && styles.activeTab]}
+                        >
+                            <Text style={[styles.tabText, type === 'all' && styles.activeTabText]}>All</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setType('books')}
+                            style={[styles.tab, type === 'books' && styles.activeTab]}
+                        >
+                            <Text style={[styles.tabText, type === 'books' && styles.activeTabText]}>Books</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setType('users')}
+                            style={[styles.tab, type === 'users' && styles.activeTab]}
+                        >
+                            <Text style={[styles.tabText, type === 'users' && styles.activeTabText]}>Users</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 {query.length === 0 ? (
                     <View style={styles.centered}>
@@ -211,5 +265,76 @@ const styles = StyleSheet.create({
         color: COLORS.textMuted,
         fontSize: 16,
         fontWeight: '600',
+    },
+    tabs: {
+        flexDirection: 'row',
+        paddingHorizontal: 20,
+        marginBottom: 16,
+        gap: 12
+    },
+    tab: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: COLORS.surfaceHighlight + '20',
+        borderWidth: 1,
+        borderColor: 'transparent'
+    },
+    activeTab: {
+        backgroundColor: COLORS.primary + '20',
+        borderColor: COLORS.primary + '40'
+    },
+    tabText: {
+        color: COLORS.textMuted,
+        fontSize: 13,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5
+    },
+    activeTabText: {
+        color: COLORS.primary
+    },
+    userCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        backgroundColor: COLORS.surface,
+        borderRadius: 20,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: COLORS.surfaceHighlight + '40'
+    },
+    userImage: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: COLORS.surfaceHighlight
+    },
+    userInfo: {
+        flex: 1,
+        marginLeft: 12
+    },
+    userName: {
+        color: COLORS.white,
+        fontSize: 16,
+        fontWeight: '800'
+    },
+    userBio: {
+        color: COLORS.textMuted,
+        fontSize: 12,
+        marginTop: 2
+    },
+    userBadge: {
+        marginTop: 6,
+        alignSelf: 'flex-start',
+        backgroundColor: COLORS.primary + '15',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4
+    },
+    userBadgeText: {
+        color: COLORS.primary,
+        fontSize: 9,
+        fontWeight: '900'
     }
 });

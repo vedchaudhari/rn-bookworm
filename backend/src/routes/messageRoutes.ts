@@ -477,21 +477,39 @@ router.patch("/edit/:messageId", protectRoute, async (req: Request, res: Respons
         await message.save();
 
         // Invalidate message threads for both
-        await Promise.all([
+        // Invalidate message threads
+        const cachePromises = [
             redis.del(CACHE_KEYS.MESSAGES(message.conversationId, message.sender.toString())),
-            redis.del(CACHE_KEYS.MESSAGES(message.conversationId, message.receiver.toString())),
-            redis.del(CACHE_KEYS.CONVERSATIONS(message.sender.toString())),
-            redis.del(CACHE_KEYS.CONVERSATIONS(message.receiver.toString()))
-        ]);
+            redis.del(CACHE_KEYS.CONVERSATIONS(message.sender.toString()))
+        ];
 
-        // Socket update - Emit to both participants for full sync
+        if (message.receiver) {
+            cachePromises.push(
+                redis.del(CACHE_KEYS.MESSAGES(message.conversationId, message.receiver.toString())),
+                redis.del(CACHE_KEYS.CONVERSATIONS(message.receiver.toString()))
+            );
+        }
+
+        await Promise.all(cachePromises);
+
+        // Socket update
         const io: Server = req.app.get("io");
-        io.to(message.sender.toString()).to(message.receiver.toString()).emit("message_edited", {
-            messageId: message._id,
-            text: message.text,
-            editedAt: message.editedAt,
-            conversationId: message.conversationId
-        });
+        if (message.clubId) {
+            io.to(`club_${message.clubId}`).emit("message_edited", {
+                messageId: message._id,
+                text: message.text,
+                editedAt: message.editedAt,
+                conversationId: message.conversationId,
+                clubId: message.clubId
+            });
+        } else if (message.receiver) {
+            io.to(message.sender.toString()).to(message.receiver.toString()).emit("message_edited", {
+                messageId: message._id,
+                text: message.text,
+                editedAt: message.editedAt,
+                conversationId: message.conversationId
+            });
+        }
 
         res.json(message);
     } catch (error) {
@@ -512,7 +530,11 @@ router.delete("/delete-me/:messageId", protectRoute, async (req: Request, res: R
         }
 
         // Verify participation
-        if (message.sender.toString() !== userId.toString() && message.receiver.toString() !== userId.toString()) {
+        const isSender = message.sender.toString() === userId.toString();
+        const isReceiver = message.receiver && message.receiver.toString() === userId.toString();
+        const isClubMessage = !!message.clubId;
+
+        if (!isSender && !isReceiver && !isClubMessage) {
             return res.status(403).json({ message: "Not authorized" });
         }
 
@@ -567,19 +589,35 @@ router.delete("/delete-everyone/:messageId", protectRoute, async (req: Request, 
         await message.save();
 
         // Invalidate message threads for both
-        await Promise.all([
+        // Invalidate message threads
+        const cachePromises = [
             redis.del(CACHE_KEYS.MESSAGES(message.conversationId, message.sender.toString())),
-            redis.del(CACHE_KEYS.MESSAGES(message.conversationId, message.receiver.toString())),
-            redis.del(CACHE_KEYS.CONVERSATIONS(message.sender.toString())),
-            redis.del(CACHE_KEYS.CONVERSATIONS(message.receiver.toString()))
-        ]);
+            redis.del(CACHE_KEYS.CONVERSATIONS(message.sender.toString()))
+        ];
 
-        // Socket update - Emit to both participants for full sync
+        if (message.receiver) {
+            cachePromises.push(
+                redis.del(CACHE_KEYS.MESSAGES(message.conversationId, message.receiver.toString())),
+                redis.del(CACHE_KEYS.CONVERSATIONS(message.receiver.toString()))
+            );
+        }
+
+        await Promise.all(cachePromises);
+
+        // Socket update
         const io: Server = req.app.get("io");
-        io.to(message.sender.toString()).to(message.receiver.toString()).emit("message_deleted", {
-            messageId: message._id,
-            conversationId: message.conversationId
-        });
+        if (message.clubId) {
+            io.to(`club_${message.clubId}`).emit("message_deleted", {
+                messageId: message._id,
+                conversationId: message.conversationId,
+                clubId: message.clubId
+            });
+        } else if (message.receiver) {
+            io.to(message.sender.toString()).to(message.receiver.toString()).emit("message_deleted", {
+                messageId: message._id,
+                conversationId: message.conversationId
+            });
+        }
 
         res.json(message);
     } catch (error) {

@@ -2,7 +2,8 @@ import mongoose, { Document, Schema, Model } from "mongoose";
 
 export interface IMessage {
     sender: mongoose.Types.ObjectId;
-    receiver: mongoose.Types.ObjectId;
+    receiver?: mongoose.Types.ObjectId;
+    clubId?: mongoose.Types.ObjectId;
     text?: string;
     image?: string;
     video?: string;
@@ -43,10 +44,18 @@ const messageSchema = new Schema<IMessageDocument>(
             ref: "User",
             required: true,
         },
+        clubId: {
+            type: Schema.Types.ObjectId,
+            ref: "Club",
+            required: false,
+            index: true
+        },
         receiver: {
             type: Schema.Types.ObjectId,
             ref: "User",
-            required: true,
+            required: function (this: IMessageDocument) {
+                return !this.clubId;
+            }
         },
         text: {
             type: String,

@@ -3,9 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../constants/colors';
-import { API_URL } from '../constants/api';
 import { useAuthStore } from '../store/authContext';
 import { useUIStore } from '../store/uiStore';
+import { apiClient } from '../lib/apiClient';
 import SafeScreen from '../components/SafeScreen';
 import GlassCard from '../components/GlassCard';
 
@@ -30,7 +30,7 @@ export default function ChapterManager() {
     const [mergeChapter1, setMergeChapter1] = useState('');
     const [mergeChapter2, setMergeChapter2] = useState('');
 
-    const { token } = useAuthStore();
+    // Auth context (user ID is still used in other parts of the store but we don't need token here)
     const { showAlert } = useUIStore();
     const router = useRouter();
 
@@ -40,11 +40,7 @@ export default function ChapterManager() {
 
     const fetchChapters = async () => {
         try {
-            const response = await fetch(`${API_URL}/api/chapters/${bookId}/chapters/author`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
+            const data = await apiClient.get<any>(`/api/chapters/${bookId}/chapters/author`);
             setChapters(data.chapters);
         } catch (error: any) {
             showAlert({ title: 'Error', message: error.message || 'Failed to fetch chapters', type: 'error' });
@@ -56,11 +52,7 @@ export default function ChapterManager() {
 
     const handlePublish = async (chapterNumber: number) => {
         try {
-            const response = await fetch(`${API_URL}/api/chapters/${bookId}/chapters/${chapterNumber}/publish`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) throw new Error('Failed to publish');
+            await apiClient.post(`/api/chapters/${bookId}/chapters/${chapterNumber}/publish`);
             showAlert({ title: 'Success', message: 'Chapter published!', type: 'success' });
             fetchChapters();
         } catch (error: any) {
@@ -77,11 +69,7 @@ export default function ChapterManager() {
             type: 'warning',
             onConfirm: async () => {
                 try {
-                    const response = await fetch(`${API_URL}/api/chapters/${bookId}/chapters/${chapterNumber}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (!response.ok) throw new Error('Failed to delete');
+                    await apiClient.delete(`/api/chapters/${bookId}/chapters/${chapterNumber}`);
                     fetchChapters();
                 } catch (error: any) {
                     showAlert({ title: 'Error', message: error.message, type: 'error' });
@@ -93,19 +81,10 @@ export default function ChapterManager() {
     const handleMerge = async () => {
         if (!mergeChapter1 || !mergeChapter2) return;
         try {
-            const response = await fetch(`${API_URL}/api/chapters/${bookId}/merge`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    chapter1Number: parseInt(mergeChapter1),
-                    chapter2Number: parseInt(mergeChapter2)
-                })
+            await apiClient.post(`/api/chapters/${bookId}/merge`, {
+                chapter1Number: parseInt(mergeChapter1),
+                chapter2Number: parseInt(mergeChapter2)
             });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
 
             showAlert({ title: 'Success', message: 'Chapters merged successfully', type: 'success' });
             setShowMergeModal(false);

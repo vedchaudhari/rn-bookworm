@@ -149,7 +149,9 @@ router.post("/", protectRoute, asyncHandler(async (req: Request, res: Response) 
     // Clear Global Feed Cache
     try {
         const keys = await redis.keys('feed:global:*');
-        if (keys.length > 0) await redis.del(...keys);
+        if (keys && keys.length > 0) {
+            await redis.del(...keys);
+        }
     } catch (e) { console.error('Redis invalidation error:', e); }
 
     const [signedBook] = await signBookUrls([newBook]);

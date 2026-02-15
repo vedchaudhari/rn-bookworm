@@ -14,34 +14,74 @@ import { IBookDocument } from "../models/Book";
 import { signBookUrls } from "./bookRoutes";
 import { asyncHandler } from "../middleware/asyncHandler";
 
+import User from "../models/User";
+import { getSignedUrlForFile } from "../lib/s3";
+
 const router = express.Router();
 
-// Search books
+// Search books and users
 router.get("/search", protectRoute, asyncHandler(async (req: Request, res: Response) => {
-    const { q, genre, rating, page, limit } = req.query;
+    const { q, genre, rating, page, limit, type } = req.query;
 
-    // Escape regex special characters
     const searchQuery = q && typeof q === 'string' ? q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
+    const currentPage = parseInt(page as string) || 1;
+    const currentLimit = parseInt(limit as string) || 10;
 
-    const filters: any = {};
-    if (genre) filters.genre = genre;
-    if (rating) filters.rating = rating;
+    const response: any = {
+        books: [],
+        users: [],
+        currentPage,
+        totalPages: 0
+    };
 
-    const result = await searchBooks(
-        searchQuery,
-        filters,
-        parseInt(page as string) || 1,
-        parseInt(limit as string) || 10
-    );
+    // Book Search
+    if (!type || type === 'all' || type === 'books') {
+        const filters: any = {};
+        if (genre) filters.genre = genre;
+        if (rating) filters.rating = rating;
 
-    // Add interactions and sign URLs
-    const booksWithInteractions = await enrichBooksWithInteractions(result.books, req.user!._id);
-    const signedBooks = await signBookUrls(booksWithInteractions);
+        const result = await searchBooks(
+            searchQuery,
+            filters,
+            currentPage,
+            currentLimit
+        );
 
-    res.json({
-        ...result,
-        books: signedBooks,
-    });
+        const booksWithInteractions = await enrichBooksWithInteractions(result.books, req.user!._id);
+        const signedBooks = await signBookUrls(booksWithInteractions);
+
+        response.books = signedBooks;
+        response.totalBooks = result.totalBooks;
+        response.totalPages = Math.max(response.totalPages, result.totalPages);
+    }
+
+    // User Search
+    if (searchQuery && (!type || type === 'all' || type === 'users')) {
+        const users = await User.find({
+            username: { $regex: searchQuery, $options: 'i' },
+            _id: { $ne: req.user!._id } // Don't search for self
+        })
+            .select('username profileImage bio level')
+            .limit(currentLimit)
+            .skip((currentPage - 1) * currentLimit);
+
+        const totalUsers = await User.countDocuments({
+            username: { $regex: searchQuery, $options: 'i' },
+            _id: { $ne: req.user!._id }
+        });
+
+        const usersWithImages = await Promise.all(users.map(async (u) => {
+            const userObj = u.toObject();
+            userObj.profileImage = await getSignedUrlForFile(userObj.profileImage);
+            return userObj;
+        }));
+
+        response.users = usersWithImages;
+        response.totalUsers = totalUsers;
+        response.totalPages = Math.max(response.totalPages, Math.ceil(totalUsers / currentLimit));
+    }
+
+    res.json(response);
 }));
 
 // Get trending books

@@ -145,22 +145,29 @@ export const setupSocketIO = (io: Server) => {
                     message.deliveredAt = new Date();
                     await message.save();
 
-
-
-                    // Invalidate sender's conversation cache so they see the double tick next time they log in or fetch
-                    const conversationId = Message.getConversationId(data.senderId, socket.userId);
-                    await redis.del(CACHE_KEYS.MESSAGES(conversationId, data.senderId));
-
-
                     // Notify original sender
                     io.to(data.senderId).emit("message_delivered", {
                         messageId: message._id,
-                        deliveredAt: message.deliveredAt
+                        deliveredAt: message.deliveredAt,
+                        clubId: message.clubId
                     });
                 }
             } catch (error) {
                 console.error("[Socket] Error handling message_delivered:", error);
             }
+        });
+
+        // Join/Leave Club Rooms
+        socket.on("join_club", (clubId: string) => {
+            if (!socket.userId || !clubId) return;
+            socket.join(`club_${clubId}`);
+            console.log(`User ${socket.userId} joined club room: club_${clubId}`);
+        });
+
+        socket.on("leave_club", (clubId: string) => {
+            if (!socket.userId || !clubId) return;
+            socket.leave(`club_${clubId}`);
+            console.log(`User ${socket.userId} left club room: club_${clubId}`);
         });
 
         // WhatsApp-style: Message read acknowledgment

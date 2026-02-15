@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import COLORS from '../constants/colors';
 import { useAuthStore } from '../store/authContext';
 import { useUIStore } from '../store/uiStore';
-import { API_URL } from '../constants/api';
+import { apiClient } from '../lib/apiClient';
 import SafeScreen from '../components/SafeScreen';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 import InterstitialAdManager from '../components/ads/InterstitialAdManager';
@@ -65,25 +65,16 @@ export default function BookReaderScreen() {
     const fetchChapterList = async () => {
         try {
             // Fetch both chapter list and reader progress metadata
-            const [chaptersResponse, metadataResponse] = await Promise.all([
-                fetch(`${API_URL}/api/chapters/${bookId}/chapters`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }),
-                fetch(`${API_URL}/api/chapters/${bookId}/reader/metadata`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                })
+            const [chaptersData, metadataData] = await Promise.all([
+                apiClient.get<any>(`/api/chapters/${bookId}/chapters`),
+                apiClient.get<any>(`/api/chapters/${bookId}/reader/metadata`)
             ]);
-
-            const chaptersData = await chaptersResponse.json();
-            const metadataData = await metadataResponse.json();
-
-            if (!chaptersResponse.ok) throw new Error(chaptersData.message);
 
             if (chaptersData.chapters && chaptersData.chapters.length > 0) {
                 setChapters(chaptersData.chapters);
 
                 // Resume from last read chapter if progress exists
-                if (metadataResponse.ok && metadataData.progress?.lastReadChapter) {
+                if (metadataData.progress?.lastReadChapter) {
                     const lastReadChapter = metadataData.progress.lastReadChapter;
                     const chapterIndex = chaptersData.chapters.findIndex(
                         (ch: ChapterMeta) => ch.chapterNumber === lastReadChapter
@@ -102,9 +93,9 @@ export default function BookReaderScreen() {
             } else {
                 setLoading(false); // No chapters found
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching chapters:', error);
-            showAlert({ title: 'Error', message: 'Failed to load book chapters', type: 'error' });
+            showAlert({ title: 'Error', message: error.message || 'Failed to load book chapters', type: 'error' });
             setLoading(false);
         }
     };
@@ -112,12 +103,7 @@ export default function BookReaderScreen() {
     const fetchChapterContent = async (chapterNum: number) => {
         setLoadingChapter(true);
         try {
-            const response = await fetch(`${API_URL}/api/chapters/${bookId}/chapters/${chapterNum}/read`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-
-            if (!response.ok) throw new Error(data.message);
+            const data = await apiClient.get<any>(`/api/chapters/${bookId}/chapters/${chapterNum}/read`);
 
             setCurrentChapter(data.chapter);
             setLoading(false); // Initial loading done
@@ -126,9 +112,9 @@ export default function BookReaderScreen() {
             // Scroll to top
             scrollViewRef.current?.scrollTo({ y: 0, animated: false });
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching chapter content:', error);
-            showAlert({ title: 'Error', message: 'Failed to load chapter content', type: 'error' });
+            showAlert({ title: 'Error', message: error.message || 'Failed to load chapter content', type: 'error' });
             setLoadingChapter(false);
             setLoading(false);
         }
@@ -136,10 +122,7 @@ export default function BookReaderScreen() {
 
     const markChapterComplete = async (chapterNum: number) => {
         try {
-            await fetch(`${API_URL}/api/chapters/${bookId}/chapters/${chapterNum}/complete`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await apiClient.post(`/api/chapters/${bookId}/chapters/${chapterNum}/complete`);
         } catch (error) {
             console.error('Error marking chapter complete:', error);
         }

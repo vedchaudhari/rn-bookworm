@@ -14,6 +14,7 @@ import FollowButton from '../../components/FollowButton';
 import styles from '../../assets/styles/explore.styles';
 import EmptyState from '../../components/EmptyState';
 import AppHeader from '../../components/AppHeader';
+import GlazedButton from '../../components/GlazedButton';
 
 const { width } = Dimensions.get('window');
 
@@ -270,6 +271,20 @@ export default function Explore() {
                         <>
                             {searchQuery.length === 0 && (
                                 <>
+                                    <View style={{ flexDirection: 'row', paddingHorizontal: 20, marginBottom: 20, gap: 10 }}>
+                                        <GlazedButton
+                                            title="Book Clubs 💬"
+                                            onPress={() => router.push('/clubs')}
+                                            style={{ flex: 1 }}
+                                            textStyle={{ fontSize: 14 }}
+                                        />
+                                        <GlazedButton
+                                            title="Challenges 🏆"
+                                            onPress={() => router.push('/streaks')}
+                                            style={{ flex: 1 }}
+                                            textStyle={{ fontSize: 14 }}
+                                        />
+                                    </View>
                                     <View><FlatList horizontal data={genres} renderItem={({ item }) => renderGenreChip(item)} keyExtractor={(item, index) => `${item}-${index}`} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.genreListContent} /></View>
                                     {suggestedUsers.length > 0 && (
                                         <View style={styles.sectionHeader}>
@@ -290,7 +305,7 @@ export default function Explore() {
                         </>
                     }
                 />
-            </View>
-        </SafeScreen>
+            </View >
+        </SafeScreen >
     );
 }

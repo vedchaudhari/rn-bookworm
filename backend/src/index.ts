@@ -21,6 +21,7 @@ import bookNoteRoutes from "./routes/bookNoteRoutes";
 import challengeRoutes from "./routes/challengeRoutes";
 import chapterRoutes from "./routes/chapterRoutes";
 import currencyRoutes from "./routes/currencyRoutes";
+import clubRoutes from "./routes/clubRoutes";
 
 
 import { connectDB, disconnectDB } from "./lib/db";
@@ -85,6 +86,28 @@ app.get("/api/health", (req: Request, res: Response) => {
     res.json({ status: "ok", timestamp: new Date(), version: "1.0.1" });
 });
 
+// Request Timeout Middleware
+app.use((req, res, next) => {
+    req.setTimeout(30000); // 30 seconds
+    res.setTimeout(30000);
+    next();
+});
+
+// Rate Limiting
+import rateLimit from 'express-rate-limit';
+
+// Rate Limiter Configuration
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: { status: 429, message: "Too many requests, please try again later." }
+});
+
+// Apply rate limiter to all api routes
+app.use('/api', limiter);
+
 console.log("[Backend] Registering routes...");
 app.use("/api/auth", authRoutes);
 app.use("/api/books", bookRoutes);
@@ -102,32 +125,10 @@ app.use("/api/notes", bookNoteRoutes);
 app.use("/api/challenges", challengeRoutes);
 app.use("/api/chapters", chapterRoutes);
 app.use("/api/currency", currencyRoutes);
-
-// Rate Limiting
-import rateLimit from 'express-rate-limit';
-import { RedisStore } from 'rate-limit-redis';
+app.use("/api/clubs", clubRoutes);
 
 // Global Error Handler (Must be after routes)
 app.use(errorHandler);
-
-// Rate Limiter Configuration
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    message: { status: 429, message: "Too many requests, please try again later." }
-});
-
-// Apply rate limiter to all api routes
-app.use('/api', limiter);
-
-// Request Timeout Middleware
-app.use((req, res, next) => {
-    req.setTimeout(30000); // 30 seconds
-    res.setTimeout(30000);
-    next();
-});
 
 const startServer = async () => {
     try {

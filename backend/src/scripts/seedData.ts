@@ -17,6 +17,8 @@ import BookNote from '../models/BookNote';
 import Achievement from '../models/Achievement';
 import DailyChallenge from '../models/DailyChallenge';
 import ReadingGoal from '../models/ReadingGoal';
+import Club from '../models/Club';
+import ClubMember from '../models/ClubMember';
 
 // Load env vars
 dotenv.config({ path: path.join(__dirname, '../../.env') });
@@ -135,6 +137,15 @@ const BOOK_TEMPLATES: Record<string, any[]> = {
     ]
 };
 
+const CLUB_TEMPLATES = [
+    { name: 'The Delhi Book Club', description: 'A community for readers based in and around the capital. We meet monthly to discuss contemporary fiction.', tags: ['Delhi', 'Contemporary', 'Community'], isPrivate: false },
+    { name: 'Sci-Fi Explorers', description: 'Deep dives into cyberpunk, space opera, and hard sci-fi. For those who look to the stars.', tags: ['Sci-Fi', 'Tech', 'Futurism'], isPrivate: false },
+    { name: 'Mystery Solvers India', description: 'Decoding the best thriller and mystery novels from around the world. No spoilers allowed!', tags: ['Mystery', 'Thriller', 'Puzzle'], isPrivate: false },
+    { name: 'Romance & Chai', description: 'A cozy corner for those who love heartfelt stories and a good cup of masala chai.', tags: ['Romance', 'Cozy', 'Feel-good'], isPrivate: false },
+    { name: 'Historical Chronicles', description: 'Exploring the past through historical fiction and non-fiction. From the Mughals to the British Raj.', tags: ['History', 'Non-Fiction', 'Ancient'], isPrivate: false },
+    { name: 'Fantasy Realms', description: 'Discussing epic fantasy, magical realism, and myth-inspired stories. All wizards welcome.', tags: ['Fantasy', 'Magic', 'Epic'], isPrivate: false }
+];
+
 const CHAT_MESSAGES = [
     "Hey! Have you finished reading that new fantasy book?",
     "Check out this cover! I love the art.",
@@ -198,6 +209,8 @@ async function seed() {
             Achievement.deleteMany({ user: { $in: seededUserIds } }),
             DailyChallenge.deleteMany({ userId: { $in: seededUserIds } }),
             ReadingGoal.deleteMany({ user: { $in: seededUserIds } }),
+            ClubMember.deleteMany({ userId: { $in: seededUserIds } }),
+            Club.deleteMany({ createdBy: { $in: seededUserIds } }),
             User.deleteMany({ _id: { $in: seededUserIds } })
         ]);
         console.log('Cleanup complete.');
@@ -614,8 +627,59 @@ async function seed() {
                 });
             }
         }
+        console.log(`Finalized achievements, goals, and challenges for ${createdUsers.length} users.`);
+
+        console.log('Creating Book Clubs...');
+        let clubCount = 0;
+        let memberCountTotal = 0;
+
+        for (const template of CLUB_TEMPLATES) {
+            const creator = createdUsers[Math.floor(Math.random() * createdUsers.length)];
+            const clubJoinedDate = getRandomPastDate(15);
+
+            const club = await Club.create({
+                ...template,
+                createdBy: creator._id,
+                image: `https://picsum.photos/seed/club_${encodeURIComponent(template.name)}/800/400`,
+                lastActiveAt: new Date(),
+                memberCount: 1, // Start with creator
+                createdAt: clubJoinedDate
+            });
+
+            // Add creator as admin
+            await ClubMember.create({
+                clubId: club._id,
+                userId: creator._id,
+                role: 'admin',
+                joinedAt: clubJoinedDate
+            });
+
+            // Add 4-7 random members
+            const numMembers = Math.floor(Math.random() * 4) + 4;
+            const potentialMembers = createdUsers.filter(u => u._id.toString() !== creator._id.toString());
+            const selectedMembers = potentialMembers.sort(() => 0.5 - Math.random()).slice(0, numMembers);
+
+            for (const member of selectedMembers) {
+                await ClubMember.create({
+                    clubId: club._id,
+                    userId: member._id,
+                    role: Math.random() > 0.9 ? 'moderator' : 'member',
+                    joinedAt: getRandomPastDate(10, new Date())
+                });
+                memberCountTotal++;
+            }
+
+            // Update club member count
+            club.memberCount = 1 + selectedMembers.length;
+            await club.save();
+
+            clubCount++;
+        }
+        console.log(`Created ${clubCount} Book Clubs with ${memberCountTotal} additional members.`);
+
         console.log(`Users: ${createdUsers.length}`);
         console.log(`Books: ${bookCount}`);
+        console.log(`Clubs: ${clubCount}`);
         console.log(`Likes: ${likeCountTotal}`);
         console.log(`Comments: ${commentCountTotal}`);
         console.log(`Notifications: ${notifCount}`);
