@@ -97,7 +97,9 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             set({ conversations: data.conversations });
             return { success: true };
         } catch (error: any) {
-            console.error('Error fetching conversations:', error);
+            if (error.response?.status !== 429) {
+                console.error('Error fetching conversations:', error);
+            }
             return { success: false, error: error.message || 'Failed to fetch conversations' };
         }
     },
@@ -129,7 +131,9 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
             return { success: true, hasMore: data.currentPage < data.totalPages };
         } catch (error: any) {
-            console.error('Error fetching messages:', error);
+            if (error.response?.status !== 429) {
+                console.error('Error fetching messages:', error);
+            }
             return { success: false, error: error.message || 'Failed to load messages' };
         }
     },
@@ -225,7 +229,9 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
             return { success: true, message: data };
         } catch (error: any) {
-            console.error('Error sending message:', error);
+            if (error.response?.status !== 429) {
+                console.error('Error sending message:', error);
+            }
 
             const currentMessages = get().messages[receiverId] || [];
             const filteredMessages = currentMessages.filter(m => m._id !== tempId);
@@ -330,7 +336,9 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             set({ unreadCount: data.unreadCount });
             return { success: true };
         } catch (error: any) {
-            console.error('Error fetching unread count:', error);
+            if (error.response?.status !== 429) {
+                console.error('Error fetching unread count:', error);
+            }
             return { success: false, error: error.message };
         }
     },
@@ -350,7 +358,9 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
             return { success: true };
         } catch (error: any) {
-            console.error('Error marking as read:', error);
+            if (error.response?.status !== 429) {
+                console.error('Error marking as read:', error);
+            }
             return { success: false, error: error.message };
         }
     },

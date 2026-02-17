@@ -141,7 +141,9 @@ export const useBookshelfStore = create<BookshelfState>((set, get) => ({
                 };
             });
         } catch (error: any) {
-            console.error('Error fetching bookshelf:', error);
+            if (error.response?.status !== 429) {
+                console.error('Error fetching bookshelf:', error);
+            }
             set({
                 error: error.message || 'Failed to load bookshelf',
                 isLoading: false,
@@ -533,7 +535,9 @@ export const useBookshelfStore = create<BookshelfState>((set, get) => ({
             const response = await bookshelfApi.getStats();
             set({ stats: response.data });
         } catch (error: any) {
-            console.error('Error fetching stats:', error);
+            if (error.response?.status !== 429) {
+                console.error('Error fetching stats:', error);
+            }
             set({ error: error.message || 'Failed to load statistics' });
         }
     },

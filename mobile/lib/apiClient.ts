@@ -49,6 +49,16 @@ class ApiClient {
                     return Promise.reject(new Error('Unauthorized. Please log in again.'));
                 }
 
+                if (error.response && error.response.status === 429) {
+                    const { useUIStore } = require('../store/uiStore');
+                    useUIStore.getState().showToast({
+                        title: 'Too Many Requests',
+                        message: 'You are doing that too fast. Please slow down and try again later.',
+                        type: 'error',
+                        duration: 4000
+                    });
+                }
+
                 if (error.response && error.response.data) {
                     const message = (error.response.data as any).message || (error.response.data as any).error || 'Unable to complete your request. Please try again.';
                     // Create enhanced error that preserves status code

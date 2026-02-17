@@ -397,11 +397,30 @@ export default function ClubDetailScreen() {
 
             // Prevent duplicates - check if message already exists
             setMessages(previousMessages => {
+                // Check if message ID already exists
                 const exists = previousMessages.some(msg => msg._id === giftedMessage._id);
                 if (exists) {
-
                     return previousMessages;
                 }
+
+                // Check for optimistic message that matches this new message (by text/image and user)
+                // This handles the race condition where socket arrives before API response
+                const isMyMessage = giftedMessage.user._id === String(user?._id);
+                if (isMyMessage) {
+                    const tempMessageIndex = previousMessages.findIndex(msg =>
+                        msg._id.toString().startsWith('temp-') &&
+                        msg.text === giftedMessage.text &&
+                        msg.image == giftedMessage.image // loose equality for null/undefined
+                    );
+
+                    if (tempMessageIndex !== -1) {
+                        // Replace the temp message with the real one
+                        const newMessages = [...previousMessages];
+                        newMessages[tempMessageIndex] = giftedMessage;
+                        return newMessages;
+                    }
+                }
+
                 return [...previousMessages, giftedMessage];
             });
         });
