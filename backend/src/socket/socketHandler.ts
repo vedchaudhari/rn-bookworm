@@ -141,16 +141,34 @@ export const setupSocketIO = (io: Server) => {
                 const Message = require("../models/Message").default;
                 const message = await Message.findById(data.messageId);
 
-                if (message && !message.deliveredAt) {
-                    message.deliveredAt = new Date();
-                    await message.save();
+                if (message) {
+                    // Legacy check
+                    if (!message.deliveredAt) {
+                        message.deliveredAt = new Date();
+                    }
 
-                    // Notify original sender
-                    io.to(data.senderId).emit("message_delivered", {
-                        messageId: message._id,
-                        deliveredAt: message.deliveredAt,
-                        clubId: message.clubId
-                    });
+                    // Club/Group check
+                    const alreadyDelivered = message.deliveredTo?.some((d: any) => d.user.toString() === socket.userId);
+                    if (!alreadyDelivered) {
+                        message.deliveredTo.push({ user: socket.userId, deliveredAt: new Date() });
+                        await message.save();
+
+                        // Notify club room so everyone sees the tick update
+                        if (message.clubId) {
+                            io.to(`club_${message.clubId}`).emit("message_updated", {
+                                messageId: message._id,
+                                deliveredTo: message.deliveredTo
+                            });
+                        }
+
+                        // Notify original sender (for legacy 1:1)
+                        io.to(data.senderId).emit("message_delivered", {
+                            messageId: message._id,
+                            deliveredAt: message.deliveredAt,
+                            clubId: message.clubId,
+                            deliveredTo: message.deliveredTo
+                        });
+                    }
                 }
             } catch (error) {
                 console.error("[Socket] Error handling message_delivered:", error);
@@ -171,12 +189,46 @@ export const setupSocketIO = (io: Server) => {
         });
 
         // WhatsApp-style: Message read acknowledgment
-        socket.on("message_read", async (data: { conversationId: string, senderId: string }) => {
+        socket.on("message_read", async (data: { conversationId: string, senderId: string, messageId?: string }) => {
             try {
-                if (!socket.userId || !data.conversationId) return;
+                if (!socket.userId) return;
 
                 const Message = require("../models/Message").default;
                 const now = new Date();
+
+                // If specific message (likely club/group context)
+                if (data.messageId) {
+                    const message = await Message.findById(data.messageId);
+                    if (message) {
+                        // Check if already read by this user
+                        const alreadyRead = message.readBy?.some((r: any) => r.user.toString() === socket.userId);
+
+                        if (!alreadyRead) {
+                            message.readBy.push({ user: socket.userId, readAt: now });
+
+                            // Also ensure it's marked delivered
+                            const alreadyDelivered = message.deliveredTo?.some((d: any) => d.user.toString() === socket.userId);
+                            if (!alreadyDelivered) {
+                                message.deliveredTo.push({ user: socket.userId, deliveredAt: now });
+                            }
+
+                            await message.save();
+
+                            // Broadcast update to club
+                            if (message.clubId) {
+                                io.to(`club_${message.clubId}`).emit("message_updated", {
+                                    messageId: message._id,
+                                    readBy: message.readBy,
+                                    deliveredTo: message.deliveredTo
+                                });
+                            }
+                        }
+                    }
+                    return;
+                }
+
+                // Legacy 1:1 Chat Logic (mark all unread in conversation)
+                if (!data.conversationId) return;
 
                 // Update all unread messages in this conversation received by this user
                 await Message.updateMany(
@@ -196,10 +248,6 @@ export const setupSocketIO = (io: Server) => {
                         }
                     }
                 );
-
-
-
-
 
                 // Notify sender
                 io.to(data.senderId).emit("message_read", {

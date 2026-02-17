@@ -1674,24 +1674,9 @@ export default function ChatScreen() {
 
     const insets = useSafeAreaInsets();
 
-    // Get smooth 60fps keyboard height value
-    const keyboard = useAnimatedKeyboard();
-
-    const animatedContainerStyle = useAnimatedStyle(() => {
-        const keyboardHeight = keyboard.height.value;
-        const basePadding = Math.max(insets.bottom, 16);
-        const wrapperPadding = Platform.OS === 'ios' ? 30 : 20;
-
-        // "Tiny padding" gap of 10px for a premium look
-        const targetPadding = Math.max(keyboardHeight - wrapperPadding + 10, basePadding);
-
-        // We use withSpring for the "Liquid Smooth" feel.
-        // For the "no animation of moving down", we use a very high stiffness and low mass 
-        // to make it feel locked to the keyboard, and snap to the bottom instantly on close.
-        return {
-            paddingBottom: targetPadding,
-        };
-    });
+    // Standard KeyboardAvoidingView used instead of Reanimated
+    // const keyboard = useAnimatedKeyboard(); 
+    // const animatedContainerStyle = ...
 
 
     return (
@@ -1723,8 +1708,12 @@ export default function ChatScreen() {
                 aspectRatio={[1, 1]}
             />
 
-            {/* Smooth Reanimated View for Keyboard */}
-            <Animated.View style={[{ flex: 1 }, animatedContainerStyle]}>
+            {/* Standard KeyboardAvoidingView for reliable input handling */}
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+            >
                 <View style={[styles.container, { paddingTop: 0, backgroundColor: currentTheme.backgroundColor }]}>
 
                     {/* Messages List */}
@@ -1817,7 +1806,7 @@ export default function ChatScreen() {
                         </View>
                     </View>
                 </View >
-            </Animated.View>
+            </KeyboardAvoidingView>
 
             <Modal visible={showPreview} transparent animationType="fade" onRequestClose={handleClearPreview}>
                 <View style={styles.previewOverlay}>

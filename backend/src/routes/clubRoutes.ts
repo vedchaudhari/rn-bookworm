@@ -9,7 +9,10 @@ import {
     leaveClub,
     getClubMembers,
     sendClubMessage,
-    getClubMessages
+    getClubMessages,
+    getMessageDetails,
+    deleteMessageForMe,
+    deleteMessageForEveryone
 } from '../controllers/clubController';
 
 const router = express.Router();
@@ -24,5 +27,8 @@ router.post('/:id/leave', protect, leaveClub);
 router.get('/:id/members', protect, getClubMembers);
 router.post('/:id/messages', protect, sendClubMessage);
 router.get('/:id/messages', protect, getClubMessages);
+router.get('/:id/messages/:messageId', protect, getMessageDetails);
+router.delete('/:id/messages/:messageId/delete-for-me', protect, deleteMessageForMe);
+router.delete('/:id/messages/:messageId', protect, deleteMessageForEveryone);
 
 export default router;

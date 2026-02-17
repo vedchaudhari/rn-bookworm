@@ -111,9 +111,9 @@ export default function SettingsScreen() {
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Username</Text>
                         <TextInput
-                            style={styles.input}
+                            style={[styles.input, styles.disabledInput]}
                             value={username}
-                            onChangeText={setUsername}
+                            editable={false}
                             placeholder="Your username"
                             placeholderTextColor={COLORS.textMuted}
                         />
@@ -253,6 +253,12 @@ const styles = StyleSheet.create({
         fontSize: 15,
         borderWidth: 1,
         borderColor: COLORS.glassBorderLight,
+    },
+    disabledInput: {
+        backgroundColor: COLORS.surface + '80',
+        color: COLORS.textSecondary,
+        borderColor: COLORS.glassBorderLight,
+        opacity: 0.8,
     },
     textArea: {
         minHeight: 80,

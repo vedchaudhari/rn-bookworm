@@ -51,7 +51,11 @@ class ApiClient {
 
                 if (error.response && error.response.data) {
                     const message = (error.response.data as any).message || (error.response.data as any).error || 'Unable to complete your request. Please try again.';
-                    return Promise.reject(new Error(message));
+                    // Create enhanced error that preserves status code
+                    const enhancedError: any = new Error(message);
+                    enhancedError.response = error.response;
+                    enhancedError.status = error.response.status;
+                    return Promise.reject(enhancedError);
                 }
 
                 if (error.request) {

@@ -190,30 +190,30 @@ async function seed() {
         await mongoose.connect(MONGO_URI);
         console.log('Connected!');
 
-        console.log('Cleaning up existing seeded data...');
-        const seededUsers = await User.find({ email: { $regex: /@example\.com$/ } });
-        const seededUserIds = seededUsers.map(u => u._id);
+        console.log('Clearing entire database...');
 
+        // Delete all data from all collections
         await Promise.all([
-            Book.deleteMany({ user: { $in: seededUserIds } }),
-            Follow.deleteMany({ $or: [{ follower: { $in: seededUserIds } }, { following: { $in: seededUserIds } }] }),
-            Message.deleteMany({ $or: [{ sender: { $in: seededUserIds } }, { receiver: { $in: seededUserIds } }] }),
-            Like.deleteMany({ user: { $in: seededUserIds } }),
-            Comment.deleteMany({ user: { $in: seededUserIds } }),
-            BookshelfItem.deleteMany({ userId: { $in: seededUserIds } }),
-            ReadingSession.deleteMany({ userId: { $in: seededUserIds } }),
-            UserStreak.deleteMany({ userId: { $in: seededUserIds } }),
-            Notification.deleteMany({ user: { $in: seededUserIds } }),
-            Chapter.deleteMany({ bookId: { $in: (await Book.find({ user: { $in: seededUserIds } })).map(b => b._id) } }),
-            BookNote.deleteMany({ userId: { $in: seededUserIds } }),
-            Achievement.deleteMany({ user: { $in: seededUserIds } }),
-            DailyChallenge.deleteMany({ userId: { $in: seededUserIds } }),
-            ReadingGoal.deleteMany({ user: { $in: seededUserIds } }),
-            ClubMember.deleteMany({ userId: { $in: seededUserIds } }),
-            Club.deleteMany({ createdBy: { $in: seededUserIds } }),
-            User.deleteMany({ _id: { $in: seededUserIds } })
+            User.deleteMany({}),
+            Book.deleteMany({}),
+            Follow.deleteMany({}),
+            Message.deleteMany({}),
+            Like.deleteMany({}),
+            Comment.deleteMany({}),
+            BookshelfItem.deleteMany({}),
+            ReadingSession.deleteMany({}),
+            UserStreak.deleteMany({}),
+            Notification.deleteMany({}),
+            Chapter.deleteMany({}),
+            BookNote.deleteMany({}),
+            Achievement.deleteMany({}),
+            DailyChallenge.deleteMany({}),
+            ReadingGoal.deleteMany({}),
+            ClubMember.deleteMany({}),
+            Club.deleteMany({})
         ]);
-        console.log('Cleanup complete.');
+
+        console.log('Database cleared successfully.');
 
         const createdUsers = [];
         console.log('Creating users and streaks with history...');

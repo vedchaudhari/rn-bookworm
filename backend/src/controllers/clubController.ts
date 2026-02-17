@@ -4,6 +4,7 @@ import ClubMember from '../models/ClubMember';
 import Message from '../models/Message';
 import debug from 'debug';
 import mongoose from 'mongoose';
+import { signMessageMedia } from '../lib/messageUtils';
 
 const log = debug('app:clubController');
 
@@ -230,7 +231,10 @@ export const sendClubMessage = async (req: AuthenticatedRequest, res: Response) 
             fileSizeBytes,
             book,
             replyTo,
-            conversationId: `club_${clubId}` // Dummy conversation ID for schema compliance if needed, or update schema to make it optional
+            conversationId: `club_${clubId}`,
+            // Auto-mark as read/delivered by sender
+            readBy: [{ user: senderId, readAt: new Date() }],
+            deliveredTo: [{ user: senderId, deliveredAt: new Date() }]
         });
 
         await newMessage.populate('sender', 'username profileImage');
@@ -242,14 +246,17 @@ export const sendClubMessage = async (req: AuthenticatedRequest, res: Response) 
             });
         }
 
+        // Sign media before emitting and returning
+        const signedMessage = await signMessageMedia(newMessage);
+
         // Emit to club room
         const io = req.app.get('io');
-        io.to(`club_${clubId}`).emit('new_message', newMessage);
+        io.to(`club_${clubId}`).emit('new_message', signedMessage);
 
         // Update club last active
         await Club.findByIdAndUpdate(clubId, { lastActiveAt: new Date() });
 
-        res.status(201).json(newMessage);
+        res.status(201).json(signedMessage);
     } catch (error: any) {
         log('Error sending club message:', error);
         res.status(500).json({ message: 'Server error sending message' });
@@ -265,15 +272,10 @@ export const getClubMessages = async (req: AuthenticatedRequest, res: Response) 
         const limit = parseInt(req.query.limit as string) || 50;
         const skip = (page - 1) * limit;
 
-        // Verify membership (Optional: maybe public clubs allow reading?)
-        // For now, strict: must be member
+        // Verify membership - strict check required for all clubs
         const isMember = await ClubMember.exists({ clubId, userId: req.user._id });
         if (!isMember) {
-            // Check if public? For now stick to strict membership or check club privacy
-            const club = await Club.findById(clubId);
-            if (club?.isPrivate) {
-                return res.status(403).json({ message: 'Private club' });
-            }
+            return res.status(403).json({ message: 'You must be a member to view messages' });
         }
 
         const messages = await Message.find({ clubId })
@@ -287,9 +289,111 @@ export const getClubMessages = async (req: AuthenticatedRequest, res: Response) 
                 populate: { path: 'sender', select: 'username' }
             });
 
-        res.json(messages);
+        // Sign media for all messages
+        const signedMessages = await Promise.all(
+            messages.map(msg => signMessageMedia(msg))
+        );
+
+        res.json(signedMessages);
     } catch (error: any) {
         log('Error fetching club messages:', error);
         res.status(500).json({ message: 'Server error fetching messages' });
+    }
+};
+
+// @desc    Get message details (for info screen)
+// @route   GET /api/clubs/:clubId/messages/:messageId
+export const getMessageDetails = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const { id: clubId, messageId } = req.params;
+
+        // Verify membership
+        const isMember = await ClubMember.exists({ clubId, userId: req.user._id });
+        if (!isMember) {
+            return res.status(403).json({ message: 'You must be a member to view message details' });
+        }
+
+        const message = await Message.findById(messageId)
+            .populate('sender', 'username profileImage')
+            .populate('readBy.user', 'username profileImage')
+            .populate('deliveredTo.user', 'username profileImage');
+
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
+        // Sign media before returning
+        const signedMessage = await signMessageMedia(message);
+
+        res.json(signedMessage);
+    } catch (error: any) {
+        log('Error fetching message details:', error);
+        res.status(500).json({ message: 'Server error fetching message details' });
+    }
+};
+
+// @desc    Delete message for current user
+// @route   DELETE /api/clubs/:id/messages/:messageId/delete-for-me
+export const deleteMessageForMe = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const { id, messageId } = req.params;
+        const userId = req.user._id;
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
+        // Add user to deletedFor array if not already there
+        if (!message.deletedFor) {
+            message.deletedFor = [];
+        }
+
+        if (!message.deletedFor.some((id: any) => id.toString() === userId.toString())) {
+            message.deletedFor.push(userId);
+            await message.save();
+        }
+
+        res.json({ message: 'Message deleted for you' });
+    } catch (error: any) {
+        log('Error deleting message for user:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+// @desc    Delete message for everyone
+// @route   DELETE /api/clubs/:id/messages/:messageId
+export const deleteMessageForEveryone = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const { id, messageId } = req.params;
+        const userId = req.user._id;
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
+        // Only sender can delete for everyone
+        if (message.sender.toString() !== userId.toString()) {
+            return res.status(403).json({ message: 'Not authorized to delete this message' });
+        }
+
+        message.isDeleted = true;
+        message.text = 'This message was deleted';
+        await message.save();
+
+        // Emit socket event to update all clients
+        const io = (req.app as any).get('io');
+        if (io) {
+            io.to(`club_${id}`).emit('message_deleted', {
+                messageId: message._id,
+                clubId: id
+            });
+        }
+
+        res.json({ message: 'Message deleted for everyone' });
+    } catch (error: any) {
+        log('Error deleting message for everyone:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };

@@ -314,7 +314,6 @@ router.put("/profile", protectRoute, asyncHandler(async (req: Request, res: Resp
     }
 
     if (bio !== undefined) updatedUser.bio = bio;
-    if (username !== undefined) updatedUser.username = username;
     if (profileImage !== undefined) updatedUser.profileImage = profileImage;
     await updatedUser.save();
 

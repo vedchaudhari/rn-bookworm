@@ -15,7 +15,7 @@ export interface ChatTheme {
 const DEFAULT_THEME: ChatTheme = {
     backgroundColor: COLORS.background,
     myBubbleColor: COLORS.primary,
-    theirBubbleColor: COLORS.surfaceSilk,
+    theirBubbleColor: COLORS.surfaceHighlight,
     myTextColor: '#FFFFFF',
     theirTextColor: '#FFFFFF',
     auraColor: COLORS.primary,

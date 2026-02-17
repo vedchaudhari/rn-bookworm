@@ -7,6 +7,7 @@ import { API_URL } from '../constants/api';
 import { useAuthStore } from '../store/authContext';
 import SafeScreen from '../components/SafeScreen';
 import GlassCard from '../components/GlassCard';
+import AppHeader from '../components/AppHeader';
 import { formatPublishDate } from '../lib/utils';
 
 interface Reward {
@@ -125,8 +126,8 @@ export default function RewardsScreen() {
     const filteredTotal = filteredRewards.reduce((sum, r) => sum + r.amount, 0);
 
     return (
-        <SafeScreen top={true}>
-            <Stack.Screen options={{ title: 'Rewards Center', headerTintColor: COLORS.textPrimary }} />
+        <SafeScreen top={false}>
+            <AppHeader showBack title="Ink Drops" />
 
             <View style={styles.container}>
                 {/* Header with Total */}

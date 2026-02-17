@@ -7,6 +7,7 @@ import { Server } from "socket.io";
 import { redis, CACHE_KEYS, TTL } from "../lib/redis";
 import { getPresignedPutUrl, getSignedUrlForFile } from "../lib/s3";
 import { sendPushNotification } from "../lib/pushService";
+import { signMessageMedia } from "../lib/messageUtils";
 
 const router = express.Router();
 
@@ -24,25 +25,7 @@ interface SendMessageBody {
     };
 }
 
-// Helper to sign all media in a message
-const signMessageMedia = async (msgObj: any) => {
-    if (msgObj.sender && typeof msgObj.sender === 'object') {
-        msgObj.sender.profileImage = await getSignedUrlForFile(msgObj.sender.profileImage);
-    }
-    if (msgObj.receiver && typeof msgObj.receiver === 'object') {
-        msgObj.receiver.profileImage = await getSignedUrlForFile(msgObj.receiver.profileImage);
-    }
-    if (msgObj.image) {
-        msgObj.image = await getSignedUrlForFile(msgObj.image);
-    }
-    if (msgObj.video) {
-        msgObj.video = await getSignedUrlForFile(msgObj.video);
-    }
-    if (msgObj.videoThumbnail) {
-        msgObj.videoThumbnail = await getSignedUrlForFile(msgObj.videoThumbnail);
-    }
-    return msgObj;
-};
+
 
 // Get presigned URL for chat media upload (images and videos)
 router.get("/presigned-url", protectRoute, async (req: Request, res: Response) => {
@@ -336,8 +319,9 @@ router.get("/conversations", protectRoute, async (req: Request, res: Response) =
 
                     const otherUser = await User.findById(otherUserId).select("username profileImage level");
 
-                    if (!otherUser && otherUserId.toString() !== userId.toString()) {
-                        return null; // Skip if user no longer exists
+                    // Skip if user no longer exists (unless it's a self-chat)
+                    if (!otherUser && (!otherUserId || otherUserId.toString() !== userId.toString())) {
+                        return null;
                     }
 
                     const unreadCount = await Message.countDocuments({

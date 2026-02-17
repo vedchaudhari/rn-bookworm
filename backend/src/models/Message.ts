@@ -25,6 +25,8 @@ export interface IMessage {
         image: string;
     };
     replyTo?: mongoose.Types.ObjectId;
+    readBy: { user: mongoose.Types.ObjectId; readAt: Date }[];
+    deliveredTo: { user: mongoose.Types.ObjectId; deliveredAt: Date }[];
 }
 
 export interface IMessageDocument extends IMessage, Document {
@@ -121,6 +123,18 @@ const messageSchema = new Schema<IMessageDocument>(
             ref: "Message",
             required: false,
         },
+        readBy: [
+            {
+                user: { type: Schema.Types.ObjectId, ref: "User" },
+                readAt: { type: Date, default: Date.now }
+            }
+        ],
+        deliveredTo: [
+            {
+                user: { type: Schema.Types.ObjectId, ref: "User" },
+                deliveredAt: { type: Date, default: Date.now }
+            }
+        ],
     },
     { timestamps: true }
 );
