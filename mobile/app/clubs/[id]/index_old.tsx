@@ -1,22 +1,22 @@
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator, TextInput, AppState, AppStateStatus } from 'react-native';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { GiftedChat, IMessage, Bubble, InputToolbar, BubbleProps, Composer } from 'react-native-gifted-chat';
-import { LinearGradient } from 'expo-linear-gradient';
-import COLORS from '../../../constants/colors';
-import { useAuthStore } from '../../../store/authContext';
-import { apiClient } from '../../../lib/apiClient';
-import SafeScreen from '../../../components/SafeScreen';
-import GlassCard from '../../../components/GlassCard';
-import { useUIStore } from '../../../store/uiStore';
-import io, { Socket } from 'socket.io-client';
-import { API_URL } from '../../../constants/api';
-import { useChatThemeStore } from '../../../store/chatThemeStore';
-import { SHADOWS } from '../../../constants/styleConstants';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator, TextInput, AppState, AppStateStatus } from "react-native";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useLocalSearchParams, useRouter, Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { GiftedChat, IMessage, Bubble, InputToolbar, BubbleProps, Composer } from "react-native-gifted-chat";
+import { LinearGradient } from "expo-linear-gradient";
+import COLORS from "../../../constants/colors";
+import { useAuthStore } from "../../../store/authContext";
+import { apiClient } from "../../../services/api/apiClient";
+import SafeScreen from "../../../components/layout/SafeScreen";
+import GlassCard from "../../../components/ui/GlassCard";
+import { useUIStore } from "../../../store/uiStore";
+import io, { Socket } from "socket.io-client";
+import { API_URL } from "../../../constants/api";
+import { useChatThemeStore } from "../../../store/chatThemeStore";
+import { SHADOWS } from "../../../constants/styleConstants";
 
-import { Club, ClubUser, IClubMessage } from '../../../types/club';
+import { Club, ClubUser, IClubMessage } from "../../../types/club";
 
 export default function ClubDetailScreen() {
     const { id, name } = useLocalSearchParams<{ id: string; name: string }>();

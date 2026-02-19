@@ -8,6 +8,7 @@ import { AppError } from "../utils/AppError";
 import { redis, CACHE_KEYS, TTL } from "../lib/redis";
 import { z } from 'zod';
 import { deleteFileFromS3, getPresignedPutUrl, getSignedUrlForFile } from '../lib/s3';
+import { UserService } from "../services/userService";
 
 const router = express.Router();
 
@@ -134,20 +135,16 @@ router.get("/:userId", protectRoute, asyncHandler(async (req: Request, res: Resp
         throw new AppError("Invalid user ID", 400);
     }
 
-    // 1. Try Cache First
-    const cachedUser: any = await redis.get(CACHE_KEYS.USER_PROFILE(userId));
-    if (cachedUser) {
-        // Robust signing for both nested and flat cache formats
-        if (cachedUser.user && cachedUser.user.profileImage) {
-            cachedUser.user.profileImage = await getSignedUrlForFile(cachedUser.user.profileImage);
-        } else if (cachedUser.profileImage) {
-            cachedUser.profileImage = await getSignedUrlForFile(cachedUser.profileImage);
-        }
-        res.json(cachedUser);
-        return;
-    }
+    // 1. Try Cache/DB via Service (Read-Through)
+    const cachedUser = await UserService.getUserById(userId);
 
-    const user = await User.findById(userId);
+    // If not found in DB
+    if (!cachedUser) throw new AppError("User found in request but not DB", 500);
+
+    // 2. Calculate Stats (Real-time)
+    // We fetch stats on the fly to ensure accuracy, while the base user object is cached.
+
+    const user = await UserService.getUserById(userId);
     if (!user) throw new AppError("User not found", 404);
 
     // Calculate stats on the fly
@@ -168,11 +165,10 @@ router.get("/:userId", protectRoute, asyncHandler(async (req: Request, res: Resp
         isFollowing: !!isFollowing
     };
 
-    // 2. Cache result
-    await redis.set(CACHE_KEYS.USER_PROFILE(userId), responseData, { ex: TTL.PROFILE });
-
     // Sign profile image URL
-    responseData.user.profileImage = await getSignedUrlForFile(responseData.user.profileImage);
+    if (responseData.user.profileImage) {
+        responseData.user.profileImage = await getSignedUrlForFile(responseData.user.profileImage);
+    }
 
     res.json(responseData);
 }));
@@ -182,37 +178,8 @@ router.post("/block/:userId", protectRoute, asyncHandler(async (req: Request, re
     const { userId } = req.params;
     const currentUserId = req.user!._id;
 
-    // Validate userId
-    if (!userId || userId === currentUserId.toString()) {
-        throw new AppError(userId === currentUserId.toString() ? "You cannot block yourself" : "Invalid user ID", 400);
-    }
-
-    // Check if user exists
-    const userToBlock = await User.findById(userId);
-    if (!userToBlock) throw new AppError("User not found", 404);
-
-    // Check if already blocked
-    const currentUser = await User.findById(currentUserId).select('blockedUsers');
-    const isAlreadyBlocked = currentUser?.blockedUsers.some(id => id.toString() === userId);
-
-    if (isAlreadyBlocked) throw new AppError("User is already blocked", 400);
-
-    // Add to blocked list
-    await User.findByIdAndUpdate(currentUserId, {
-        $addToSet: { blockedUsers: userId }
-    });
-
-    // Invalidate caches
-    await Promise.all([
-        redis.del(CACHE_KEYS.USER_PROFILE(currentUserId.toString())),
-        redis.del(CACHE_KEYS.USER_PROFILE(userId.toString()))
-    ]);
-
-    // Remove follow relationships in both directions
-    await Promise.all([
-        Follow.findOneAndDelete({ follower: currentUserId, following: userId }),
-        Follow.findOneAndDelete({ follower: userId, following: currentUserId })
-    ]);
+    // Use UserService to block (Handles Logic + Validation + Invalidation)
+    await UserService.blockUser(currentUserId.toString(), userId);
 
     res.json({
         success: true,
@@ -225,23 +192,8 @@ router.post("/unblock/:userId", protectRoute, asyncHandler(async (req: Request, 
     const { userId } = req.params;
     const currentUserId = req.user!._id;
 
-    // Validate userId
-    if (!userId) throw new AppError("Invalid user ID", 400);
-
-    // Remove from blocked list
-    const result = await User.findByIdAndUpdate(
-        currentUserId,
-        { $pull: { blockedUsers: userId } },
-        { new: true }
-    );
-
-    if (!result) throw new AppError("User not found", 404);
-
-    // Invalidate caches
-    await Promise.all([
-        redis.del(CACHE_KEYS.USER_PROFILE(currentUserId.toString())),
-        redis.del(CACHE_KEYS.USER_PROFILE(userId.toString()))
-    ]);
+    // Use UserService to unblock (Handles Logic + Validation + Invalidation)
+    await UserService.unblockUser(currentUserId.toString(), userId);
 
     res.json({
         success: true,
@@ -298,31 +250,59 @@ router.put("/profile", protectRoute, asyncHandler(async (req: Request, res: Resp
     const { bio, username, profileImage } = req.body;
     const userId = req.user!._id;
 
-    const updatedUser = await User.findById(userId).select("-password");
-    if (!updatedUser) throw new AppError("User not found", 404);
+    const updateData: any = {};
+    if (bio !== undefined) updateData.bio = bio;
+    if (profileImage !== undefined) {
+        // We use specific method for image if needed, but here we can just update field
+        // But wait, UserService.updateProfileImage handles S3 cleanup. 
+        // If we just pass profileImage into updateUser, we miss S3 cleanup logic if it was in the route.
+        // The Service handles updateProfileImage separately.
+        // Let's check the original route logic.
+        // It had S3 cleanup.
+        // If we use updateUser, we need to handle S3 cleanup.
+        // Ideally, we should use updateProfileImage if the image changed.
 
-    // S3 Cleanup
-    if (updatedUser.profileImage &&
-        updatedUser.profileImage.includes('amazonaws.com') &&
-        updatedUser.profileImage !== profileImage) {
-        try {
-            await deleteFileFromS3(updatedUser.profileImage);
+        // MIXED UPDATE (Bio + Image):
+        // If image changed, we should probably call updateProfileImage or let updateUser handle cleanup?
+        // UserService.updateUser is generic.
+        // Let's iterate `UserService.updateUser` to be comprehensive? No, simpler to just use specific calls or logic here.
+        // Since `updateProfileImage` exists, let's use it for image, and `updateUser` for bio.
+        // Or refactor route to be cleaner.
 
-        } catch (err) {
-            console.error('[S3] Generic update cleanup failed:', err);
-        }
+        // Use separate calls for clarity and safety?
+        // Or just move all logic here to Service?
+        // Let's assume we want to use `UserService.updateUser` for generic updates.
+        // If profileImage is present, we should handle it carefully.
+
+        // Actually, the original route handled both.
+        // Let's stick to using `UserService.updateProfileImage` if image changes, and `UserService.updateUser` for bio.
     }
 
-    if (bio !== undefined) updatedUser.bio = bio;
-    if (profileImage !== undefined) updatedUser.profileImage = profileImage;
-    await updatedUser.save();
+    // But `UserService.updateProfileImage` does a `save()`. `updateUser` does `findByIdAndUpdate`.
+    // Let's do this:
 
-    // Invalidate Redis cache
-    await redis.del(CACHE_KEYS.USER_PROFILE(userId.toString()));
+    let updatedUser;
+
+    if (profileImage !== undefined) {
+        updatedUser = await UserService.updateProfileImage(userId.toString(), profileImage);
+    }
+
+    if (bio !== undefined) {
+        updatedUser = await UserService.updateUser(userId.toString(), { bio });
+    }
+
+    if (!updatedUser) {
+        // If not updated (e.g. no fields), retrieve current
+        updatedUser = await UserService.getUserById(userId.toString());
+    }
+
+    if (!updatedUser) throw new AppError("User not found", 404);
 
     // Sign profile image URL for response
     const userObj = updatedUser.toObject();
-    userObj.profileImage = await getSignedUrlForFile(userObj.profileImage);
+    if (userObj.profileImage) {
+        userObj.profileImage = await getSignedUrlForFile(userObj.profileImage);
+    }
 
     res.json({ success: true, user: userObj });
 }));
@@ -338,38 +318,16 @@ router.put("/update-profile-image", protectRoute, asyncHandler(async (req: Reque
     const { profileImage } = parsed.data;
     const userId = req.user!._id;
 
-    // Get current user with existing profile image
-    const user = await User.findById(userId).select('profileImage');
-    if (!user) throw new AppError("User not found", 404);
-
-    // Delete old profile image from S3 (if exists and is S3 URL)
-    if (user.profileImage &&
-        user.profileImage.includes('amazonaws.com') &&
-        user.profileImage !== profileImage) {
-        try {
-            await deleteFileFromS3(user.profileImage);
-
-        } catch (deleteError) {
-            // Log but don't fail the update
-            console.error('[S3] Failed to delete old profile image:', deleteError);
-        }
-    }
-
-    // Update with new image
-    const updatedUser = await User.findByIdAndUpdate(
-        userId,
-        { $set: { profileImage } },
-        { new: true }
-    ).select("-password");
+    // Use UserService to update image (Handles S3 Cleanup + Invalidation)
+    const updatedUser = await UserService.updateProfileImage(userId.toString(), profileImage);
 
     if (!updatedUser) throw new AppError("User not found", 404);
 
-    // Invalidate Redis cache
-    await redis.del(CACHE_KEYS.USER_PROFILE(userId.toString()));
-
     // Sign profile image URL for response
     const userObj = updatedUser.toObject();
-    userObj.profileImage = await getSignedUrlForFile(userObj.profileImage);
+    if (userObj.profileImage) {
+        userObj.profileImage = await getSignedUrlForFile(userObj.profileImage);
+    }
 
     res.json({ success: true, user: userObj });
 }));

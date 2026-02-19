@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import styles from "../../assets/styles/signup.styles";
 import { Ionicons } from "@expo/vector-icons";
 import COLORS from "../../constants/colors";
@@ -15,7 +15,7 @@ import { Link } from "expo-router";
 import { useAuthStore } from "../../store/authContext";
 import { useUIStore } from "../../store/uiStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import KeyboardScreen from "../../components/KeyboardScreen";
+import KeyboardScreen from "../../components/layout/KeyboardScreen";
 
 export default function Signup() {
     const insets = useSafeAreaInsets();

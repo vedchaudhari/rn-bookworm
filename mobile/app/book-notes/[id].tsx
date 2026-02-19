@@ -1,5 +1,5 @@
 // mobile/app/book-notes/[id].tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
     View,
     Text,
@@ -8,13 +8,13 @@ import {
     TouchableOpacity,
     TextInput,
     RefreshControl,
-} from 'react-native';
-import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import SafeScreen from '../../components/SafeScreen';
-import GlassCard from '../../components/GlassCard';
-import GlazedButton from '../../components/GlazedButton';
-import Loader from '../../components/Loader';
-import COLORS from '../../constants/colors';
+} from "react-native";
+import { useRouter, useLocalSearchParams, Stack } from "expo-router";
+import SafeScreen from "../../components/layout/SafeScreen";
+import GlassCard from "../../components/ui/GlassCard";
+import GlazedButton from "../../components/ui/GlazedButton";
+import Loader from "../../components/feedback/Loader";
+import COLORS from "../../constants/colors";
 import {
     SPACING,
     PADDING,
@@ -23,12 +23,12 @@ import {
     TYPOGRAPHY,
     BORDER_RADIUS,
     COMPONENT_SIZES,
-} from '../../constants/styleConstants';
-import { useBookNoteStore } from '../../store/bookNoteStore';
-import { useBookshelfStore } from '../../store/bookshelfStore';
-import { useUIStore } from '../../store/uiStore';
-import { Ionicons } from '@expo/vector-icons';
-import type { NoteType, Visibility } from '../../lib/api/bookNoteApi';
+} from "../../constants/styleConstants";
+import { useBookNoteStore } from "../../store/bookNoteStore";
+import { useBookshelfStore } from "../../store/bookshelfStore";
+import { useUIStore } from "../../store/uiStore";
+import { Ionicons } from "@expo/vector-icons";
+import type { NoteType, Visibility } from "../../services/api/endpoints/bookNoteApi";
 
 // Placeholder for NoteCard component (will be created next)
 const NoteCard = ({ note, onPress, onDelete }: any) => (

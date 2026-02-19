@@ -1,4 +1,4 @@
-import { IMessage } from 'react-native-gifted-chat';
+import { IMessage } from "react-native-gifted-chat";
 
 export interface ClubUser {
     _id: string;

@@ -1,16 +1,16 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, TextInput, RefreshControl } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { useRouter, Stack, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import COLORS from '../../constants/colors';
-import { API_URL } from '../../constants/api';
-import { useAuthStore } from '../../store/authContext';
-import SafeScreen from '../../components/SafeScreen';
-import GlassCard from '../../components/GlassCard';
-import GlazedButton from '../../components/GlazedButton';
-import { useUIStore } from '../../store/uiStore';
-import { apiClient } from '../../lib/apiClient';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, TextInput, RefreshControl } from "react-native";
+import React, { useState, useEffect } from "react";
+import { useRouter, Stack, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import COLORS from "../../constants/colors";
+import { API_URL } from "../../constants/api";
+import { useAuthStore } from "../../store/authContext";
+import SafeScreen from "../../components/layout/SafeScreen";
+import GlassCard from "../../components/ui/GlassCard";
+import GlazedButton from "../../components/ui/GlazedButton";
+import { useUIStore } from "../../store/uiStore";
+import { apiClient } from "../../services/api/apiClient";
 
 interface Club {
     _id: string;

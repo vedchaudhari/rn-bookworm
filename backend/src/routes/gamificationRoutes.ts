@@ -39,8 +39,8 @@ router.get("/achievements", protectRoute, async (req: Request, res: Response) =>
         });
 
         res.json({ achievements: achievementsWithDetails });
-    } catch (error) {
-        console.error("Error fetching achievements:", error);
+    } catch (error: any) {
+        console.error(`[Gamification] Error fetching achievements for user ${req.user!._id}:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -88,8 +88,8 @@ router.get("/leaderboard", protectRoute, async (req: Request, res: Response) => 
             leaderboard,
             currentUserRank: currentUserRank !== -1 ? currentUserRank + 1 : null,
         });
-    } catch (error) {
-        console.error("Error fetching leaderboard:", error);
+    } catch (error: any) {
+        console.error(`[Gamification] Error fetching leaderboard:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -131,8 +131,8 @@ router.post("/goal", protectRoute, async (req: Request, res: Response) => {
 
         await newGoal.save();
         res.status(201).json(newGoal);
-    } catch (error) {
-        console.error("Error creating reading goal:", error);
+    } catch (error: any) {
+        console.error(`[Gamification] Error creating reading goal for user ${req.user!._id}:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -151,8 +151,8 @@ router.get("/goals", protectRoute, async (req: Request, res: Response) => {
         const goals = await ReadingGoal.find(query).sort({ createdAt: -1 });
 
         res.json({ goals });
-    } catch (error) {
-        console.error("Error fetching reading goals:", error);
+    } catch (error: any) {
+        console.error(`[Gamification] Error fetching reading goals for user ${req.user!._id}:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -190,8 +190,8 @@ router.put("/goal/:goalId", protectRoute, async (req: Request, res: Response) =>
 
         await goal.save();
         res.json(goal);
-    } catch (error) {
-        console.error("Error updating reading goal:", error);
+    } catch (error: any) {
+        console.error(`[Gamification] Error updating reading goal ${req.params.goalId}:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -236,8 +236,8 @@ router.get("/stats", protectRoute, async (req: Request, res: Response) => {
             activeGoals,
             completedGoals,
         });
-    } catch (error) {
-        console.error("Error fetching user stats:", error);
+    } catch (error: any) {
+        console.error(`[Gamification] Error fetching user stats for user ${req.user!._id}:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -253,8 +253,8 @@ router.post("/update-streak", protectRoute, async (req: Request, res: Response) 
         }
 
         res.json(result);
-    } catch (error) {
-        console.error("Error updating streak:", error);
+    } catch (error: any) {
+        console.error(`[Gamification] Error updating streak for user ${req.user!._id}:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });

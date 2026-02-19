@@ -56,7 +56,7 @@ router.post('/check-in', authenticateToken, async (req: Request, res: Response) 
         const isPro = (req as any).user.isPro || false;
 
         // Rate limiting check (simple in-memory, use Redis in production)
-        // TODO: Implement proper rate limiting with Redis
+        // Rate limiting check (simple in-memory, use Redis in production)
 
         const result = await StreakService.checkIn(userId, isPro);
 

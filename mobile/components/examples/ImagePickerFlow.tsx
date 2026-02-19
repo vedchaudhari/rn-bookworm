@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { ImagePickerService, MediaAttachment } from '../../services/ImagePickerService';
-import { ImageCompressor } from '../../services/ImageCompressor';
-import ImageCropper from '../ImageCropper'; // The component we verified earlier
+import React, { useState } from "react";
+import { View, Text, TouchableOpacity, ScrollView, Image, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { ImagePickerService, MediaAttachment } from "../../services/device/imagePicker";
+import { ImageCompressor } from "../../services/device/imageCompressor";
+import ImageCropper from "../ui/ImageCropper"; // The component we verified earlier
 
 export default function ImagePickerFlow() {
     const [attachments, setAttachments] = useState<MediaAttachment[]>([]);

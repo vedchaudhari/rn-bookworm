@@ -1,13 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform } from 'react-native';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import SafeScreen from '../components/SafeScreen';
-import COLORS from '../constants/colors';
-import { SHADOWS, BORDER_RADIUS, SPACING } from '../constants/styleConstants';
-import GlazedButton from '../components/GlazedButton';
-import { useUIStore } from '../store/uiStore';
+import React from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform } from "react-native";
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import SafeScreen from "../components/layout/SafeScreen";
+import COLORS from "../constants/colors";
+import { SHADOWS, BORDER_RADIUS, SPACING } from "../constants/styleConstants";
+import GlazedButton from "../components/ui/GlazedButton";
+import { useUIStore } from "../store/uiStore";
 
 const { width } = Dimensions.get('window');
 

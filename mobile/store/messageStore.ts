@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { apiClient } from '../lib/apiClient';
+import { create } from "zustand";
+import { apiClient } from "../services/api/apiClient";
 
 export interface Message {
     _id: string;

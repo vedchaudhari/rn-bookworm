@@ -1,13 +1,13 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet as RNStyleSheet, Platform } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../constants/colors';
-import { API_URL } from '../constants/api';
-import { useAuthStore } from '../store/authContext';
-import { useUIStore } from '../store/uiStore';
-import KeyboardScreen from '../components/KeyboardScreen';
-import SafeScreen from '../components/SafeScreen';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet as RNStyleSheet, Platform } from "react-native";
+import React, { useState, useEffect } from "react";
+import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import COLORS from "../constants/colors";
+import { API_URL } from "../constants/api";
+import { useAuthStore } from "../store/authContext";
+import { useUIStore } from "../store/uiStore";
+import KeyboardScreen from "../components/layout/KeyboardScreen";
+import SafeScreen from "../components/layout/SafeScreen";
 
 export default function ChapterEditor() {
     const { bookId, chapterNumber, isNew } = useLocalSearchParams<{ bookId: string; chapterNumber?: string; isNew?: string }>();

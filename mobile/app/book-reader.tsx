@@ -1,15 +1,15 @@
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
-import React, { useState, useEffect, useRef } from 'react';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import COLORS from '../constants/colors';
-import { useAuthStore } from '../store/authContext';
-import { useUIStore } from '../store/uiStore';
-import { apiClient } from '../lib/apiClient';
-import SafeScreen from '../components/SafeScreen';
-import { useSubscriptionStore } from '../store/subscriptionStore';
-import InterstitialAdManager from '../components/ads/InterstitialAdManager';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import COLORS from "../constants/colors";
+import { useAuthStore } from "../store/authContext";
+import { useUIStore } from "../store/uiStore";
+import { apiClient } from "../services/api/apiClient";
+import SafeScreen from "../components/layout/SafeScreen";
+import { useSubscriptionStore } from "../store/subscriptionStore";
+import InterstitialAdManager from "../components/features/ads/InterstitialAdManager";
 
 interface ChapterMeta {
     chapterNumber: number;

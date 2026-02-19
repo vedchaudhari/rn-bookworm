@@ -1,5 +1,5 @@
 // mobile/app/streaks/leaderboard.tsx
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from "react";
 import {
     View,
     Text,
@@ -8,12 +8,12 @@ import {
     RefreshControl,
     TouchableOpacity,
     ActivityIndicator,
-} from 'react-native';
-import { Image } from 'expo-image';
-import { useRouter, Stack } from 'expo-router';
-import SafeScreen from '../../components/SafeScreen';
-import GlassCard from '../../components/GlassCard';
-import COLORS from '../../constants/colors';
+} from "react-native";
+import { Image } from "expo-image";
+import { useRouter, Stack } from "expo-router";
+import SafeScreen from "../../components/layout/SafeScreen";
+import GlassCard from "../../components/ui/GlassCard";
+import COLORS from "../../constants/colors";
 import {
     SPACING,
     PADDING,
@@ -22,10 +22,10 @@ import {
     TYPOGRAPHY,
     BORDER_RADIUS,
     COMPONENT_SIZES,
-} from '../../constants/styleConstants';
-import { useStreakStore } from '../../stores/streakStore';
-import { LeaderboardEntry } from '../../lib/api/streakApi';
-import { Ionicons } from '@expo/vector-icons';
+} from "../../constants/styleConstants";
+import { useStreakStore } from "../../store/streakStore";
+import { LeaderboardEntry } from "../../services/api/endpoints/streakApi";
+import { Ionicons } from "@expo/vector-icons";
 
 /**
  * LeaderboardScreen

@@ -117,7 +117,7 @@ router.post('/track-progress', authenticateToken, async (req: Request, res: Resp
  * Helper: Generate daily challenge for user
  */
 async function generateDailyChallengeForUser(userId: string, date: string): Promise<any> {
-    const isPro = false; // TODO: Get from user object
+    const isPro = false;
 
     // Select challenge type (rotate based on user ID for variety)
     const challengeTypes: ChallengeType[] = ['read_posts', 'like_posts', 'comment', 'recommend_book'];

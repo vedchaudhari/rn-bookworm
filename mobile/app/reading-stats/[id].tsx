@@ -1,5 +1,5 @@
 // mobile/app/reading-stats/[id].tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
     View,
     Text,
@@ -7,12 +7,12 @@ import {
     ScrollView,
     TouchableOpacity,
     Dimensions,
-} from 'react-native';
-import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import SafeScreen from '../../components/SafeScreen';
-import GlassCard from '../../components/GlassCard';
-import Loader from '../../components/Loader';
-import COLORS from '../../constants/colors';
+} from "react-native";
+import { useRouter, useLocalSearchParams, Stack } from "expo-router";
+import SafeScreen from "../../components/layout/SafeScreen";
+import GlassCard from "../../components/ui/GlassCard";
+import Loader from "../../components/feedback/Loader";
+import COLORS from "../../constants/colors";
 import {
     SPACING,
     PADDING,
@@ -21,9 +21,9 @@ import {
     TYPOGRAPHY,
     BORDER_RADIUS,
     COMPONENT_SIZES,
-} from '../../constants/styleConstants';
-import { useReadingSessionStore } from '../../store/readingSessionStore';
-import { Ionicons } from '@expo/vector-icons';
+} from "../../constants/styleConstants";
+import { useReadingSessionStore } from "../../store/readingSessionStore";
+import { Ionicons } from "@expo/vector-icons";
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_WIDTH = SCREEN_WIDTH - PADDING.screen.horizontal * 2 - PADDING.card.vertical * 2;

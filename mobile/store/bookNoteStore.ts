@@ -1,12 +1,12 @@
 // mobile/store/bookNoteStore.ts
-import { create } from 'zustand';
+import { create } from "zustand";
 import bookNoteApi, {
     BookNote,
     NoteType,
     Visibility,
     NoteFilters,
     NoteStats,
-} from '../lib/api/bookNoteApi';
+} from "../services/api/endpoints/bookNoteApi";
 
 /**
  * BOOK NOTE STORE

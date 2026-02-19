@@ -1,6 +1,7 @@
 import User from '../models/User';
 import { toObjectId } from '../lib/objectId';
 import mongoose from 'mongoose';
+import { AppError } from '../utils/AppError';
 
 export type InkDropSource =
     | 'streak_check_in'
@@ -36,7 +37,7 @@ export async function addInkDrops(
     const user = await User.findById(toObjectId(userId));
 
     if (!user) {
-        throw new Error('USER_NOT_FOUND');
+        throw new AppError('User not found', 404);
     }
 
     // Initialize inkDrops if not exists
@@ -48,7 +49,7 @@ export async function addInkDrops(
 
     // Prevent negative balance
     if (newBalance < 0) {
-        throw new Error('INSUFFICIENT_INK_DROPS');
+        throw new AppError('Insufficient Ink Drops', 400);
     }
 
     user.inkDrops = newBalance;
@@ -81,7 +82,7 @@ export async function getInkDropsBalance(userId: string): Promise<number> {
     const user = await User.findById(toObjectId(userId));
 
     if (!user) {
-        throw new Error('USER_NOT_FOUND');
+        throw new AppError('User not found', 404);
     }
 
     return user.inkDrops || 0;

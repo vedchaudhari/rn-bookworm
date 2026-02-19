@@ -1,8 +1,77 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiClient } from "../lib/apiClient";
-import { API_URL } from "../constants/api";
+import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
+import { apiClient } from "../services/api/apiClient";
 import { Keyboard } from "react-native";
+
+// --- SECURITY CONSTANTS & CONFIGURATION ---
+
+const TOKEN_KEY = "refresh_token";
+
+// Standard security option for all native platforms
+// Accessible only when device is unlocked and after first unlock.
+const SECURE_OPTIONS: SecureStore.SecureStoreOptions = {
+    keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY
+};
+
+// --- SECURE STORAGE WRAPPERS ---
+
+/**
+ * Checks if SecureStore is available on the current device/platform.
+ */
+const isSecureStoreAvailable = async (): Promise<boolean> => {
+    if (Platform.OS === 'web') return false; // Web not supported by SecureStore
+    return await SecureStore.isAvailableAsync();
+};
+
+/**
+ * Securely saves the token.
+ */
+const setSecureToken = async (token: string) => {
+    try {
+        if (await isSecureStoreAvailable()) {
+            await SecureStore.setItemAsync(TOKEN_KEY, token, SECURE_OPTIONS);
+        } else {
+            console.warn("[Auth] SecureStore unavailable, session will not persist securely.");
+        }
+    } catch (error) {
+        console.error("[Auth] Failed to set secure token:", error);
+        throw error; // Propagate to caller to handle UI feedback
+    }
+};
+
+/**
+ * Securely retrieves the token.
+ */
+const getSecureToken = async (): Promise<string | null> => {
+    try {
+        if (await isSecureStoreAvailable()) {
+            return await SecureStore.getItemAsync(TOKEN_KEY, SECURE_OPTIONS);
+        }
+        return null;
+    } catch (error) {
+        console.error("[Auth] Failed to get secure token:", error);
+        return null; // Treat corruption/failure as logged out
+    }
+};
+
+/**
+ * Securely deletes the token.
+ */
+const deleteSecureToken = async () => {
+    try {
+        if (await isSecureStoreAvailable()) {
+            await SecureStore.deleteItemAsync(TOKEN_KEY, SECURE_OPTIONS);
+        }
+    } catch (error) {
+        console.error("[Auth] Failed to delete secure token:", error);
+        // Continue with logout flow even if this fails
+    }
+};
+
+// --- TYPES & INTERFACES ---
+
 interface User {
     id: string;
     _id?: string; // Kept for compatibility if needed
@@ -77,18 +146,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     register: async (email: string, username: string, password: string) => {
         set({ isLoading: true });
         try {
-            const data = await apiClient.post<{ token: string; user: any }>(
+            const data = await apiClient.post<{ accessToken: string; refreshToken: string; user: any }>(
                 `/api/auth/register`,
                 { email, username, password }
             );
 
-            const normalizedUser = normalizeUser(data.user);
+            const { accessToken, refreshToken, user } = data as any;
+            const normalizedUser = normalizeUser(user);
 
+            // Store non-sensitive user data in AsyncStorage
             await AsyncStorage.setItem("user", JSON.stringify(normalizedUser));
-            await AsyncStorage.setItem("token", data.token);
+
+            // Store Refresh Token in SecureStore
+            await setSecureToken(refreshToken);
 
             set({
-                token: data.token,
+                token: accessToken, // Access Token in Memory Only
                 user: normalizedUser,
                 isLoading: false,
                 isAuthLoading: false,
@@ -96,7 +169,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             });
 
             // Sync with apiClient
-            apiClient.setAuthToken(data.token);
+            apiClient.setAuthToken(accessToken);
 
             return { success: true };
         } catch (error: any) {
@@ -109,60 +182,62 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ isCheckingAuth: true });
 
         try {
-            const cachedToken = await AsyncStorage.getItem("token");
-            const cachedUserStr = await AsyncStorage.getItem("user");
+            // 1. Attempt to get Refresh Token from SecureStore
+            const refreshToken = await getSecureToken();
 
-            if (cachedToken) {
-                // Cold-start safety: immediately push token to apiClient
-                apiClient.setAuthToken(cachedToken);
-
-                let cachedUser = null;
-                try {
-                    cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : null;
-                } catch (e) {
-
-                }
-
-                if (!cachedUser) {
-                    const decoded = decodeJwt(cachedToken);
-                    if (decoded) {
-                        const userId = decoded.userId || decoded.id || decoded._id;
-                        if (userId) {
-                            cachedUser = normalizeUser({ id: userId });
-                        }
-                    }
-                }
-
-                if (cachedUser) {
-                    // Ensure cached user is also normalized
-                    cachedUser = normalizeUser(cachedUser);
-                    set({
-                        token: cachedToken,
-                        user: cachedUser
-                    });
-                }
-            }
-
+            // Load onboarding state
             const onboarding = await AsyncStorage.getItem('onboarding_completed');
             set({ hasCompletedOnboarding: onboarding === 'true' });
 
-            if (!cachedToken) {
+            if (refreshToken) {
+                // Attempt to usage Refresh Token to get a new Access Token
+                try {
+                    const refreshResponse = await apiClient.post<{ accessToken: string, refreshToken: string }>(
+                        `/api/auth/refresh`,
+                        { refreshToken }
+                    );
+
+                    const { accessToken, refreshToken: newRefreshToken } = refreshResponse;
+
+                    // Rotate Refresh Token
+                    await setSecureToken(newRefreshToken);
+
+                    // Set Access Token in State
+                    set({ token: accessToken });
+                    apiClient.setAuthToken(accessToken);
+
+                    // Fetch User Profile
+                    try {
+                        const data = await apiClient.get<{ user: any }>(`/api/auth/me`);
+                        const normalizedUser = normalizeUser(data.user);
+
+                        await AsyncStorage.setItem("user", JSON.stringify(normalizedUser));
+                        set({ user: normalizedUser });
+                    } catch (meError) {
+                        console.warn("[Auth] /me failed after refresh", meError);
+                        // Fallback to cached user if available
+                        const cachedUserStr = await AsyncStorage.getItem("user");
+                        if (cachedUserStr) {
+                            set({ user: normalizeUser(JSON.parse(cachedUserStr)) });
+                        }
+                    }
+
+                } catch (refreshError) {
+                    console.error("[Auth] Refresh failed during checkAuth:", refreshError);
+                    // Refresh failed (invalid/expired) -> User is logged out
+                    await deleteSecureToken();
+                    set({ token: null, user: null });
+                    apiClient.setAuthToken(null);
+                }
+            } else {
+                // No Refresh Token -> Logged out
                 set({ token: null, user: null });
-                return;
+                apiClient.setAuthToken(null);
             }
-
-            const data = await apiClient.get<{ user: any }>(`/api/auth/me`);
-            const normalizedUser = normalizeUser(data.user);
-
-            await AsyncStorage.setItem("user", JSON.stringify(normalizedUser));
-            set({
-                token: cachedToken,
-                user: normalizedUser,
-            });
 
         } catch (error: any) {
             console.error("Auth check error:", error);
-            // On 401, apiClient handles it. On other errors, we keep cached state
+            set({ token: null, user: null });
         } finally {
             set({ isCheckingAuth: false, isAuthLoading: false });
         }
@@ -172,27 +247,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ isLoading: true })
         try {
 
-            const data = await apiClient.post<{ token: string; user: any }>(
+            const data = await apiClient.post<{ accessToken: string; refreshToken: string; user: any }>(
                 `/api/auth/login`,
                 { email, password }
             );
 
-            const normalizedUser = normalizeUser(data.user);
+            const { accessToken, refreshToken, user } = data as any;
+            const normalizedUser = normalizeUser(user);
 
+            // Store non-sensitive user data in AsyncStorage
             await AsyncStorage.setItem("user", JSON.stringify(normalizedUser));
-            await AsyncStorage.setItem("token", data.token);
+
+            // Store Refresh Token in SecureStore
+            await setSecureToken(refreshToken);
+
+            // Ensure legacy token is gone
+            await AsyncStorage.removeItem("token");
 
             set({
-                token: data.token,
+                token: accessToken,
                 user: normalizedUser,
                 isLoading: false,
-                isAuthLoading: false, // Ensure loading is off after manual login
+                isAuthLoading: false,
                 isCheckingAuth: false
             });
 
 
             // Sync with apiClient
-            apiClient.setAuthToken(data.token);
+            apiClient.setAuthToken(accessToken);
 
             return { success: true };
 
@@ -238,13 +320,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     logout: async () => {
         try {
 
-            // 1. Clear storage (BUT keep onboarding state)
-            await AsyncStorage.multiRemove(["token", "user"]);
+            // 1. Notify Backend (Best Effort)
+            const refreshToken = await getSecureToken();
+            if (refreshToken) {
+                try {
+                    await apiClient.post('/api/auth/logout', { refreshToken });
+                } catch (e) {
+                    console.warn("[Auth] Backend logout failed, continuing local logout", e);
+                }
+            }
+
+            // 2. Clear storage (BUT keep onboarding state)
+            await AsyncStorage.removeItem("user");
+            await AsyncStorage.removeItem("token"); // Cleanup legacy if exists
+
+            // Clear SecureStore (Delete Refresh Token)
+            await deleteSecureToken();
 
             // Dismiss keyboard to prevent Android UI crashes during nav
             Keyboard.dismiss();
 
-            // 2. Reset all global stores to prevent cross-account data leakage
+            // 3. Reset all global stores to prevent cross-account data leakage
             // Using dynamic imports to avoid circular dependencies
             try {
                 const { useSocialStore } = await import('./socialStore');
@@ -309,3 +405,4 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 apiClient.registerUnauthorizedCallback(() => {
     useAuthStore.getState().logout();
 });
+

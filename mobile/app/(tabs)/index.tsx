@@ -1,24 +1,24 @@
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl, StyleSheet, ListRenderItemInfo, Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { useAuthStore } from '../../store/authContext';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl, StyleSheet, ListRenderItemInfo, Alert } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useState } from "react";
+import { useAuthStore } from "../../store/authContext";
 import styles from "../../assets/styles/home.styles";
-import { Image } from 'expo-image';
-import { apiClient } from '../../lib/apiClient';
+import { Image } from "expo-image";
+import { apiClient } from "../../services/api/apiClient";
 import { Ionicons } from "@expo/vector-icons";
-import COLORS from '../../constants/colors';
-import { formatPublishDate } from '../../lib/utils';
-import Loader from '../../components/Loader';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import BannerAdComponent from '../../components/ads/BannerAd';
-import SafeScreen from "../../components/SafeScreen";
-import SkeletonLoader from '../../components/SkeletonLoader';
-import AppHeader from '../../components/AppHeader';
+import COLORS from "../../constants/colors";
+import { formatPublishDate } from "../../lib/utils";
+import Loader from "../../components/feedback/Loader";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import BannerAdComponent from "../../components/features/ads/BannerAd";
+import SafeScreen from "../../components/layout/SafeScreen";
+import SkeletonLoader from "../../components/feedback/SkeletonLoader";
+import AppHeader from "../../components/layout/AppHeader";
 
 
-import SocialPostCard from '../../components/SocialPostCard';
-import EmptyState from '../../components/EmptyState';
+import SocialPostCard from "../../components/features/SocialPostCard";
+import EmptyState from "../../components/feedback/EmptyState";
 
 interface Book {
     _id: string;

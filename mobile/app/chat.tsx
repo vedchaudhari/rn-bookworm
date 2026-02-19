@@ -1,34 +1,34 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, withSpring, runOnJS, useAnimatedKeyboard, useDerivedValue, interpolate, Extrapolation } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { formatLastSeen } from '../lib/utils';
-import { processMessagesWithDates, ProcessedItem, GroupPosition } from '../lib/messageUtils';
-import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { useVideoPlayer, VideoView } from 'expo-video';
-import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform, Alert, StyleSheet, StatusBar, Dimensions, Keyboard, LayoutAnimation, UIManager, ScrollView } from 'react-native';
-import * as VideoThumbnails from 'expo-video-thumbnails';
-import * as FileSystem from 'expo-file-system/legacy';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, withSpring, runOnJS, useAnimatedKeyboard, useDerivedValue, interpolate, Extrapolation } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { formatLastSeen } from "../lib/utils";
+import { processMessagesWithDates, ProcessedItem, GroupPosition } from "../lib/messageUtils";
+import * as Haptics from "expo-haptics";
+import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import { Image } from "expo-image";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { useVideoPlayer, VideoView } from "expo-video";
+import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, AppState, AppStateStatus, ListRenderItemInfo, Modal, KeyboardAvoidingView, Platform, Alert, StyleSheet, StatusBar, Dimensions, Keyboard, LayoutAnimation, UIManager, ScrollView } from "react-native";
+import * as VideoThumbnails from "expo-video-thumbnails";
+import * as FileSystem from "expo-file-system/legacy";
+import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 
-import * as Notifications from 'expo-notifications';
-import * as Sharing from 'expo-sharing';
-import * as MediaLibrary from 'expo-media-library';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
-import COLORS from '../constants/colors';
-import { SPACING, SHADOWS } from '../constants/styleConstants';
-import { useMessageStore, Message } from '../store/messageStore';
-import { useAuthStore } from '../store/authContext';
-import { useNotificationStore } from '../store/notificationStore';
-import { apiClient } from '../lib/apiClient';
-import SafeScreen from '../components/SafeScreen';
-import { useUIStore } from '../store/uiStore';
-import styles from '../assets/styles/chat.styles';
-import ChatHeader from '../components/ChatHeader';
-import ImageCropper from '../components/ImageCropper';
+import * as Notifications from "expo-notifications";
+import * as Sharing from "expo-sharing";
+import * as MediaLibrary from "expo-media-library";
+import Constants, { ExecutionEnvironment } from "expo-constants";
+import COLORS from "../constants/colors";
+import { SPACING, SHADOWS } from "../constants/styleConstants";
+import { useMessageStore, Message } from "../store/messageStore";
+import { useAuthStore } from "../store/authContext";
+import { useNotificationStore } from "../store/notificationStore";
+import { apiClient } from "../services/api/apiClient";
+import SafeScreen from "../components/layout/SafeScreen";
+import { useUIStore } from "../store/uiStore";
+import styles from "../assets/styles/chat.styles";
+import ChatHeader from "../components/features/ChatHeader";
+import ImageCropper from "../components/ui/ImageCropper";
 
 // Premium Media Viewer Component
 interface MediaViewerProps {
@@ -426,7 +426,7 @@ const FullscreenVideo: React.FC<{ uri: string, autoPlay?: boolean, onPlayingChan
 
 
 
-import { useChatThemeStore, ChatTheme } from '../store/chatThemeStore';
+import { useChatThemeStore, ChatTheme } from "../store/chatThemeStore";
 
 // Palette Presets
 const PALETTE_PRESETS: { name: string, theme: ChatTheme }[] = [

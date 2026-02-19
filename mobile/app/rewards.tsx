@@ -1,14 +1,14 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../constants/colors';
-import { API_URL } from '../constants/api';
-import { useAuthStore } from '../store/authContext';
-import SafeScreen from '../components/SafeScreen';
-import GlassCard from '../components/GlassCard';
-import AppHeader from '../components/AppHeader';
-import { formatPublishDate } from '../lib/utils';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from "react-native";
+import React, { useState, useEffect } from "react";
+import { useRouter, Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import COLORS from "../constants/colors";
+import { API_URL } from "../constants/api";
+import { useAuthStore } from "../store/authContext";
+import SafeScreen from "../components/layout/SafeScreen";
+import GlassCard from "../components/ui/GlassCard";
+import AppHeader from "../components/layout/AppHeader";
+import { formatPublishDate } from "../lib/utils";
 
 interface Reward {
     amount: number;

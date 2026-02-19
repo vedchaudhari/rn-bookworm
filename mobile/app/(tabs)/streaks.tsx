@@ -1,5 +1,5 @@
 // mobile/app/(tabs)/streaks.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
     View,
     Text,
@@ -8,14 +8,14 @@ import {
     RefreshControl,
     TouchableOpacity,
     AccessibilityInfo,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import SafeScreen from '../../components/SafeScreen';
-import GlazedButton from '../../components/GlazedButton';
-import GlassCard from '../../components/GlassCard';
-import Loader from '../../components/Loader';
-import AppHeader from '../../components/AppHeader';
-import COLORS from '../../constants/colors';
+} from "react-native";
+import { useRouter } from "expo-router";
+import SafeScreen from "../../components/layout/SafeScreen";
+import GlazedButton from "../../components/ui/GlazedButton";
+import GlassCard from "../../components/ui/GlassCard";
+import Loader from "../../components/feedback/Loader";
+import AppHeader from "../../components/layout/AppHeader";
+import COLORS from "../../constants/colors";
 import {
     SPACING,
     PADDING,
@@ -25,17 +25,17 @@ import {
     BORDER_RADIUS,
     SHADOWS,
     COMPONENT_SIZES,
-} from '../../constants/styleConstants';
-import { useStreakStore } from '../../stores/streakStore';
-import { useReadingSessionStore } from '../../store/readingSessionStore';
-import { useUIStore } from '../../store/uiStore';
-import { analytics } from '../../lib/analytics';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import ReadingActivityCard from '../../components/ReadingActivityCard';
-import ReadingActivityChart from '../../components/ReadingActivityChart';
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+} from "../../constants/styleConstants";
+import { useStreakStore } from "../../store/streakStore";
+import { useReadingSessionStore } from "../../store/readingSessionStore";
+import { useUIStore } from "../../store/uiStore";
+import { analytics } from "../../lib/analytics";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import ReadingActivityCard from "../../components/features/ReadingActivityCard";
+import ReadingActivityChart from "../../components/features/ReadingActivityChart";
+import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 
 /**
  * StreakDashboardScreen

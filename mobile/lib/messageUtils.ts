@@ -1,5 +1,5 @@
 
-import { Message } from '../store/messageStore';
+import { Message } from "../store/messageStore";
 
 export interface DateSeparator {
     _id: string;

@@ -6,8 +6,8 @@
  * and consistency across all screens and components.
  */
 
-import { Platform } from 'react-native';
-import COLORS from './colors';
+import { Platform } from "react-native";
+import COLORS from "./colors";
 
 // ... rest of imports
 // Based on 4px baseline grid for consistent rhythm

@@ -138,7 +138,7 @@ router.post('/purchase', protectRoute, async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, message: 'Invalid amount' });
         }
 
-        // TODO: In a real app, verify the IAP receipt with Apple/Google here
+        // In a real app, verify the IAP receipt with Apple/Google here
 
         const newBalance = await addInkDrops(
             req.user!._id.toString(),

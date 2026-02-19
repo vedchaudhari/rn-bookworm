@@ -1,14 +1,14 @@
 
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Image, ScrollView } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuthStore } from '../../../store/authContext';
-import COLORS from '../../../constants/colors';
-import { API_URL } from '../../../constants/api';
-import SafeScreen from '../../../components/SafeScreen';
-import { format } from 'date-fns';
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Image, ScrollView } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuthStore } from "../../../store/authContext";
+import COLORS from "../../../constants/colors";
+import { API_URL } from "../../../constants/api";
+import SafeScreen from "../../../components/layout/SafeScreen";
+import { format } from "date-fns";
 
 interface UserInfo {
     _id: string;

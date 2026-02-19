@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '../constants/api';
-import { INK_DROPS_CONFIG } from '../constants/monetization';
+import { create } from "zustand";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_URL } from "../constants/api";
+import { INK_DROPS_CONFIG } from "../constants/monetization";
 
 interface Transaction {
     _id: string;

@@ -75,7 +75,8 @@
           "savePhotosPermission": "Allow ReadSphere to save images to your library.",
           "isAudioEnabled": false
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,15 +1,15 @@
 // mobile/app/book-edit.tsx
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter, Stack, useNavigation } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import COLORS from '../constants/colors';
-import { apiClient } from '../lib/apiClient';
-import { useUIStore } from '../store/uiStore';
-import SafeScreen from '../components/SafeScreen';
-import GlassCard from '../components/GlassCard';
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet, KeyboardAvoidingView, ScrollView, Platform } from "react-native";
+import { useLocalSearchParams, useRouter, Stack, useNavigation } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import COLORS from "../constants/colors";
+import { apiClient } from "../services/api/apiClient";
+import { useUIStore } from "../store/uiStore";
+import SafeScreen from "../components/layout/SafeScreen";
+import GlassCard from "../components/ui/GlassCard";
 
 export default function BookEditScreen() {
     const { bookId } = useLocalSearchParams<{ bookId: string }>();

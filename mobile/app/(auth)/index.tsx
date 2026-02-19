@@ -19,8 +19,8 @@ import { Link } from "expo-router";
 import { useAuthStore } from "../../store/authContext";
 import { useUIStore } from "../../store/uiStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import KeyboardScreen from "../../components/KeyboardScreen";
-import SafeScreen from "../../components/SafeScreen";
+import KeyboardScreen from "../../components/layout/KeyboardScreen";
+import SafeScreen from "../../components/layout/SafeScreen";
 
 export default function Login() {
     const insets = useSafeAreaInsets();

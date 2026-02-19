@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from "zustand";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type SubscriptionTier = 'monthly' | 'yearly' | null;
 
@@ -69,10 +69,6 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
     purchaseSubscription: async (productId: string) => {
         set({ isLoading: true });
         try {
-            // TODO: Implement RevenueCat purchase flow
-            // const offerings = await Purchases.getOfferings();
-            // const purchaseResult = await Purchases.purchasePackage(package);
-
             // For now, simulate purchase (REMOVE IN PRODUCTION)
 
 

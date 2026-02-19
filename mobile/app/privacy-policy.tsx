@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../constants/colors';
-import SafeScreen from '../components/SafeScreen';
-import GlassCard from '../components/GlassCard';
-import { SPACING, FONT_SIZE, TYPOGRAPHY, RADIUS } from '../constants/styleConstants';
+import React from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { useRouter, Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import COLORS from "../constants/colors";
+import SafeScreen from "../components/layout/SafeScreen";
+import GlassCard from "../components/ui/GlassCard";
+import { SPACING, FONT_SIZE, TYPOGRAPHY, RADIUS } from "../constants/styleConstants";
 
 export default function PrivacyPolicyScreen() {
     const router = useRouter();

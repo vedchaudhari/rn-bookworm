@@ -1,14 +1,14 @@
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, Dimensions } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { useLocalSearchParams, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../constants/colors';
-import { API_URL } from '../constants/api';
-import { useAuthStore } from '../store/authContext';
-import { useUIStore } from '../store/uiStore';
-import SafeScreen from '../components/SafeScreen';
-import GlassCard from '../components/GlassCard';
-import { formatPublishDate } from '../lib/utils';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, Dimensions } from "react-native";
+import React, { useState, useEffect } from "react";
+import { useLocalSearchParams, Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import COLORS from "../constants/colors";
+import { API_URL } from "../constants/api";
+import { useAuthStore } from "../store/authContext";
+import { useUIStore } from "../store/uiStore";
+import SafeScreen from "../components/layout/SafeScreen";
+import GlassCard from "../components/ui/GlassCard";
+import { formatPublishDate } from "../lib/utils";
 
 const { width } = Dimensions.get('window');
 

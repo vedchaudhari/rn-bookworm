@@ -1,20 +1,20 @@
-import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl, Dimensions, StyleSheet, ListRenderItemInfo } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import COLORS from '../../constants/colors';
-import { apiClient } from '../../lib/apiClient';
-import { useAuthStore } from '../../store/authContext';
-import SafeScreen from '../../components/SafeScreen';
-import GlazedView from '../../components/GlazedView';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import FollowButton from '../../components/FollowButton';
-import styles from '../../assets/styles/explore.styles';
-import EmptyState from '../../components/EmptyState';
-import AppHeader from '../../components/AppHeader';
-import GlazedButton from '../../components/GlazedButton';
+import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl, Dimensions, StyleSheet, ListRenderItemInfo } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import COLORS from "../../constants/colors";
+import { apiClient } from "../../services/api/apiClient";
+import { useAuthStore } from "../../store/authContext";
+import SafeScreen from "../../components/layout/SafeScreen";
+import GlazedView from "../../components/ui/GlazedView";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import FollowButton from "../../components/ui/FollowButton";
+import styles from "../../assets/styles/explore.styles";
+import EmptyState from "../../components/feedback/EmptyState";
+import AppHeader from "../../components/layout/AppHeader";
+import GlazedButton from "../../components/ui/GlazedButton";
 
 const { width } = Dimensions.get('window');
 

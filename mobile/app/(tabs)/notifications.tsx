@@ -1,16 +1,16 @@
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet, ListRenderItemInfo } from 'react-native';
-import * as ExpoNotifications from 'expo-notifications';
-import Constants from 'expo-constants';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import React, { useState } from 'react';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../../constants/colors';
-import { useNotificationStore } from '../../store/notificationStore';
-import { useAuthStore } from '../../store/authContext';
-import { useUIStore } from '../../store/uiStore';
-import SafeScreen from '../../components/SafeScreen';
-import AppHeader from '../../components/AppHeader';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet, ListRenderItemInfo } from "react-native";
+import * as ExpoNotifications from "expo-notifications";
+import Constants from "expo-constants";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import React, { useState } from "react";
+import { useRouter, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import COLORS from "../../constants/colors";
+import { useNotificationStore } from "../../store/notificationStore";
+import { useAuthStore } from "../../store/authContext";
+import { useUIStore } from "../../store/uiStore";
+import SafeScreen from "../../components/layout/SafeScreen";
+import AppHeader from "../../components/layout/AppHeader";
 
 interface NotificationData {
     bookId?: string;

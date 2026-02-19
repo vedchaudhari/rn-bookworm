@@ -3,6 +3,7 @@ import BookNote, { IBookNoteDocument, NoteType, Visibility } from '../models/Boo
 import BookshelfItem from '../models/BookshelfItem';
 import { toObjectId } from '../lib/objectId';
 import mongoose from 'mongoose';
+import { AppError } from '../utils/AppError';
 
 /**
  * BOOK NOTE SERVICE
@@ -89,34 +90,34 @@ export class BookNoteService {
         // Validate bookshelf item exists and belongs to user
         const bookshelfItem = await BookshelfItem.findById(toObjectId(bookshelfItemId));
         if (!bookshelfItem) {
-            throw new Error('BOOKSHELF_ITEM_NOT_FOUND');
+            throw new AppError('Bookshelf item not found', 404);
         }
         if (bookshelfItem.userId.toString() !== userId) {
-            throw new Error('UNAUTHORIZED');
+            throw new AppError('You are not authorized to perform this action', 403);
         }
 
         // Validate note type requirements
         if (type === 'highlight' || type === 'question') {
             if (!highlightedText) {
-                throw new Error('HIGHLIGHTED_TEXT_REQUIRED');
+                throw new AppError('Highlighted text is required for highlights and questions', 400);
             }
         }
 
         // For 'note' type, we need either highlighted text OR a user note
         if (type === 'note') {
             if (!highlightedText && !userNote) {
-                throw new Error('NOTE_CONTENT_REQUIRED');
+                throw new AppError('Note content or highlighted text is required', 400);
             }
         }
 
         // Validate color format
         if (color && !/^#[0-9A-F]{6}$/i.test(color)) {
-            throw new Error('INVALID_COLOR_FORMAT');
+            throw new AppError('Invalid color format. Use hex code (e.g., #FF0000)', 400);
         }
 
         // Validate tags limit
         if (tags.length > 10) {
-            throw new Error('MAX_TAGS_EXCEEDED');
+            throw new AppError('Maximum of 10 tags allowed', 400);
         }
 
         // Create note
@@ -164,7 +165,7 @@ export class BookNoteService {
         // Update color
         if (color !== undefined) {
             if (!/^#[0-9A-F]{6}$/i.test(color)) {
-                throw new Error('INVALID_COLOR_FORMAT');
+                throw new AppError('Invalid color format', 400);
             }
             note.color = color;
         }
@@ -177,7 +178,7 @@ export class BookNoteService {
         // Update tags
         if (tags !== undefined) {
             if (tags.length > 10) {
-                throw new Error('MAX_TAGS_EXCEEDED');
+                throw new AppError('Maximum of 10 tags allowed', 400);
             }
             note.tags = tags;
         }
@@ -215,12 +216,12 @@ export class BookNoteService {
         const note = await BookNote.findById(toObjectId(noteId));
 
         if (!note) {
-            throw new Error('NOTE_NOT_FOUND');
+            throw new AppError('Note not found', 404);
         }
 
         // For private notes, validate ownership
         if (note.visibility === 'private' && note.userId.toString() !== userId) {
-            throw new Error('UNAUTHORIZED');
+            throw new AppError('You are not authorized to view this note', 403);
         }
 
         return note;
@@ -252,10 +253,10 @@ export class BookNoteService {
         // Validate bookshelf item belongs to user
         const bookshelfItem = await BookshelfItem.findById(toObjectId(bookshelfItemId));
         if (!bookshelfItem) {
-            throw new Error('BOOKSHELF_ITEM_NOT_FOUND');
+            throw new AppError('Bookshelf item not found', 404);
         }
         if (bookshelfItem.userId.toString() !== userId) {
-            throw new Error('UNAUTHORIZED');
+            throw new AppError('Unauthorized', 403);
         }
 
         // Build query
@@ -305,10 +306,10 @@ export class BookNoteService {
         // Validate ownership
         const bookshelfItem = await BookshelfItem.findById(toObjectId(bookshelfItemId));
         if (!bookshelfItem) {
-            throw new Error('BOOKSHELF_ITEM_NOT_FOUND');
+            throw new AppError('Bookshelf item not found', 404);
         }
         if (bookshelfItem.userId.toString() !== userId) {
-            throw new Error('UNAUTHORIZED');
+            throw new AppError('Unauthorized', 403);
         }
 
         return await BookNote.getNotesByPage(toObjectId(bookshelfItemId));
@@ -359,12 +360,12 @@ export class BookNoteService {
         const note = await BookNote.findById(toObjectId(noteId));
 
         if (!note) {
-            throw new Error('NOTE_NOT_FOUND');
+            throw new AppError('Note not found', 404);
         }
 
         // Check visibility - can't like private notes unless owner
         if (note.visibility === 'private' && note.userId.toString() !== userId) {
-            throw new Error('UNAUTHORIZED');
+            throw new AppError('Cannot like private notes', 403);
         }
 
         await note.addLike();
@@ -378,7 +379,7 @@ export class BookNoteService {
         const note = await BookNote.findById(toObjectId(noteId));
 
         if (!note) {
-            throw new Error('NOTE_NOT_FOUND');
+            throw new AppError('Note not found', 404);
         }
 
         await note.removeLike();
@@ -473,7 +474,7 @@ export class BookNoteService {
      * Get notes shared with a book club
      */
     static async getBookClubNotes(bookClubId: string, limit: number = 50): Promise<IBookNoteDocument[]> {
-        // TODO: Validate user is member of book club (when Book Club feature is implemented)
+        // Validate user is member of book club (when Book Club feature is implemented)
 
         return await BookNote.find({
             sharedWithBookClubId: toObjectId(bookClubId)
@@ -590,10 +591,10 @@ export class BookNoteService {
         // Validate ownership
         const bookshelfItem = await BookshelfItem.findById(toObjectId(bookshelfItemId));
         if (!bookshelfItem) {
-            throw new Error('BOOKSHELF_ITEM_NOT_FOUND');
+            throw new AppError('Bookshelf item not found', 404);
         }
         if (bookshelfItem.userId.toString() !== userId) {
-            throw new Error('UNAUTHORIZED');
+            throw new AppError('Unauthorized', 403);
         }
 
         const query: any = {
@@ -628,10 +629,10 @@ export class BookNoteService {
         // Validate ownership
         const bookshelfItem = await BookshelfItem.findById(toObjectId(bookshelfItemId));
         if (!bookshelfItem) {
-            throw new Error('BOOKSHELF_ITEM_NOT_FOUND');
+            throw new AppError('Bookshelf item not found', 404);
         }
         if (bookshelfItem.userId.toString() !== userId) {
-            throw new Error('UNAUTHORIZED');
+            throw new AppError('Unauthorized', 403);
         }
 
         const notes = await BookNote.find({

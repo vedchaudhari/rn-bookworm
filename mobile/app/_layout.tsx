@@ -1,30 +1,30 @@
 import { SplashScreen, Stack, useRouter } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AppState, AppStateStatus, LogBox, Platform } from 'react-native';
-import * as NavigationBar from 'expo-navigation-bar';
+import { AppState, AppStateStatus, LogBox, Platform } from "react-native";
+import * as NavigationBar from "expo-navigation-bar";
 
-import SafeScreen from "../components/SafeScreen";
+import SafeScreen from "../components/layout/SafeScreen";
 
 // Suppress expo-notifications warning in Expo Go (Android)
 LogBox.ignoreLogs(['expo-notifications: Android Push notifications']);
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
-import ErrorBoundary from "../components/ErrorBoundary";
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import ErrorBoundary from "../components/feedback/ErrorBoundary";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { useAuthStore } from "../store/authContext";
 import { useSocialStore } from "../store/socialStore";
-import { useNotificationStore } from '../store/notificationStore';
+import { useNotificationStore } from "../store/notificationStore";
 import { useMessageStore } from "../store/messageStore";
 import { useEffect, useRef, useState } from "react";
 import COLORS from "../constants/colors";
 import { Socket } from "socket.io-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import GlobalAlert from "../components/GlobalAlert";
-import Toast from "../components/Toast";
+import GlobalAlert from "../components/feedback/GlobalAlert";
+import Toast from "../components/feedback/Toast";
 import { useUIStore } from "../store/uiStore";
-import { registerForPushNotificationsAsync, setupPushNotificationListeners, checkInitialNotification } from "../lib/pushNotifications";
+import { registerForPushNotificationsAsync, setupPushNotificationListeners, checkInitialNotification } from "../services/device/pushNotifications";
 // import { usePermissions } from "../hooks/usePermissions";
 
 SplashScreen.preventAutoHideAsync();

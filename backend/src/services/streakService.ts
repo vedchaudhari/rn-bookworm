@@ -4,6 +4,7 @@ import DailyChallenge from '../models/DailyChallenge';
 import { addInkDrops } from './inkDropService';
 import { toObjectId } from '../lib/objectId';
 import mongoose from 'mongoose';
+import { AppError } from '../utils/AppError';
 
 interface StreakUpdateResult {
     streak: IUserStreakDocument;
@@ -187,11 +188,11 @@ export class StreakService {
         const streak = await this.getOrCreateStreak(userId);
 
         if (!streak.canRestoreStreak) {
-            throw new Error('ALREADY_RESTORED');
+            throw new AppError('Streak already restored', 400);
         }
 
         if (streak.isStreakActive()) {
-            throw new Error('NO_BROKEN_STREAK');
+            throw new AppError('No broken streak to restore', 400);
         }
 
         // Calculate restore cost (increases with each use)

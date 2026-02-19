@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
 export function resolveImageUrl(url: string): string {
     if (!url) return '';
@@ -8,7 +8,7 @@ export function resolveImageUrl(url: string): string {
 
     // If it's a relative path, prefix it with API_URL
     if (!resolvedUrl.startsWith('http')) {
-        const { API_URL } = require('../constants/api');
+        const { API_URL } = require("../constants/api");
         resolvedUrl = `${API_URL}${resolvedUrl.startsWith('/') ? '' : '/'}${resolvedUrl}`;
     }
 

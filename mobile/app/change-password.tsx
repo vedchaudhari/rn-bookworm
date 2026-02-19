@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../constants/colors';
-import SafeScreen from '../components/SafeScreen';
-import GlassCard from '../components/GlassCard';
-import { SPACING, BORDER_RADIUS, TYPOGRAPHY } from '../constants/styleConstants';
-import { apiClient } from '../lib/apiClient';
-import { useUIStore } from '../store/uiStore';
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
+import { useRouter, Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import COLORS from "../constants/colors";
+import SafeScreen from "../components/layout/SafeScreen";
+import GlassCard from "../components/ui/GlassCard";
+import { SPACING, BORDER_RADIUS, TYPOGRAPHY } from "../constants/styleConstants";
+import { apiClient } from "../services/api/apiClient";
+import { useUIStore } from "../store/uiStore";
 
 export default function ChangePasswordScreen() {
     const router = useRouter();

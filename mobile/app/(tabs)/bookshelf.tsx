@@ -1,5 +1,5 @@
 // mobile/app/(tabs)/bookshelf.tsx
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
     View,
     Text,
@@ -9,15 +9,15 @@ import {
     TouchableOpacity,
     TextInput,
     AccessibilityInfo,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import SafeScreen from '../../components/SafeScreen';
-import GlassCard from '../../components/GlassCard';
-import GlazedButton from '../../components/GlazedButton';
-import Loader from '../../components/Loader';
-import SkeletonLoader from '../../components/SkeletonLoader';
-import COLORS from '../../constants/colors';
+} from "react-native";
+import { useRouter } from "expo-router";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import SafeScreen from "../../components/layout/SafeScreen";
+import GlassCard from "../../components/ui/GlassCard";
+import GlazedButton from "../../components/ui/GlazedButton";
+import Loader from "../../components/feedback/Loader";
+import SkeletonLoader from "../../components/feedback/SkeletonLoader";
+import COLORS from "../../constants/colors";
 import {
     SPACING,
     PADDING,
@@ -26,13 +26,13 @@ import {
     TYPOGRAPHY,
     BORDER_RADIUS,
     COMPONENT_SIZES,
-} from '../../constants/styleConstants';
-import { useBookshelfStore } from '../../store/bookshelfStore';
-import { useUIStore } from '../../store/uiStore';
-import { Ionicons } from '@expo/vector-icons';
-import BookShelfCard from '../../components/BookShelfCard';
-import AppHeader from '../../components/AppHeader';
-import type { ReadingStatus } from '../../lib/api/bookshelfApi';
+} from "../../constants/styleConstants";
+import { useBookshelfStore } from "../../store/bookshelfStore";
+import { useUIStore } from "../../store/uiStore";
+import { Ionicons } from "@expo/vector-icons";
+import BookShelfCard from "../../components/features/BookShelfCard";
+import AppHeader from "../../components/layout/AppHeader";
+import type { ReadingStatus } from "../../services/api/endpoints/bookshelfApi";
 
 
 

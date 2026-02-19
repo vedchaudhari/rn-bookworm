@@ -1,14 +1,14 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, ActivityIndicator } from 'react-native';
-import React, { useState } from 'react';
-import { useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../constants/colors';
-import SafeScreen from '../components/SafeScreen';
-import GlassCard from '../components/GlassCard';
-import { SPACING, BORDER_RADIUS, FONT_SIZE, TYPOGRAPHY } from '../constants/styleConstants';
-import { useAuthStore } from '../store/authContext';
-import { useUIStore } from '../store/uiStore';
-import { apiClient } from '../lib/apiClient';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, ActivityIndicator } from "react-native";
+import React, { useState } from "react";
+import { useRouter, Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import COLORS from "../constants/colors";
+import SafeScreen from "../components/layout/SafeScreen";
+import GlassCard from "../components/ui/GlassCard";
+import { SPACING, BORDER_RADIUS, FONT_SIZE, TYPOGRAPHY } from "../constants/styleConstants";
+import { useAuthStore } from "../store/authContext";
+import { useUIStore } from "../store/uiStore";
+import { apiClient } from "../services/api/apiClient";
 
 export default function SettingsScreen() {
     const router = useRouter();

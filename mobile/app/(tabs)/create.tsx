@@ -1,20 +1,20 @@
-import { View, Text, Platform, TextInput, TouchableOpacity, Image, ActivityIndicator, Keyboard, KeyboardEvent, Switch, Modal, StyleSheet } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'expo-router';
-import styles from '../../assets/styles/create.styles';
-import COLORS from '../../constants/colors';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, Platform, TextInput, TouchableOpacity, Image, ActivityIndicator, Keyboard, KeyboardEvent, Switch, Modal, StyleSheet } from "react-native";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "expo-router";
+import styles from "../../assets/styles/create.styles";
+import COLORS from "../../constants/colors";
+import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import * as DocumentPicker from 'expo-document-picker';
-import { useAuthStore } from '../../store/authContext';
-import { API_URL } from '../../constants/api';
-import { apiClient } from '../../lib/apiClient';
-import { useUIStore } from '../../store/uiStore';
-import KeyboardScreen from '../../components/KeyboardScreen';
-import SafeScreen from '../../components/SafeScreen';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AppHeader from '../../components/AppHeader';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import * as DocumentPicker from "expo-document-picker";
+import { useAuthStore } from "../../store/authContext";
+import { API_URL } from "../../constants/api";
+import { apiClient } from "../../services/api/apiClient";
+import { useUIStore } from "../../store/uiStore";
+import KeyboardScreen from "../../components/layout/KeyboardScreen";
+import SafeScreen from "../../components/layout/SafeScreen";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AppHeader from "../../components/layout/AppHeader";
+import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 
 export default function CreateTab() {
     const [title, setTitle] = useState("");

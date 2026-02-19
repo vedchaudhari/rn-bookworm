@@ -1,14 +1,14 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../constants/colors';
-import { useAuthStore } from '../store/authContext';
-import { useCurrencyStore } from '../store/currencyStore';
-import { useUIStore } from '../store/uiStore';
-import { INK_DROPS_CONFIG } from '../constants/monetization';
-import SafeScreen from '../components/SafeScreen';
-import GlassCard from '../components/GlassCard';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, FlatList } from "react-native";
+import React, { useState, useEffect } from "react";
+import { Stack, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import COLORS from "../constants/colors";
+import { useAuthStore } from "../store/authContext";
+import { useCurrencyStore } from "../store/currencyStore";
+import { useUIStore } from "../store/uiStore";
+import { INK_DROPS_CONFIG } from "../constants/monetization";
+import SafeScreen from "../components/layout/SafeScreen";
+import GlassCard from "../components/ui/GlassCard";
 
 export default function WalletScreen() {
     const { token } = useAuthStore();

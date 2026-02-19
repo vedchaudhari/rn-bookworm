@@ -1,18 +1,18 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useRouter } from 'expo-router';
-import { View, Text, useWindowDimensions, Image, Platform, StyleSheet } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
-import * as Haptics from 'expo-haptics';
-import { BlurView } from 'expo-blur';
-import COLORS from '../../constants/colors';
-import { SPACING, SHADOWS } from '../../constants/styleConstants';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuthStore } from '../../store/authContext';
-import { useUIStore } from '../../store/uiStore';
+import { Ionicons } from "@expo/vector-icons";
+import { Tabs, useRouter } from "expo-router";
+import { View, Text, useWindowDimensions, Image, Platform, StyleSheet } from "react-native";
+import { Image as ExpoImage } from "expo-image";
+import * as Haptics from "expo-haptics";
+import { BlurView } from "expo-blur";
+import COLORS from "../../constants/colors";
+import { SPACING, SHADOWS } from "../../constants/styleConstants";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuthStore } from "../../store/authContext";
+import { useUIStore } from "../../store/uiStore";
 
-import { API_URL } from '../../constants/api';
+import { API_URL } from "../../constants/api";
 
-import { useMessageStore } from '../../store/messageStore';
+import { useMessageStore } from "../../store/messageStore";
 
 export default function TabLayout() {
     const insets = useSafeAreaInsets();

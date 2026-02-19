@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, ActivityIndicator, Keyboard } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import SafeScreen from '../components/SafeScreen';
-import COLORS from '../constants/colors';
-import { apiClient } from '../lib/apiClient';
-import AppHeader from '../components/AppHeader';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import GlazedView from '../components/GlazedView';
-import { Image } from 'expo-image';
+import React, { useState, useEffect, useRef } from "react";
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, ActivityIndicator, Keyboard } from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import SafeScreen from "../components/layout/SafeScreen";
+import COLORS from "../constants/colors";
+import { apiClient } from "../services/api/apiClient";
+import AppHeader from "../components/layout/AppHeader";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import GlazedView from "../components/ui/GlazedView";
+import { Image } from "expo-image";
 
 export default function GlobalSearch() {
     const [query, setQuery] = useState('');

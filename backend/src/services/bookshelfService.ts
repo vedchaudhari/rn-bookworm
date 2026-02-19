@@ -3,6 +3,7 @@ import BookshelfItem, { IBookshelfItemDocument, ReadingStatus, Priority } from '
 import Book from '../models/Book';
 import { toObjectId } from '../lib/objectId';
 import mongoose from 'mongoose';
+import { AppError } from '../utils/AppError';
 
 /**
  * BOOKSHELF SERVICE
@@ -100,7 +101,7 @@ export class BookshelfService {
         // Validate book exists
         const book = await Book.findById(toObjectId(bookId));
         if (!book) {
-            throw new Error('BOOK_NOT_FOUND');
+            throw new AppError('Book not found', 404);
         }
 
         // Check if already on shelf (will throw duplicate key error if exists)
@@ -110,7 +111,7 @@ export class BookshelfService {
         });
 
         if (existing) {
-            throw new Error('BOOK_ALREADY_ON_SHELF');
+            throw new AppError('Book is already on your shelf', 400);
         }
 
         // Create bookshelf item
@@ -144,7 +145,7 @@ export class BookshelfService {
         });
 
         if (!item) {
-            throw new Error('BOOK_NOT_FOUND_ON_SHELF');
+            throw new AppError('Book not found on shelf', 404);
         }
 
         await this.removeBook(userId, item.id, true); // Always hard delete for quick toggles
@@ -277,7 +278,7 @@ export class BookshelfService {
 
         if (rating !== undefined) {
             if (rating < 1 || rating > 5) {
-                throw new Error('INVALID_RATING');
+                throw new AppError('Rating must be between 1 and 5', 400);
             }
             bookshelfItem.rating = rating;
         }
@@ -319,7 +320,7 @@ export class BookshelfService {
 
         // Validate max 20 tags
         if (tags.length > 20) {
-            throw new Error('MAX_TAGS_EXCEEDED');
+            throw new AppError('Maximum of 20 tags allowed', 400);
         }
 
         bookshelfItem.tags = tags;
@@ -452,12 +453,12 @@ export class BookshelfService {
         const bookshelfItem = await BookshelfItem.findById(toObjectId(bookshelfItemId));
 
         if (!bookshelfItem) {
-            throw new Error('BOOKSHELF_ITEM_NOT_FOUND');
+            throw new AppError('Bookshelf item not found', 404);
         }
 
         // Verify ownership
         if (bookshelfItem.userId.toString() !== userId) {
-            throw new Error('UNAUTHORIZED');
+            throw new AppError('You are not authorized to access this item', 403);
         }
 
         return await bookshelfItem.populate([

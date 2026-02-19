@@ -1,12 +1,12 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, Dimensions, TouchableOpacity, Animated } from 'react-native';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import COLORS from '../constants/colors';
-import SafeScreen from '../components/SafeScreen';
-import GlazedButton from '../components/GlazedButton';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuthStore } from '../store/authContext';
+import React, { useState, useRef } from "react";
+import { View, Text, StyleSheet, FlatList, Dimensions, TouchableOpacity, Animated } from "react-native";
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import COLORS from "../constants/colors";
+import SafeScreen from "../components/layout/SafeScreen";
+import GlazedButton from "../components/ui/GlazedButton";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuthStore } from "../store/authContext";
 
 const { width, height } = Dimensions.get('window');
 
@@ -15,21 +15,21 @@ const SLIDES = [
         id: '1',
         title: 'Your Digital Library',
         description: 'Store, organize and read all your favorite books in one beautiful place.',
-        image: require('../assets/images/onboarding-reading.png'),
+        image: require("../assets/images/onboarding-reading.png"),
         icon: 'library-outline'
     },
     {
         id: '2',
         title: 'Track Your Progress',
         description: 'See how much you read, set goals, and maintain your reading streak.',
-        image: require('../assets/images/book-placeholder-2.png'),
+        image: require("../assets/images/book-placeholder-2.png"),
         icon: 'analytics-outline'
     },
     {
         id: '3',
         title: 'Connect with Readers',
         description: 'Share recommendations, chat with fellow bookworms, and join challenges.',
-        image: require('../assets/images/book-placeholder-3.png'),
+        image: require("../assets/images/book-placeholder-3.png"),
         icon: 'people-outline'
     }
 ];

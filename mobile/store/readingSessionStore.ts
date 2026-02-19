@@ -1,5 +1,5 @@
 // mobile/store/readingSessionStore.ts
-import { create } from 'zustand';
+import { create } from "zustand";
 import readingSessionApi, {
     ReadingSession,
     SessionStats,
@@ -8,7 +8,7 @@ import readingSessionApi, {
     MonthlyStats,
     LeaderboardEntry,
     SessionFilters,
-} from '../lib/api/readingSessionApi';
+} from "../services/api/endpoints/readingSessionApi";
 
 /**
  * READING SESSION STORE

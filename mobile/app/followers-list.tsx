@@ -1,14 +1,14 @@
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, ListRenderItemInfo } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { useLocalSearchParams, Stack, useRouter, useFocusEffect } from 'expo-router';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import COLORS from '../constants/colors';
-import { useAuthStore } from '../store/authContext';
-import { apiClient } from '../lib/apiClient';
-import FollowButton from '../components/FollowButton';
-import SafeScreen from '../components/SafeScreen';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, ListRenderItemInfo } from "react-native";
+import React, { useState, useEffect } from "react";
+import { useLocalSearchParams, Stack, useRouter, useFocusEffect } from "expo-router";
+import { Image } from "expo-image";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import COLORS from "../constants/colors";
+import { useAuthStore } from "../store/authContext";
+import { apiClient } from "../services/api/apiClient";
+import FollowButton from "../components/ui/FollowButton";
+import SafeScreen from "../components/layout/SafeScreen";
 
 interface User { _id: string; username: string; profileImage: string; bio?: string; level?: number; isFollowing?: boolean; }
 

@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Alert } from 'react-native';
-import { AD_FREQUENCY, ADMOB_CONFIG } from '../constants/monetization';
-import { useSubscriptionStore } from '../store/subscriptionStore';
+import { useEffect, useState } from "react";
+import { Alert } from "react-native";
+import { AD_FREQUENCY, ADMOB_CONFIG } from "../constants/monetization";
+import { useSubscriptionStore } from "../store/subscriptionStore";
 
 // Note: In a real app, you'd use 'react-native-google-mobile-ads'
 // This is a simulation hook since we are in a managed environment

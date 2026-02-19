@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiClient } from '../lib/apiClient';
+import { create } from "zustand";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { apiClient } from "../services/api/apiClient";
 
 // Helper functions to serialize/deserialize Sets
 const serializeSet = (set: Set<string>): string => JSON.stringify([...set]);

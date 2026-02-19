@@ -1,13 +1,13 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../constants/colors';
-import { useAuthStore } from '../store/authContext';
-import { useUIStore } from '../store/uiStore';
-import { apiClient } from '../lib/apiClient';
-import SafeScreen from '../components/SafeScreen';
-import GlassCard from '../components/GlassCard';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, TextInput, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import React, { useState, useEffect } from "react";
+import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import COLORS from "../constants/colors";
+import { useAuthStore } from "../store/authContext";
+import { useUIStore } from "../store/uiStore";
+import { apiClient } from "../services/api/apiClient";
+import SafeScreen from "../components/layout/SafeScreen";
+import GlassCard from "../components/ui/GlassCard";
 
 interface Chapter {
     _id: string;

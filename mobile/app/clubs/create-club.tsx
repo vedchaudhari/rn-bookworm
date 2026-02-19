@@ -1,16 +1,16 @@
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Switch } from 'react-native';
-import React, { useState } from 'react';
-import { useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { Image } from 'expo-image';
-import COLORS from '../../constants/colors';
-import { useAuthStore } from '../../store/authContext';
-import { useUIStore } from '../../store/uiStore';
-import { apiClient } from '../../lib/apiClient';
-import SafeScreen from '../../components/SafeScreen';
-import GlazedButton from '../../components/GlazedButton';
-import GlassCard from '../../components/GlassCard';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Switch } from "react-native";
+import React, { useState } from "react";
+import { useRouter, Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
+import COLORS from "../../constants/colors";
+import { useAuthStore } from "../../store/authContext";
+import { useUIStore } from "../../store/uiStore";
+import { apiClient } from "../../services/api/apiClient";
+import SafeScreen from "../../components/layout/SafeScreen";
+import GlazedButton from "../../components/ui/GlazedButton";
+import GlassCard from "../../components/ui/GlassCard";
 
 export default function CreateClubScreen() {
     const [name, setName] = useState('');

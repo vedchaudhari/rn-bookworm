@@ -31,8 +31,8 @@ router.get("/", protectRoute, async (req: Request, res: Response) => {
             totalPages: Math.ceil(totalNotifications / limit),
             unreadCount,
         });
-    } catch (error) {
-        console.error("Error fetching notifications:", error);
+    } catch (error: any) {
+        console.error(`[Notifications] Error fetching notifications for user ${req.user!._id}:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -43,8 +43,8 @@ router.get("/unread-count", protectRoute, async (req: Request, res: Response) =>
         const userId = req.user!._id;
         const unreadCount = await Notification.countDocuments({ user: userId, read: false });
         res.json({ unreadCount });
-    } catch (error) {
-        console.error("Error fetching unread count:", error);
+    } catch (error: any) {
+        console.error(`[Notifications] Error fetching unread count for user ${req.user!._id}:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -64,8 +64,8 @@ router.put("/:id/read", protectRoute, async (req: Request, res: Response) => {
         await notification.save();
 
         res.json({ message: "Notification marked as read" });
-    } catch (error) {
-        console.error("Error marking notification as read:", error);
+    } catch (error: any) {
+        console.error(`[Notifications] Error marking notification ${req.params.id} as read:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -81,8 +81,8 @@ router.put("/read-all", protectRoute, async (req: Request, res: Response) => {
         );
 
         res.json({ message: "All notifications marked as read" });
-    } catch (error) {
-        console.error("Error marking all notifications as read:", error);
+    } catch (error: any) {
+        console.error(`[Notifications] Error marking all notifications as read for user ${req.user!._id}:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -100,8 +100,8 @@ router.delete("/:id", protectRoute, async (req: Request, res: Response) => {
 
         await notification.deleteOne();
         res.json({ message: "Notification deleted" });
-    } catch (error) {
-        console.error("Error deleting notification:", error);
+    } catch (error: any) {
+        console.error(`[Notifications] Error deleting notification ${req.params.id}:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -129,8 +129,8 @@ router.post("/register-token", protectRoute, async (req: Request, res: Response)
         await User.findByIdAndUpdate(userId, { $set: { expoPushToken: token } });
 
         res.json({ success: true, message: "Push token registered successfully" });
-    } catch (error) {
-        console.error("Error registering push token:", error);
+    } catch (error: any) {
+        console.error(`[Notifications] Error registering push token for user ${req.user!._id}:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -148,8 +148,8 @@ router.post("/test", protectRoute, async (req: Request, res: Response) => {
         });
 
         res.json({ success: true, message: "Test notification sent" });
-    } catch (error) {
-        console.error("Error sending test notification:", error);
+    } catch (error: any) {
+        console.error(`[Notifications] Error sending test notification for user ${req.user!._id}:`, error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });

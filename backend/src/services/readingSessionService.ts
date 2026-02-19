@@ -4,26 +4,9 @@ import BookshelfItem from '../models/BookshelfItem';
 import { addInkDrops } from './inkDropService';
 import { toObjectId } from '../lib/objectId';
 import mongoose from 'mongoose';
+import { AppError } from '../utils/AppError';
 
-/**
- * READING SESSION SERVICE
- * 
- * Responsibilities:
- * - Start and end reading sessions
- * - Track reading time and progress
- * - Calculate reading speed and analytics
- * - Validate sessions for streak contribution
- * - Award Ink Drops for reading
- * - Aggregate daily/weekly/monthly statistics
- * 
- * Edge Cases Handled:
- * - Overlapping sessions (prevent multiple active sessions)
- * - Session duration validation (sanity checks)
- * - Minimum session time for rewards (5 minutes)
- * - Auto-calculation of metrics via pre-save hooks
- * - Time zone handling (UTC normalization)
- * - Session quality scoring (pause tracking)
- */
+// READING SESSION SERVICE
 
 export interface StartSessionParams {
     userId: string;
@@ -78,7 +61,7 @@ export class ReadingSessionService {
             const activeSession = await ReadingSession.findById(activeSessionId);
 
             if (activeSession) {
-                throw new Error('ACTIVE_SESSION_EXISTS');
+                throw new AppError('You already have an active reading session. Please end it before starting a new one.', 409);
             } else {
                 // Clean up stale entry
                 activeSessions.delete(userId);
@@ -88,10 +71,10 @@ export class ReadingSessionService {
         // Validate bookshelf item exists and belongs to user
         const bookshelfItem = await BookshelfItem.findById(bookshelfItemId);
         if (!bookshelfItem) {
-            throw new Error('BOOKSHELF_ITEM_NOT_FOUND');
+            throw new AppError('Bookshelf item not found', 404);
         }
         if (bookshelfItem.userId.toString() !== userId) {
-            throw new Error('UNAUTHORIZED');
+            throw new AppError('Unauthorized', 403);
         }
 
         // Create session
@@ -137,17 +120,17 @@ export class ReadingSessionService {
         const session = await ReadingSession.findById(sessionId);
 
         if (!session) {
-            throw new Error('SESSION_NOT_FOUND');
+            throw new AppError('Reading session not found', 404);
         }
 
         // Verify ownership
         if (session.userId.toString() !== userId) {
-            throw new Error('UNAUTHORIZED');
+            throw new AppError('Unauthorized', 403);
         }
 
         // Prevent ending already completed session
         if (session.isCompleteSession) {
-            throw new Error('SESSION_ALREADY_COMPLETED');
+            throw new AppError('This session has already been completed', 400);
         }
 
         // Update session
@@ -239,23 +222,23 @@ export class ReadingSessionService {
 
         // Validate time range
         if (endTime <= startTime) {
-            throw new Error('INVALID_TIME_RANGE');
+            throw new AppError('End time must be after start time', 400);
         }
 
         const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 1000 / 60);
 
         // Sanity check: max 24 hours
         if (durationMinutes > 1440) {
-            throw new Error('SESSION_TOO_LONG');
+            throw new AppError('Session duration cannot exceed 24 hours', 400);
         }
 
         // Validate bookshelf item
         const bookshelfItem = await BookshelfItem.findById(toObjectId(bookshelfItemId));
         if (!bookshelfItem) {
-            throw new Error('BOOKSHELF_ITEM_NOT_FOUND');
+            throw new AppError('Bookshelf item not found', 404);
         }
         if (bookshelfItem.userId.toString() !== userId) {
-            throw new Error('UNAUTHORIZED');
+            throw new AppError('Unauthorized', 403);
         }
 
         // Create session
@@ -348,11 +331,11 @@ export class ReadingSessionService {
         const session = await ReadingSession.findById(toObjectId(sessionId));
 
         if (!session) {
-            throw new Error('SESSION_NOT_FOUND');
+            throw new AppError('Reading session not found', 404);
         }
 
         if (session.userId.toString() !== userId) {
-            throw new Error('UNAUTHORIZED');
+            throw new AppError('Unauthorized', 403);
         }
 
         return session;
@@ -502,22 +485,22 @@ export class ReadingSessionService {
      * Returns array of dates with reading activity
      */
     static async getReadingStreakDays(userId: string, year: number, month: number): Promise<string[]> {
-        console.log(`[ReadingSessionService] [START] getReadingStreakDays calling for user=${userId}, year=${year}, month=${month}`);
+
 
         try {
             // Validate inputs
             if (!year || !month || isNaN(year) || isNaN(month)) {
                 console.error('[ReadingSessionService] [ERROR] Invalid year or month');
-                throw new Error('INVALID_DATE_PARAMS');
+                throw new AppError('Invalid date parameters', 400);
             }
 
             // Validate year and month ranges
             if (year < 1900 || year > 2100) {
-                throw new Error('INVALID_YEAR_RANGE');
+                throw new AppError('Invalid year range', 400);
             }
 
             if (month < 1 || month > 12) {
-                throw new Error('INVALID_MONTH_RANGE');
+                throw new AppError('Invalid month range', 400);
             }
 
             const cleanUserId = toObjectId(userId);
@@ -530,14 +513,14 @@ export class ReadingSessionService {
             // Format for prefix match
             const datePrefix = `${yearStr}-${monthStr}`;
 
-            console.log(`[ReadingSessionService] Searching sessions for month prefix: ${datePrefix}`);
+
 
             // Use direct distinct query with prefix matching on sessionDate
-            console.log('[ReadingSessionService] Executing ReadingSession.distinct...');
+
 
             if (!ReadingSession) {
                 console.error('[ReadingSessionService] [ERROR] ReadingSession model is undefined');
-                throw new Error('MODEL_UNDEFINED');
+                throw new AppError('Internal Server Error', 500);
             }
 
             // Use safer regex with escaped prefix
@@ -549,21 +532,18 @@ export class ReadingSessionService {
                 contributesToStreak: true
             });
 
-            console.log(`[ReadingSessionService] [SUCCESS] Found ${streakDays.length} streak days`);
+
             return streakDays;
         } catch (error: any) {
             console.error('[ReadingSessionService] [ERROR] in getReadingStreakDays:', error);
 
-            // Re-throw known errors
-            if (error.message === 'INVALID_DATE_PARAMS' ||
-                error.message === 'INVALID_YEAR_RANGE' ||
-                error.message === 'INVALID_MONTH_RANGE' ||
-                error.message === 'INVALID_ID_FORMAT') {
+            // Re-throw AppError or known errors
+            if (error instanceof AppError) {
                 throw error;
             }
 
             // Wrap unknown errors
-            throw new Error('DATABASE_ERROR');
+            throw new AppError('Database Error', 500);
         }
     }
 

@@ -1,15 +1,15 @@
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet, ListRenderItemInfo, TextInput } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import React, { useState } from 'react';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../../constants/colors';
-import { useMessageStore } from '../../store/messageStore';
-import { useAuthStore } from '../../store/authContext';
-import SafeScreen from '../../components/SafeScreen';
-import GlassCard from '../../components/GlassCard';
-import { SPACING, SHADOWS } from '../../constants/styleConstants';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet, ListRenderItemInfo, TextInput } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import React, { useState } from "react";
+import { useRouter, useFocusEffect } from "expo-router";
+import { Image } from "expo-image";
+import { Ionicons } from "@expo/vector-icons";
+import COLORS from "../../constants/colors";
+import { useMessageStore } from "../../store/messageStore";
+import { useAuthStore } from "../../store/authContext";
+import SafeScreen from "../../components/layout/SafeScreen";
+import GlassCard from "../../components/ui/GlassCard";
+import { SPACING, SHADOWS } from "../../constants/styleConstants";
 
 interface Conversation {
     conversationId: string;

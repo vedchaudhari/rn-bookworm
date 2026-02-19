@@ -1,24 +1,24 @@
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator, TextInput, AppState, AppStateStatus, FlatList, Alert } from 'react-native';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as ImagePicker from 'expo-image-picker';
-import PremiumMediaViewer from '../../../components/PremiumMediaViewer';
-import COLORS from '../../../constants/colors';
-import { useAuthStore } from '../../../store/authContext';
-import { apiClient } from '../../../lib/apiClient';
-import SafeScreen from '../../../components/SafeScreen';
-import GlassCard from '../../../components/GlassCard';
-import { useUIStore } from '../../../store/uiStore';
-import io, { Socket } from 'socket.io-client';
-import { API_URL } from '../../../constants/api';
-import { useChatThemeStore } from '../../../store/chatThemeStore';
-import { SHADOWS, SPACING, PADDING, FONT_SIZE, FONT_WEIGHT, BORDER_RADIUS } from '../../../constants/styleConstants';
-import { formatMessageDate, isSameDay } from '../../../utils/dateUtils';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator, TextInput, AppState, AppStateStatus, FlatList, Alert } from "react-native";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useLocalSearchParams, useRouter, Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
+import * as ImagePicker from "expo-image-picker";
+import PremiumMediaViewer from "../../../components/features/PremiumMediaViewer";
+import COLORS from "../../../constants/colors";
+import { useAuthStore } from "../../../store/authContext";
+import { apiClient } from "../../../services/api/apiClient";
+import SafeScreen from "../../../components/layout/SafeScreen";
+import GlassCard from "../../../components/ui/GlassCard";
+import { useUIStore } from "../../../store/uiStore";
+import io, { Socket } from "socket.io-client";
+import { API_URL } from "../../../constants/api";
+import { useChatThemeStore } from "../../../store/chatThemeStore";
+import { SHADOWS, SPACING, PADDING, FONT_SIZE, FONT_WEIGHT, BORDER_RADIUS } from "../../../constants/styleConstants";
+import { formatMessageDate, isSameDay } from "../../../utils/dateUtils";
 
-import { Club, ClubUser, IClubMessage } from '../../../types/club';
+import { Club, ClubUser, IClubMessage } from "../../../types/club";
 
 
 // ChatImage Component for dynamic sizing

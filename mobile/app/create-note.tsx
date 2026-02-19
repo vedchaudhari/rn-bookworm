@@ -1,13 +1,13 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import React, { useState } from 'react';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../constants/colors';
-import { useBookNoteStore } from '../store/bookNoteStore';
-import { useUIStore } from '../store/uiStore';
-import KeyboardScreen from '../components/KeyboardScreen';
-import SafeScreen from '../components/SafeScreen';
-import { SPACING, BORDER_RADIUS, FONT_SIZE, SHADOWS } from '../constants/styleConstants';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import React, { useState } from "react";
+import { useLocalSearchParams, useRouter, Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import COLORS from "../constants/colors";
+import { useBookNoteStore } from "../store/bookNoteStore";
+import { useUIStore } from "../store/uiStore";
+import KeyboardScreen from "../components/layout/KeyboardScreen";
+import SafeScreen from "../components/layout/SafeScreen";
+import { SPACING, BORDER_RADIUS, FONT_SIZE, SHADOWS } from "../constants/styleConstants";
 
 export default function CreateNoteScreen() {
     const { bookId, bookshelfItemId, bookTitle } = useLocalSearchParams<{

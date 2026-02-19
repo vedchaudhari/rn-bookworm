@@ -4,6 +4,8 @@ import { Request, Response, NextFunction } from "express";
 import User, { IUserDocument } from "../models/User";
 import { redis, CACHE_KEYS, TTL } from "../lib/redis";
 
+import { UserService } from "../services/userService";
+
 // Extend the Express Request interface
 declare global {
     namespace Express {
@@ -25,14 +27,14 @@ const protectRoute = async (req: Request, res: Response, next: NextFunction) => 
             return res.status(401).json({ message: "No authentication token, access denied" });
         }
 
-        // Defensive: Remove 'Bearer ' (case insensitive) & trim whitespace
-        // Also removes quotes if present
-        const token = authHeader
-            .replace(/^Bearer\s+/i, "")
-            .replace(/^["'](.*)["']$/, '$1')
-            .trim();
+        // Strict Bearer Token Parsing
+        if (!authHeader.startsWith("Bearer ")) {
+            return res.status(401).json({ message: "Invalid token format. Format must be: Bearer <token>" });
+        }
 
-        if (!token) {
+        const token = authHeader.split(" ")[1];
+
+        if (!token || token.trim() === "") {
             return res.status(401).json({ message: "Token is empty" });
         }
 
@@ -46,51 +48,12 @@ const protectRoute = async (req: Request, res: Response, next: NextFunction) => 
             const decoded = jwt.verify(token, secret) as DecodedToken;
             const userId = decoded.userId;
 
-            // 1. Try fetching user from Redis cache first
-            const cachedUser = await redis.get(CACHE_KEYS.USER_PROFILE(userId));
-
-            if (cachedUser) {
-                try {
-                    const userObj = cachedUser as any;
-
-                    // Ensure _id is present and is a real ObjectId
-                    const idValue = userObj._id || userObj.id;
-                    if (idValue) {
-                        userObj._id = new mongoose.Types.ObjectId(idValue.toString());
-                    } else {
-                        console.warn(`[Auth] User object in cache missing both _id and id: ${userId}`);
-                        // Fallback to DB
-                        throw new Error("Invalid cached user");
-                    }
-
-                    // Hydrate to ensure it has Mongoose methods if needed
-                    const hydratedUser = User.hydrate(userObj);
-
-                    // Refresh TTL on cache hit
-                    await redis.expire(CACHE_KEYS.USER_PROFILE(userId), TTL.PROFILE);
-
-                    req.user = hydratedUser;
-                    return next();
-
-                } catch (cacheError) {
-                    console.error(`[Auth] Cache hydration error for user ${userId}:`, cacheError);
-                    // Fallback to DB
-                }
-            }
-
-            // 2. Cache miss - find user in MongoDB
-            const user = await User.findById(userId).select("-password");
+            // Use Centralized Service (Handles Redis Read-Through)
+            const user = await UserService.getUserById(userId);
 
             if (!user) {
                 console.warn(`User found in token but not DB: ${userId}`);
                 return res.status(401).json({ message: "Token is not valid" });
-            }
-
-            // 3. Store in Redis for subsequent requests
-            try {
-                await redis.set(CACHE_KEYS.USER_PROFILE(userId), user.toObject(), { ex: TTL.PROFILE });
-            } catch (redisError) {
-                console.error(`[Auth] Failed to cache user ${userId}:`, redisError);
             }
 
             req.user = user;

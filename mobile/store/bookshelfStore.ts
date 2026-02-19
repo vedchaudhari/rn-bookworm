@@ -1,12 +1,12 @@
 // mobile/store/bookshelfStore.ts
-import { create } from 'zustand';
+import { create } from "zustand";
 import bookshelfApi, {
     BookshelfItem,
     ReadingStatus,
     Priority,
     BookshelfFilters,
     BookshelfStats,
-} from '../lib/api/bookshelfApi';
+} from "../services/api/endpoints/bookshelfApi";
 
 /**
  * BOOKSHELF STORE

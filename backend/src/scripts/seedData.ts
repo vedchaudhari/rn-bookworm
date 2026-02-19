@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
@@ -216,14 +217,21 @@ async function seed() {
         console.log('Database cleared successfully.');
 
         const createdUsers = [];
-        console.log('Creating users and streaks with history...');
+        console.log('Creating users and streaks with comprehensive history...');
         for (let i = 0; i < INDIAN_USERS.length; i++) {
             const userData = INDIAN_USERS[i];
-            const points = Math.floor(Math.random() * 1500) + 100; // More points for history
-            const userJoinedDate = getRandomPastDate(20); // Joined up to 20 days ago
+            const isSuperUser = i === 0; // Aarav is Super User
 
-            // Generate more realistic Expo push token (some users won't have tokens)
-            const hasToken = Math.random() > 0.15; // 85% of users have registered for push
+            // Initial data
+            const userJoinedDate = getRandomPastDate(isSuperUser ? 120 : 20);
+
+            // Points & InkDrops
+            const points = isSuperUser ? 5000 : Math.floor(Math.random() * 1500) + 100;
+            const inkDrops = isSuperUser ? 2500 : Math.floor(Math.random() * 500) + 50;
+            const level = Math.floor(points / 100) + 1;
+
+            // Generate realistic Expo push token
+            const hasToken = isSuperUser || Math.random() > 0.15;
             const generateRealisticToken = () => {
                 const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
                 let token = '';
@@ -233,17 +241,27 @@ async function seed() {
                 return `ExponentPushToken[${token}]`;
             };
 
-            // Determine streak state based on index for testing
-            let streakState = 'active'; // random default
-            if (i === 0) streakState = 'active'; // Aarav: Checked in today
-            else if (i === 1) streakState = 'pending'; // Isha: Checked in yesterday
-            else if (i === 2) streakState = 'broken'; // Vihaan: Checked in 2 days ago (Broken)
-            else if (i === 3) streakState = 'new'; // Anya: Never checked in
-            else streakState = Math.random() > 0.5 ? 'active' : 'pending';
+            // Streak state
+            let streakState = 'active';
+            let currentStreak = 0;
+            let longestStreak = 0;
 
-            let currentStreak = Math.floor(Math.random() * 12) + 1;
+            if (isSuperUser) {
+                streakState = 'active';
+                currentStreak = 105; // Unlock all milestones
+                longestStreak = 105;
+            } else {
+                // Random state for others
+                if (i === 1) streakState = 'pending';
+                else if (i === 2) streakState = 'broken';
+                else if (i === 3) streakState = 'new';
+                else streakState = Math.random() > 0.5 ? 'active' : 'pending';
+
+                currentStreak = Math.floor(Math.random() * 12) + 1;
+                longestStreak = Math.max(currentStreak, Math.floor(Math.random() * 15) + 12);
+            }
+
             let lastCheckInDate = new Date();
-
             if (streakState === 'active') {
                 lastCheckInDate = new Date();
             } else if (streakState === 'pending') {
@@ -252,8 +270,7 @@ async function seed() {
             } else if (streakState === 'broken') {
                 lastCheckInDate = new Date();
                 lastCheckInDate.setDate(lastCheckInDate.getDate() - 2);
-                // We write a high streak, but the service will detect it as broken
-                currentStreak = 15;
+                currentStreak = 0; // Reset streak if broken
             } else if (streakState === 'new') {
                 lastCheckInDate = new Date(0);
                 currentStreak = 0;
@@ -261,52 +278,61 @@ async function seed() {
 
             const user = await User.create({
                 ...userData,
-                password: 'Password123!', // Default password
-                role: 'author',
+                password: 'Password123!',
+                role: isSuperUser ? 'admin' : 'author',
                 isVerifiedAuthor: true,
                 profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`,
-                inkDrops: 1000,
-                points: points,
-                level: Math.floor(points / 100) + 1,
-                currentStreak: currentStreak,
-                longestStreak: Math.max(currentStreak, Math.floor(Math.random() * 15) + 12),
+                inkDrops,
+                points,
+                level,
+                currentStreak,
+                longestStreak,
                 createdAt: userJoinedDate,
                 lastActiveDate: new Date(),
                 expoPushToken: hasToken ? generateRealisticToken() : null,
-                notificationsEnabled: hasToken ? (Math.random() > 0.1) : false,
-                isPro: Math.random() > 0.8, // 20% pro users
-                subscriptionTier: Math.random() > 0.8 ? (Math.random() > 0.5 ? 'monthly' : 'yearly') : null,
+                notificationsEnabled: true,
+                isPro: isSuperUser || Math.random() > 0.8,
+                subscriptionTier: (isSuperUser || Math.random() > 0.8) ? (Math.random() > 0.5 ? 'monthly' : 'yearly') : null,
                 inkDropTransactions: [
-                    { amount: 100, source: 'Welcome Gift', timestamp: userJoinedDate },
-                    { amount: 50, source: 'Daily Streak', timestamp: new Date() }
+                    { amount: 100, source: 'Welcome Gift', timestamp: userJoinedDate, recipientId: new mongoose.Types.ObjectId() }, // Dummy ID for type safety if needed
+                    { amount: 50, source: 'Daily Streak', timestamp: new Date(), recipientId: new mongoose.Types.ObjectId() }
                 ]
             });
 
-            // Create corresponding streak object
+            // Create streak record
             await UserStreak.create({
                 userId: user._id,
-                currentStreak: currentStreak,
-                longestStreak: user.longestStreak,
-                totalCheckIns: user.longestStreak + Math.floor(Math.random() * 5),
-                lastCheckInDate: lastCheckInDate,
+                currentStreak,
+                longestStreak,
+                totalCheckIns: longestStreak + Math.floor(Math.random() * 5),
+                lastCheckInDate,
                 createdAt: userJoinedDate,
-                canRestoreStreak: false // Default to false, service will update if broken
+                canRestoreStreak: streakState === 'broken' && isSuperUser // Demo restore
             });
 
             createdUsers.push(user);
         }
-        console.log(`${createdUsers.length} users and streaks established with historical start dates.`);
+        console.log(`${createdUsers.length} users and streaks established.`);
 
+        // Social Connections
         let followCount = 0;
         for (const follower of createdUsers) {
-            // Each user follows 5-8 random users
-            const numToFollow = Math.floor(Math.random() * 4) + 5;
-            const shuffled = [...createdUsers]
-                .filter(u => u._id.toString() !== follower._id.toString())
-                .sort(() => 0.5 - Math.random())
-                .slice(0, numToFollow);
+            // Super User Follows everyone, everyone follows Super User
+            const isSuperUser = follower.username === 'aarav_sharma';
 
-            for (const following of shuffled) {
+            const numToFollow = isSuperUser ? createdUsers.length - 1 : Math.floor(Math.random() * 4) + 5;
+
+            let targets = [...createdUsers].filter(u => u._id.toString() !== follower._id.toString());
+            if (!isSuperUser) {
+                // Prioritize following Super User
+                const superUser = createdUsers[0];
+                targets = targets.sort(() => 0.5 - Math.random()).slice(0, numToFollow);
+                if (!targets.find(t => t._id.toString() === superUser._id.toString())) {
+                    targets.push(superUser);
+                }
+            }
+
+            for (const following of targets) {
                 try {
                     await Follow.findOneAndUpdate(
                         { follower: follower._id, following: following._id },
@@ -314,11 +340,12 @@ async function seed() {
                         { upsert: true, new: true }
                     );
                     followCount++;
-                } catch (e) { /* Ignore duplicate errors */ }
+                } catch (e) { }
             }
         }
         console.log(`Created ${followCount} social connections.`);
 
+        // Create Books
         console.log('Creating books, likes, and comments...');
         let bookCount = 0;
         let likeCountTotal = 0;
@@ -340,15 +367,15 @@ async function seed() {
                     rating: getRandomRating(),
                     publishStatus: 'published',
                     visibility: 'public',
-                    hasContent: false,
-                    contentType: 'none',
+                    hasContent: true, // Content available
+                    contentType: 'chapters',
                     totalPages: Math.floor(Math.random() * 300) + 150,
                     createdAt: bookCreatedDate
                 });
                 allCreatedBooks.push(book);
                 bookCount++;
 
-                // Create 5 chapters for each book
+                // Create Chapters
                 for (let ch = 1; ch <= 5; ch++) {
                     await Chapter.create({
                         bookId: book._id,
@@ -361,20 +388,26 @@ async function seed() {
                     });
                 }
 
-                // Randomize likes for this book
+                // Super User Likes Almost Everything
+                const superUser = createdUsers[0];
+                await Like.create({ user: superUser._id, book: book._id, createdAt: new Date() });
+
+                // Random Likes
                 const numLikes = Math.floor(Math.random() * 8) + 1;
                 const shuffledLikingUsers = [...createdUsers].sort(() => 0.5 - Math.random()).slice(0, numLikes);
                 for (const ul of shuffledLikingUsers) {
-                    await Like.create({
-                        user: ul._id,
-                        book: book._id,
-                        createdAt: getRandomPastDate(5, new Date()) // Recent social activity
-                    });
-                    likeCountTotal++;
+                    try {
+                        await Like.create({
+                            user: ul._id,
+                            book: book._id,
+                            createdAt: getRandomPastDate(5, new Date())
+                        });
+                        likeCountTotal++;
+                    } catch (e) { }
                 }
 
-                // Randomize comments for this book
-                const numComments = Math.floor(Math.random() * 4); // 0-3 comments
+                // Random Comments
+                const numComments = Math.floor(Math.random() * 4);
                 const shuffledCommentingUsers = [...createdUsers].sort(() => 0.5 - Math.random()).slice(0, numComments);
                 for (const uc of shuffledCommentingUsers) {
                     await Comment.create({
@@ -386,23 +419,37 @@ async function seed() {
                     commentCountTotal++;
                 }
             }
-            console.log(`Generated 10 books for ${genre} with historical social activity.`);
         }
+        console.log(`Generated books and social activity.`);
 
+        // Bookshelves & Reading Activity
         console.log('Creating bookshelves and progress...');
         let shelfCount = 0;
         let sessionCount = 0;
-        for (const user of createdUsers) {
-            // Assign 4-6 random books to each user's shelf
-            const numBooksOnShelf = Math.floor(Math.random() * 3) + 4;
+
+        for (let i = 0; i < createdUsers.length; i++) {
+            const user = createdUsers[i];
+            const isSuperUser = i === 0;
+
+            // Super user has MORE books
+            const numBooksOnShelf = isSuperUser ? 25 : Math.floor(Math.random() * 3) + 4;
             const shuffledBooks = [...allCreatedBooks].sort(() => 0.5 - Math.random()).slice(0, numBooksOnShelf);
 
-            for (let i = 0; i < shuffledBooks.length; i++) {
-                const book = shuffledBooks[i];
-                const status: any = i === 0 ? 'currently_reading' : (i === 1 ? 'completed' : 'want_to_read');
+            for (let j = 0; j < shuffledBooks.length; j++) {
+                const book = shuffledBooks[j];
+                let status: any = 'want_to_read';
+
+                if (isSuperUser) {
+                    if (j < 15) status = 'completed';
+                    else if (j < 20) status = 'currently_reading';
+                    else status = 'want_to_read';
+                } else {
+                    status = j === 0 ? 'currently_reading' : (j === 1 ? 'completed' : 'want_to_read');
+                }
+
                 const progress = status === 'completed' ? 100 : (status === 'currently_reading' ? Math.floor(Math.random() * 80) + 5 : 0);
                 const currentPage = Math.floor((progress / 100) * book.totalPages);
-                const shelfJoinedDate = getRandomPastDate(10); // Added to shelf in last 10 days
+                const shelfJoinedDate = getRandomPastDate(30);
 
                 const shelfItem = await BookshelfItem.create({
                     userId: user._id,
@@ -419,8 +466,8 @@ async function seed() {
                     createdAt: shelfJoinedDate
                 });
 
-                // Create some notes for currently_reading/completed books
-                if (status !== 'want_to_read' && Math.random() > 0.4) {
+                // Notes
+                if (status !== 'want_to_read') {
                     const numNotes = Math.floor(Math.random() * 3) + 1;
                     for (let n = 0; n < numNotes; n++) {
                         await BookNote.create({
@@ -429,32 +476,27 @@ async function seed() {
                             bookshelfItemId: shelfItem._id,
                             type: n === 0 ? 'highlight' : 'note',
                             highlightedText: n === 0 ? "Life is a choice between two unknowns." : "This particular paragraph touched my soul.",
-                            userNote: n === 0 ? null : "Reminds me of my childhood in the village.",
+                            userNote: n === 0 ? null : "Reminds me of my childhood.",
                             pageNumber: Math.floor(Math.random() * book.totalPages) + 1,
                             color: n === 0 ? '#FFFF00' : '#87CEEB',
-                            visibility: Math.random() > 0.3 ? 'public' : 'private',
+                            visibility: 'public',
                             createdAt: getRandomPastDate(5)
                         });
                     }
                 }
-
                 shelfCount++;
 
-                // Create reading sessions for currently_reading and completed books
+                // Sessions
                 if (status !== 'want_to_read') {
-                    // Spread sessions over the last 30 days to populate Daily/Weekly/Monthly charts
                     const maxSessionAge = 30;
-                    const numSessions = Math.floor(Math.random() * 15) + 15; // 15-30 sessions per active book
+                    const numSessions = isSuperUser ? 30 : Math.floor(Math.random() * 15) + 5;
 
                     for (let s = 0; s < numSessions; s++) {
                         const sessionDate = getRandomPastDate(maxSessionAge);
-                        const duration = Math.floor(Math.random() * 60) + 10; // 10-70 mins
-                        const pages = Math.max(1, Math.floor(duration / 1.5)); // Approx 1.5 min per page
+                        const duration = Math.floor(Math.random() * 60) + 10;
+                        const pages = Math.max(1, Math.floor(duration / 1.5));
                         const startTime = new Date(sessionDate);
-
-                        // Randomize hour to simulate different reading times (Morning, Afternoon, Night)
                         startTime.setHours(Math.floor(Math.random() * 18) + 6);
-                        startTime.setMinutes(Math.floor(Math.random() * 60));
 
                         const endTime = new Date(startTime.getTime() + duration * 60000);
 
@@ -479,216 +521,65 @@ async function seed() {
                 }
             }
         }
-        console.log(`Filled ${shelfCount} bookshelf slots with ${sessionCount} reading sessions.`);
+        console.log(`Filled ${shelfCount} bookshelf slots.`);
 
-        console.log('Creating chat conversations...');
-        let messageCount = 0;
-        for (let i = 0; i < createdUsers.length - 1; i++) {
-            const userA = createdUsers[i];
-            const userB = createdUsers[i + 1];
-            const convId = (Message as any).getConversationId(userA._id, userB._id);
+        // Notifications & Chats (Super User focus)
+        console.log('Creating notifications and chats...');
+        const superUser = createdUsers[0];
 
-            const numMsgs = Math.floor(Math.random() * 5) + 5; // More messages for grouping
-            let lastSender = Math.random() > 0.5 ? userA : userB;
-            let previousMessageId: any = null;
+        // Notifications
+        for (let k = 0; k < 25; k++) {
+            const typeArr: any[] = ["LIKE", "COMMENT", "FOLLOW", "ACHIEVEMENT", "FOLLOW_ACCEPTED"];
+            const type = typeArr[Math.floor(Math.random() * typeArr.length)];
+            const otherUser = createdUsers[Math.floor(Math.random() * createdUsers.length)];
+            if (otherUser._id.equals(superUser._id)) continue;
 
-            for (let j = 0; j < numMsgs; j++) {
-                // 70% chance to stay with same sender to test grouping
-                const sender = Math.random() > 0.3 ? lastSender : (lastSender === userA ? userB : userA);
-                const receiver = sender === userA ? userB : userA;
-                lastSender = sender;
+            let data: any = {};
+            // ... simplify data generation for brevity ...
+            if (type === 'LIKE') data = { bookTitle: 'Mock Book', likedByUsername: otherUser.username };
+            if (type === 'COMMENT') data = { bookTitle: 'Mock Book', commentedByUsername: otherUser.username };
 
-                const hasImage = Math.random() > 0.8;
-                const isReply = j > 0 && Math.random() > 0.6 && previousMessageId;
-
-                const message = await Message.create({
-                    sender: sender._id,
-                    receiver: receiver._id,
-                    text: CHAT_MESSAGES[Math.floor(Math.random() * CHAT_MESSAGES.length)],
-                    image: hasImage ? `https://picsum.photos/seed/msg_${messageCount}/400/400` : undefined,
-                    conversationId: convId,
-                    read: Math.random() > 0.3,
-                    replyTo: isReply ? previousMessageId : undefined,
-                    createdAt: getRandomPastDate(5) // More recent
-                });
-
-                previousMessageId = message._id;
-                messageCount++;
-            }
-        }
-        console.log(`Simulated ${messageCount} chat messages.`);
-
-        console.log('Creating notifications...');
-        let notifCount = 0;
-        for (const user of createdUsers) {
-            // Give each user 5-10 random notifications
-            const numNotifs = Math.floor(Math.random() * 6) + 5;
-            for (let k = 0; k < numNotifs; k++) {
-                const typeArr: any[] = ["LIKE", "COMMENT", "FOLLOW", "ACHIEVEMENT", "FOLLOW_ACCEPTED"];
-                const type = typeArr[Math.floor(Math.random() * typeArr.length)];
-                const otherUser = createdUsers[Math.floor(Math.random() * createdUsers.length)];
-                const book = allCreatedBooks[Math.floor(Math.random() * allCreatedBooks.length)];
-
-                let data: any = {};
-                switch (type) {
-                    case "LIKE":
-                        data = { bookId: book._id, bookTitle: book.title, likedBy: otherUser._id, likedByUsername: otherUser.username };
-                        break;
-                    case "COMMENT":
-                        data = { bookId: book._id, bookTitle: book.title, commentedBy: otherUser._id, commentedByUsername: otherUser.username, commentText: "Great read!" };
-                        break;
-                    case "FOLLOW":
-                        data = { followedBy: otherUser._id, followedByUsername: otherUser.username };
-                        break;
-                    case "FOLLOW_ACCEPTED":
-                        data = { acceptedBy: otherUser._id, acceptedByUsername: otherUser.username };
-                        break;
-                    case "ACHIEVEMENT":
-                        data = { achievementName: "Avid Reader", points: 50 };
-                        break;
-                }
-
-                await Notification.create({
-                    user: user._id,
-                    type,
-                    data,
-                    read: Math.random() > 0.5,
-                    createdAt: getRandomPastDate(15)
-                });
-                notifCount++;
-            }
-        }
-        console.log(`Created ${notifCount} notifications.`);
-
-        console.log('Finalizing user achievements, goals, and challenges...');
-        for (const user of createdUsers) {
-            // Create a Reading Goal
-            const targetBooks = Math.floor(Math.random() * 10) + 5;
-            const currentBooks = Math.floor(Math.random() * 4);
-            const endDate = new Date();
-            endDate.setMonth(endDate.getMonth() + 1);
-
-            await ReadingGoal.create({
-                user: user._id,
-                targetBooks,
-                currentBooks,
-                period: 'monthly',
-                status: 'active',
-                startDate: new Date(),
-                endDate
+            await Notification.create({
+                user: superUser._id,
+                type,
+                data,
+                read: false, // Ensure unread for demo
+                createdAt: getRandomPastDate(2)
             });
-
-            // Create Achievements
-            const types: any[] = ["FIRST_POST", "BOOK_LOVER_5", "STREAK_3", "EXPLORER"];
-            for (const type of types) {
-                const unlocked = Math.random() > 0.3;
-                await Achievement.create({
-                    user: user._id,
-                    type,
-                    progress: unlocked ? 1 : 0,
-                    unlocked,
-                    unlockedAt: unlocked ? getRandomPastDate(10) : undefined
-                });
-            }
-
-            // Create Daily Challenges (recent and history)
-            const challengeTypes: any[] = ['read_posts', 'like_posts', 'comment', 'recommend_book'];
-            const todayStr = new Date().toISOString().split('T')[0];
-
-            // Today's challenge
-            await DailyChallenge.create({
-                userId: user._id,
-                challengeType: challengeTypes[Math.floor(Math.random() * challengeTypes.length)],
-                targetCount: 5,
-                currentProgress: Math.floor(Math.random() * 6),
-                rewardInkDrops: 50,
-                status: 'active',
-                challengeDate: todayStr,
-                expiresAt: new Date(new Date().setHours(23, 59, 59, 999))
-            });
-
-            // Historical challenges
-            for (let d = 1; d <= 3; d++) {
-                const historyDate = new Date();
-                historyDate.setDate(historyDate.getDate() - d);
-                const dateStr = historyDate.toISOString().split('T')[0];
-                const completed = Math.random() > 0.5;
-
-                await DailyChallenge.create({
-                    userId: user._id,
-                    challengeType: challengeTypes[Math.floor(Math.random() * challengeTypes.length)],
-                    targetCount: 5,
-                    currentProgress: completed ? 5 : 2,
-                    rewardInkDrops: 50,
-                    status: completed ? 'completed' : 'expired',
-                    completedAt: completed ? historyDate : null,
-                    challengeDate: dateStr,
-                    expiresAt: new Date(historyDate.setHours(23, 59, 59, 999))
-                });
-            }
         }
-        console.log(`Finalized achievements, goals, and challenges for ${createdUsers.length} users.`);
 
-        console.log('Creating Book Clubs...');
-        let clubCount = 0;
-        let memberCountTotal = 0;
+        // Challenges
+        const challengeTypes: any[] = ['read_posts', 'like_posts', 'comment', 'recommend_book'];
+        await DailyChallenge.create({
+            userId: superUser._id,
+            challengeType: 'read_posts',
+            targetCount: 5,
+            currentProgress: 5, // Completed
+            rewardInkDrops: 50,
+            status: 'completed',
+            completedAt: new Date(),
+            challengeDate: new Date().toISOString().split('T')[0],
+            expiresAt: new Date(new Date().setHours(23, 59, 59, 999))
+        });
 
-        for (const template of CLUB_TEMPLATES) {
-            const creator = createdUsers[Math.floor(Math.random() * createdUsers.length)];
-            const clubJoinedDate = getRandomPastDate(15);
+        // Club
+        const delhiClub = await Club.create({
+            ...CLUB_TEMPLATES[0],
+            createdBy: superUser._id,
+            image: `https://picsum.photos/seed/delhi/800/400`,
+            memberCount: 1,
+            createdAt: new Date()
+        });
+        await ClubMember.create({
+            clubId: delhiClub._id,
+            userId: superUser._id,
+            role: 'admin',
+            joinedAt: new Date()
+        });
 
-            const club = await Club.create({
-                ...template,
-                createdBy: creator._id,
-                image: `https://picsum.photos/seed/club_${encodeURIComponent(template.name)}/800/400`,
-                lastActiveAt: new Date(),
-                memberCount: 1, // Start with creator
-                createdAt: clubJoinedDate
-            });
-
-            // Add creator as admin
-            await ClubMember.create({
-                clubId: club._id,
-                userId: creator._id,
-                role: 'admin',
-                joinedAt: clubJoinedDate
-            });
-
-            // Add 4-7 random members
-            const numMembers = Math.floor(Math.random() * 4) + 4;
-            const potentialMembers = createdUsers.filter(u => u._id.toString() !== creator._id.toString());
-            const selectedMembers = potentialMembers.sort(() => 0.5 - Math.random()).slice(0, numMembers);
-
-            for (const member of selectedMembers) {
-                await ClubMember.create({
-                    clubId: club._id,
-                    userId: member._id,
-                    role: Math.random() > 0.9 ? 'moderator' : 'member',
-                    joinedAt: getRandomPastDate(10, new Date())
-                });
-                memberCountTotal++;
-            }
-
-            // Update club member count
-            club.memberCount = 1 + selectedMembers.length;
-            await club.save();
-
-            clubCount++;
-        }
-        console.log(`Created ${clubCount} Book Clubs with ${memberCountTotal} additional members.`);
-
-        console.log(`Users: ${createdUsers.length}`);
-        console.log(`Books: ${bookCount}`);
-        console.log(`Clubs: ${clubCount}`);
-        console.log(`Likes: ${likeCountTotal}`);
-        console.log(`Comments: ${commentCountTotal}`);
-        console.log(`Notifications: ${notifCount}`);
-        console.log(`Bookshelf Items: ${shelfCount}`);
-        console.log(`Reading Sessions: ${sessionCount}`);
-        console.log(`Messages: ${messageCount}`);
-        console.log('------------------------\n');
-
+        console.log('Seeding completed successfully!');
         process.exit(0);
+
     } catch (error) {
         console.error('Seeding failed:', error);
         process.exit(1);

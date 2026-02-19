@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { API_URL } from '../constants/api';
-import { io, Socket } from 'socket.io-client';
+import { create } from "zustand";
+import { API_URL } from "../constants/api";
+import { io, Socket } from "socket.io-client";
 
 interface Notification {
     _id: string;

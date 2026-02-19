@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { StyleSheet, View, ActivityIndicator, Text, TouchableOpacity, Platform } from 'react-native';
-import { useAuthStore } from '../store/authContext';
-import { useUIStore } from '../store/uiStore';
-import { WebView } from 'react-native-webview';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import SafeScreen from '../components/SafeScreen';
-import COLORS from '../constants/colors';
-import { Ionicons } from '@expo/vector-icons';
-import { API_URL } from '../constants/api';
-import { File, Paths } from 'expo-file-system';
+import React, { useState, useEffect, useMemo } from "react";
+import { StyleSheet, View, ActivityIndicator, Text, TouchableOpacity, Platform } from "react-native";
+import { useAuthStore } from "../store/authContext";
+import { useUIStore } from "../store/uiStore";
+import { WebView } from "react-native-webview";
+import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import SafeScreen from "../components/layout/SafeScreen";
+import COLORS from "../constants/colors";
+import { Ionicons } from "@expo/vector-icons";
+import { API_URL } from "../constants/api";
+import { File, Paths } from "expo-file-system";
 
 export default function PdfReaderScreen() {
     const { pdfUrl, title, bookId } = useLocalSearchParams<{ pdfUrl: string, title: string, bookId: string }>();

@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { API_URL } from '../constants/api';
+import { create } from "zustand";
+import { API_URL } from "../constants/api";
 
 interface Achievement {
     _id: string;

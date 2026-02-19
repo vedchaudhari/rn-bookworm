@@ -1,5 +1,5 @@
 // mobile/app/book-progress/[id].tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
     View,
     Text,
@@ -8,14 +8,14 @@ import {
     TouchableOpacity,
     TextInput,
     ActivityIndicator,
-} from 'react-native';
-import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import SafeScreen from '../../components/SafeScreen';
-import GlassCard from '../../components/GlassCard';
-import GlazedButton from '../../components/GlazedButton';
-import ReadingProgressBar from '../../components/ReadingProgressBar';
-import SessionTimer from '../../components/SessionTimer';
-import COLORS from '../../constants/colors';
+} from "react-native";
+import { useRouter, useLocalSearchParams, Stack } from "expo-router";
+import SafeScreen from "../../components/layout/SafeScreen";
+import GlassCard from "../../components/ui/GlassCard";
+import GlazedButton from "../../components/ui/GlazedButton";
+import ReadingProgressBar from "../../components/features/ReadingProgressBar";
+import SessionTimer from "../../components/features/SessionTimer";
+import COLORS from "../../constants/colors";
 import {
     SPACING,
     PADDING,
@@ -24,12 +24,12 @@ import {
     TYPOGRAPHY,
     BORDER_RADIUS,
     COMPONENT_SIZES,
-} from '../../constants/styleConstants';
-import { useBookshelfStore } from '../../store/bookshelfStore';
-import { useReadingSessionStore } from '../../store/readingSessionStore';
-import { useUIStore } from '../../store/uiStore';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+} from "../../constants/styleConstants";
+import { useBookshelfStore } from "../../store/bookshelfStore";
+import { useReadingSessionStore } from "../../store/readingSessionStore";
+import { useUIStore } from "../../store/uiStore";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 
 /**
  * BookProgressScreen
