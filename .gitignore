@@ -11,6 +11,8 @@ dist/
 build/
 web-build/
 .expo/
+.next/
+out/
 
 # Sub-projects
 backend/node_modules/
@@ -18,6 +20,8 @@ backend/dist/
 mobile/node_modules/
 mobile/.expo/
 mobile/dist/
+website/node_modules/
+website/next-env.d.ts
 
 # OS specific
 Thumbs.db
