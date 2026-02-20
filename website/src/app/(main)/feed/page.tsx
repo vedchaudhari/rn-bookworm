@@ -83,93 +83,80 @@ export default function FeedPage() {
 
     return (
         <div className="h-screen overflow-y-auto" onScroll={handleScroll}>
-            {/* Sticky Header */}
-            <div className="sticky top-0 z-20 px-4 pt-6 pb-4"
-                style={{
-                    background: "rgba(11,15,20,0.9)",
-                    backdropFilter: "blur(20px)",
-                    borderBottom: "1px solid var(--glass-border)",
-                }}
-            >
-                <h1 className="section-header mb-1">Feed</h1>
-                <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>Curated stories for your shelf</p>
+            <div className="max-w-2xl mx-auto w-full">
+                {/* Sticky Header */}
+                <div className="sticky top-0 z-30 px-4 pt-6 pb-4 bg-background/90 backdrop-blur-xl border-b border-glass-border">
+                    <h1 className="section-header mb-1">Feed</h1>
+                    <p className="text-sm mb-4 text-text-muted">Curated stories for your shelf</p>
 
-                {/* Tabs */}
-                <div className="flex gap-2">
-                    {[
-                        { key: "all", label: "All Books", icon: Globe },
-                        { key: "following", label: "Following", icon: Users },
-                    ].map(({ key, label, icon: Icon }) => (
-                        <button
-                            key={key}
-                            onClick={() => handleTabChange(key as any)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-bold transition-all"
-                            style={
-                                activeTab === key
-                                    ? {
-                                        background: "linear-gradient(135deg, #19E3D1, #00C2FF)",
-                                        color: "#0B0F14",
-                                    }
-                                    : {
-                                        background: "rgba(255,255,255,0.05)",
-                                        border: "1px solid rgba(255,255,255,0.08)",
-                                        color: "var(--text-secondary)",
-                                    }
-                            }
-                        >
-                            <Icon className="w-4 h-4" />
-                            {label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Content */}
-            <div className="py-2">
-                {loading ? (
-                    <>
-                        <Skeleton />
-                        <Skeleton />
-                        <Skeleton />
-                    </>
-                ) : posts.length === 0 ? (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="flex flex-col items-center justify-center py-20 text-center px-6"
-                    >
-                        <div className="text-6xl mb-4">📚</div>
-                        <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
-                            No posts yet
-                        </h3>
-                        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                            {activeTab === "following"
-                                ? "Follow more readers to see their posts here"
-                                : "Be the first to share a book recommendation!"}
-                        </p>
-                    </motion.div>
-                ) : (
-                    <>
-                        {posts.map((post, i) => (
-                            <motion.div
-                                key={post._id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i < 5 ? i * 0.05 : 0 }}
+                    {/* Tabs */}
+                    <div className="flex gap-2">
+                        {[
+                            { key: "all", label: "All Books", icon: Globe },
+                            { key: "following", label: "Following", icon: Users },
+                        ].map(({ key, label, icon: Icon }) => (
+                            <button
+                                key={key}
+                                onClick={() => handleTabChange(key as any)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-bold transition-all ${activeTab === key
+                                    ? "bg-gradient-to-br from-primary to-primary-dark text-background shadow-glow-primary"
+                                    : "bg-white/5 border border-white/10 text-text-secondary hover:bg-white/10 hover:border-primary/30"
+                                    }`}
                             >
-                                <PostCard
-                                    post={post}
-                                    onDelete={(id) => setPosts((p) => p.filter((b) => b._id !== id))}
-                                />
-                            </motion.div>
+                                <Icon className="w-4 h-4" />
+                                {label}
+                            </button>
                         ))}
-                        {loadingMore && (
-                            <div className="flex justify-center py-6">
-                                <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--primary)" }} />
-                            </div>
-                        )}
-                    </>
-                )}
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div className="py-4 px-4 sm:px-0">
+                    {loading ? (
+                        <>
+                            <Skeleton />
+                            <Skeleton />
+                            <Skeleton />
+                        </>
+                    ) : posts.length === 0 ? (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex flex-col items-center justify-center py-20 text-center px-6"
+                        >
+                            <div className="text-6xl mb-4">📚</div>
+                            <h3 className="text-lg font-bold mb-2 text-text-primary">
+                                No posts yet
+                            </h3>
+                            <p className="text-sm text-text-muted">
+                                {activeTab === "following"
+                                    ? "Follow more readers to see their posts here"
+                                    : "Be the first to share a book recommendation!"}
+                            </p>
+                        </motion.div>
+                    ) : (
+                        <>
+                            {posts.map((post, i) => (
+                                <motion.div
+                                    key={post._id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: i < 5 ? i * 0.05 : 0 }}
+                                >
+                                    <PostCard
+                                        post={post}
+                                        onDelete={(id) => setPosts((p) => p.filter((b) => b._id !== id))}
+                                    />
+                                </motion.div>
+                            ))}
+                            {loadingMore && (
+                                <div className="flex justify-center py-6">
+                                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );

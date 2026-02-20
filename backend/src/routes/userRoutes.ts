@@ -153,7 +153,7 @@ router.get("/:userId", protectRoute, asyncHandler(async (req: Request, res: Resp
     const bookCount = await Book.countDocuments({ user: userId });
 
     // Check if current user is following this user
-    const isFollowing = await Follow.findOne({ follower: currentUserId, following: userId });
+    const followRecord = await Follow.findOne({ follower: currentUserId, following: userId });
 
     const responseData = {
         user: {
@@ -162,7 +162,8 @@ router.get("/:userId", protectRoute, asyncHandler(async (req: Request, res: Resp
             followingCount,
             bookCount
         },
-        isFollowing: !!isFollowing
+        isFollowing: followRecord ? (followRecord as any).status !== 'pending' : false,
+        hasRequestedFollow: followRecord ? (followRecord as any).status === 'pending' : false
     };
 
     // Sign profile image URL

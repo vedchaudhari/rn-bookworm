@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import Book, { IBookDocument } from "../models/Book";
 import Follow from "../models/Follow";
+import User from "../models/User";
 import protectRoute from "../middleware/auth.middleware";
 import Like from "../models/Like";
 import Comment from "../models/Comment";
@@ -177,6 +178,13 @@ router.get("/", protectRoute, asyncHandler(async (req: Request, res: Response) =
         query.genre = genre;
     }
 
+    // Exclude blocked users & their posts
+    const currentUser = await User.findById(req.user!._id).select("blockedUsers");
+    const blockedUserIds = currentUser?.blockedUsers || [];
+    if (blockedUserIds.length > 0) {
+        query.user = { $nin: blockedUserIds };
+    }
+
     const [books, totalBooks] = await Promise.all([
         Book.find(query)
             .sort({ createdAt: -1 }) // desc
@@ -203,21 +211,6 @@ router.get("/", protectRoute, asyncHandler(async (req: Request, res: Response) =
     res.send(responseData);
 }));
 
-router.get("/:id", protectRoute, asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-
-    const book = await Book.findById(id).populate("user", "username profileImage level");
-    if (!book) {
-        return res.status(404).json({ message: "Book not found" });
-    }
-
-    // Add like and comment counts
-    const [enrichedBook] = await enrichBooksWithInteractions([book], req.user!._id);
-    const [signedBook] = await signBookUrls([enrichedBook]);
-
-    res.json(signedBook);
-}));
-
 router.get("/following", protectRoute, asyncHandler(async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -236,7 +229,16 @@ router.get("/following", protectRoute, asyncHandler(async (req: Request, res: Re
     const following = await Follow.find({ follower: userId }).select("following");
     const followingIds = following.map((f) => f.following);
 
-    if (followingIds.length === 0) {
+    // Add current user to see their own posts in the feed too
+    followingIds.push(userId);
+
+    // Filter out blocked users
+    const currentUser = await User.findById(userId).select("blockedUsers");
+    const blockedUserIds = currentUser?.blockedUsers.map((id: any) => id.toString()) || [];
+
+    const validIds = followingIds.filter((id: any) => !blockedUserIds.includes(id.toString()));
+
+    if (validIds.length === 0) {
         const emptyResponse = {
             books: [],
             currentPage: page,
@@ -246,7 +248,7 @@ router.get("/following", protectRoute, asyncHandler(async (req: Request, res: Re
         return res.send(emptyResponse);
     }
 
-    const query: any = { user: { $in: followingIds } };
+    const query: any = { user: { $in: validIds } };
     if (genre !== 'All') {
         query.genre = genre;
     }
@@ -292,6 +294,21 @@ router.get("/user/:userId", protectRoute, asyncHandler(async (req: Request, res:
     const books = await Book.find({ user: userId }).sort({ createdAt: -1 });
     const booksWithSignedUrls = await signBookUrls(books);
     res.json(booksWithSignedUrls);
+}));
+
+router.get("/:id", protectRoute, asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const book = await Book.findById(id).populate("user", "username profileImage level");
+    if (!book) {
+        return res.status(404).json({ message: "Book not found" });
+    }
+
+    // Add like and comment counts
+    const [enrichedBook] = await enrichBooksWithInteractions([book], req.user!._id);
+    const [signedBook] = await signBookUrls([enrichedBook]);
+
+    res.json(signedBook);
 }));
 
 router.delete("/:id", protectRoute, asyncHandler(async (req: Request, res: Response) => {

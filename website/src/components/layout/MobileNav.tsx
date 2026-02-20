@@ -19,26 +19,18 @@ export default function MobileNav() {
     const pathname = usePathname();
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 lg:hidden px-2 pb-2"
-            style={{
-                background: "rgba(11, 15, 20, 0.95)",
-                borderTop: "1px solid var(--glass-border)",
-                backdropFilter: "blur(24px)",
-            }}
-        >
+        <nav className="fixed bottom-0 left-0 right-0 z-40 lg:hidden px-2 pb-2 bg-background/95 border-t border-glass-border backdrop-blur-3xl">
             <div className="flex items-center justify-around pt-2">
                 {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
                     const isActive = pathname === href || pathname.startsWith(href + "/");
                     return (
                         <Link key={href} href={href}
-                            className="flex flex-col items-center gap-0.5 px-2 py-2 min-w-0"
+                            className="flex flex-col items-center gap-0.5 px-2 py-2 min-w-0 transition-colors"
                         >
                             <Icon
-                                className="w-6 h-6"
-                                style={{ color: isActive ? "var(--primary)" : "var(--text-muted)" }}
+                                className={`w-6 h-6 ${isActive ? "text-primary" : "text-text-muted"}`}
                             />
-                            <span className="text-[10px] font-semibold"
-                                style={{ color: isActive ? "var(--primary)" : "var(--text-muted)" }}>
+                            <span className={`text-[10px] font-semibold ${isActive ? "text-primary" : "text-text-muted"}`}>
                                 {label}
                             </span>
                         </Link>

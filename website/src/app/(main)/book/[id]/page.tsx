@@ -10,6 +10,7 @@ import { ArrowLeft, Heart, MessageCircle, BookPlus, Star, Send, Loader2 } from "
 import { motion } from "framer-motion";
 import { formatDate } from "@/lib/utils";
 import toast from "react-hot-toast";
+import Avatar from "@/components/ui/Avatar";
 
 const STATUS_OPTIONS = [
     { value: "want_to_read", label: "Want to Read" },
@@ -161,17 +162,12 @@ export default function BookDetailPage() {
                     {/* Author + Actions Row */}
                     <div className="flex items-center justify-between mb-5">
                         <Link href={`/profile/${book.user?._id}`} className="flex items-center gap-2 group">
-                            <div className="relative w-9 h-9 rounded-full overflow-hidden"
-                                style={{ border: "1.5px solid rgba(25,227,209,0.3)" }}>
-                                {book.user?.profileImage ? (
-                                    <Image src={book.user.profileImage} alt={book.user.username} fill className="object-cover" unoptimized />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-sm font-black"
-                                        style={{ background: "linear-gradient(135deg, #19E3D1, #00C2FF)", color: "#0B0F14" }}>
-                                        {book.user?.username?.[0]?.toUpperCase()}
-                                    </div>
-                                )}
-                            </div>
+                            <Avatar
+                                src={book.user?.profileImage}
+                                name={book.user?.username}
+                                size={36}
+                                style={{ border: "1.5px solid rgba(25,227,209,0.3)" }}
+                            />
                             <div>
                                 <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{book.user?.username}</p>
                                 <p className="text-xs" style={{ color: "var(--text-muted)" }}>{formatDate(book.createdAt)}</p>
@@ -229,17 +225,12 @@ export default function BookDetailPage() {
 
                         {/* Comment Input */}
                         <form onSubmit={handleComment} className="flex gap-2 mb-5">
-                            <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0"
-                                style={{ border: "1.5px solid rgba(25,227,209,0.3)" }}>
-                                {user?.profileImage ? (
-                                    <Image src={user.profileImage} alt={user.username} fill className="object-cover" unoptimized />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-xs font-black"
-                                        style={{ background: "linear-gradient(135deg, #19E3D1, #00C2FF)", color: "#0B0F14" }}>
-                                        {user?.username?.[0]?.toUpperCase()}
-                                    </div>
-                                )}
-                            </div>
+                            <Avatar
+                                src={user?.profileImage}
+                                name={user?.username}
+                                size={32}
+                                style={{ border: "1.5px solid rgba(25,227,209,0.3)" }}
+                            />
                             <div className="flex-1 flex gap-2">
                                 <input
                                     value={comment}
@@ -259,17 +250,12 @@ export default function BookDetailPage() {
                             {comments.map((c: any) => (
                                 <div key={c._id} className="flex gap-3">
                                     <Link href={`/profile/${c.user?._id}`} className="flex-shrink-0">
-                                        <div className="relative w-8 h-8 rounded-full overflow-hidden"
-                                            style={{ border: "1px solid rgba(25,227,209,0.2)" }}>
-                                            {c.user?.profileImage ? (
-                                                <Image src={c.user.profileImage} alt={c.user.username} fill className="object-cover" unoptimized />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-xs font-black"
-                                                    style={{ background: "linear-gradient(135deg, #19E3D1, #00C2FF)", color: "#0B0F14" }}>
-                                                    {c.user?.username?.[0]?.toUpperCase()}
-                                                </div>
-                                            )}
-                                        </div>
+                                        <Avatar
+                                            src={c.user?.profileImage}
+                                            name={c.user?.username}
+                                            size={32}
+                                            style={{ border: "1px solid rgba(25,227,209,0.2)" }}
+                                        />
                                     </Link>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-baseline gap-2">

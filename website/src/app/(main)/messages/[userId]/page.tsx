@@ -11,6 +11,7 @@ import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import Avatar from "@/components/ui/Avatar";
 
 export default function ChatPage() {
     const { userId } = useParams<{ userId: string }>();
@@ -116,21 +117,12 @@ export default function ChatPage() {
 
                 {otherUser && (
                     <Link href={`/profile/${userId}`} className="flex items-center gap-3 flex-1 min-w-0">
-                        <div
-                            className="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0"
+                        <Avatar
+                            src={otherUser.profileImage}
+                            name={otherUser.username}
+                            size={36}
                             style={{ border: "2px solid rgba(25,227,209,0.4)" }}
-                        >
-                            {otherUser.profileImage ? (
-                                <Image src={otherUser.profileImage} alt={otherUser.username} fill className="object-cover" unoptimized />
-                            ) : (
-                                <div
-                                    className="w-full h-full flex items-center justify-center text-sm font-black"
-                                    style={{ background: "linear-gradient(135deg, #19E3D1, #00C2FF)", color: "#0B0F14" }}
-                                >
-                                    {otherUser.username?.[0]?.toUpperCase()}
-                                </div>
-                            )}
-                        </div>
+                        />
                         <div className="min-w-0">
                             <p className="font-black text-sm truncate" style={{ color: "var(--text-primary)" }}>
                                 {otherUser.username}
@@ -174,21 +166,13 @@ export default function ChatPage() {
                                     <div className={`max-w-[75%] flex gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
                                         {/* Avatar */}
                                         {!isMe && (
-                                            <div
-                                                className="relative w-7 h-7 rounded-full overflow-hidden flex-shrink-0 self-end"
+                                            <Avatar
+                                                src={msg.sender?.profileImage}
+                                                name={msg.sender?.username}
+                                                size={28}
+                                                className="self-end"
                                                 style={{ border: "1.5px solid rgba(25,227,209,0.3)" }}
-                                            >
-                                                {msg.sender?.profileImage ? (
-                                                    <Image src={msg.sender.profileImage} alt="" fill className="object-cover" unoptimized />
-                                                ) : (
-                                                    <div
-                                                        className="w-full h-full flex items-center justify-center text-xs font-black"
-                                                        style={{ background: "linear-gradient(135deg, #19E3D1, #00C2FF)", color: "#0B0F14" }}
-                                                    >
-                                                        {msg.sender?.username?.[0]?.toUpperCase()}
-                                                    </div>
-                                                )}
-                                            </div>
+                                            />
                                         )}
 
                                         <div>

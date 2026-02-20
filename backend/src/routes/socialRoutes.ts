@@ -237,6 +237,12 @@ router.post("/follow/:userId", protectRoute, asyncHandler(async (req: Request, r
         await existingFollow.deleteOne();
         await invalidateProfileCache([followerId.toString(), userId]);
 
+        // Invalidate feed caches
+        try {
+            const keys = await redis.keys(`feed:following:${followerId.toString()}:*`);
+            if (keys && keys.length > 0) await redis.del(...keys);
+        } catch (e) { console.error('Redis feed invalidation error:', e); }
+
         res.json({
             message: existingFollow.status === 'accepted' ? "User unfollowed" : "Follow request cancelled",
             following: false,
@@ -266,6 +272,12 @@ router.post("/follow/:userId", protectRoute, asyncHandler(async (req: Request, r
         });
 
         await invalidateProfileCache([followerId.toString(), userId]);
+
+        // Invalidate feed caches
+        try {
+            const keys = await redis.keys(`feed:following:${followerId.toString()}:*`);
+            if (keys && keys.length > 0) await redis.del(...keys);
+        } catch (e) { console.error('Redis feed invalidation error:', e); }
 
         res.json({
             message: status === 'accepted' ? "User followed" : "Follow request sent",

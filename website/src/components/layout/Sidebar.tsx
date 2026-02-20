@@ -8,7 +8,7 @@ import {
     PlusCircle, MessageSquare, Flame, ChevronRight
 } from "lucide-react";
 import { motion } from "framer-motion";
-import Image from "next/image";
+import Avatar from "@/components/ui/Avatar";
 import toast from "react-hot-toast";
 
 const NAV_ITEMS = [
@@ -100,17 +100,12 @@ export default function Sidebar() {
                     <Link href="/profile">
                         <div className="flex items-center gap-3 px-3 py-2 rounded-2xl mb-2 cursor-pointer transition-all"
                             style={{ background: "rgba(255,255,255,0.03)" }}>
-                            <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0"
-                                style={{ border: "2px solid rgba(25,227,209,0.3)" }}>
-                                {user.profileImage ? (
-                                    <Image src={user.profileImage} alt={user.username} fill className="object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-sm font-black"
-                                        style={{ background: "linear-gradient(135deg, #19E3D1, #00C2FF)", color: "#0B0F14" }}>
-                                        {user.username?.[0]?.toUpperCase()}
-                                    </div>
-                                )}
-                            </div>
+                            <Avatar
+                                src={user.profileImage}
+                                name={user.username}
+                                size={40}
+                                style={{ border: "2px solid rgba(25,227,209,0.3)" }}
+                            />
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold truncate" style={{ color: "var(--text-primary)" }}>
                                     {user.username}

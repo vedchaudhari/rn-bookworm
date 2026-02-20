@@ -12,7 +12,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         if (token) {
             apiClient.setAuthToken(token);
         }
-        // Then verify / refresh
+        // Run refresh/verify — isCheckingAuth starts as true (see authStore)
+        // so ProtectedLayout will never redirect until this resolves.
         checkAuth();
     }, []);
 
