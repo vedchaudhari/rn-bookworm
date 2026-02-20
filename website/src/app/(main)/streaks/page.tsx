@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/apiClient";
 import { useAuthStore } from "@/store/authStore";
 import { Flame, Trophy, Target, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 export default function StreaksPage() {
     const { user } = useAuthStore();
@@ -128,29 +129,30 @@ export default function StreaksPage() {
                             </h2>
                             <div className="space-y-2">
                                 {leaderboard.slice(0, 10).map((entry: any, i: number) => (
-                                    <motion.div
-                                        key={entry._id || i}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: i * 0.03 }}
-                                        className="glass-card flex items-center gap-3 p-3"
-                                        style={i === 0 ? { borderColor: "rgba(255,215,0,0.4)" } : {}}
-                                    >
-                                        <div className="w-8 text-center">
-                                            <span className="text-lg">{["🥇", "🥈", "🥉"][i] || `${i + 1}.`}</span>
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-sm truncate" style={{ color: "var(--text-primary)" }}>
-                                                {entry.username || entry.user?.username}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-1 flex-shrink-0">
-                                            <Flame className="w-4 h-4" style={{ color: "#FF9500" }} />
-                                            <p className="text-sm font-black" style={{ color: "#FF9500" }}>
-                                                {entry.currentStreak || entry.streak}
-                                            </p>
-                                        </div>
-                                    </motion.div>
+                                    <Link key={entry._id || i} href={`/profile/${entry.user?._id || entry._id}`}>
+                                        <motion.div
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: i * 0.03 }}
+                                            className="glass-card flex items-center gap-3 p-3 transition-colors hover:border-primary/30 cursor-pointer"
+                                            style={i === 0 ? { borderColor: "rgba(255,215,0,0.4)" } : {}}
+                                        >
+                                            <div className="w-8 text-center">
+                                                <span className="text-lg">{["🥇", "🥈", "🥉"][i] || `${i + 1}.`}</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-sm truncate" style={{ color: "var(--text-primary)" }}>
+                                                    {entry.username || entry.user?.username}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-1 flex-shrink-0">
+                                                <Flame className="w-4 h-4" style={{ color: "#FF9500" }} />
+                                                <p className="text-sm font-black" style={{ color: "#FF9500" }}>
+                                                    {entry.currentStreak || entry.streak}
+                                                </p>
+                                            </div>
+                                        </motion.div>
+                                    </Link>
                                 ))}
                             </div>
                         </div>

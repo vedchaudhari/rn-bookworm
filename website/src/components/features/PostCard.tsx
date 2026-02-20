@@ -88,25 +88,27 @@ export default function PostCard({ post, onDelete }: Props) {
         >
             {/* Book Image */}
             {post.image && (
-                <div className="relative w-full h-48 sm:h-64 overflow-hidden">
-                    <Image
-                        src={post.image}
-                        alt={post.title}
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        sizes="(max-width: 768px) 100vw, 640px"
-                        unoptimized
-                    />
-                    {/* Gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
+                <div className="relative w-full h-48 sm:h-64 overflow-hidden group/image">
+                    <Link href={`/book/${post._id}`} className="block w-full h-full cursor-pointer">
+                        <Image
+                            src={post.image}
+                            alt={post.title}
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover/image:scale-105"
+                            sizes="(max-width: 768px) 100vw, 640px"
+                            unoptimized
+                        />
+                        {/* Gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
 
-                    {/* Title + rating on image */}
-                    <div className="absolute bottom-4 left-4 right-4 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                        <h2 className="text-xl font-black text-white leading-tight mb-2 line-clamp-2 drop-shadow-lg">
-                            {post.title}
-                        </h2>
-                        <Stars rating={post.rating} />
-                    </div>
+                        {/* Title + rating on image */}
+                        <div className="absolute bottom-4 left-4 right-4 translate-y-2 group-hover/image:translate-y-0 transition-transform duration-300">
+                            <h2 className="text-xl font-black text-white leading-tight mb-2 line-clamp-2 drop-shadow-lg group-hover/image:text-primary transition-colors">
+                                {post.title}
+                            </h2>
+                            <Stars rating={post.rating} />
+                        </div>
+                    </Link>
 
                     {/* Owner menu */}
                     {isOwner && (

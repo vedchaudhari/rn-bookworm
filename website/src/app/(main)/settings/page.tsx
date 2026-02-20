@@ -49,7 +49,7 @@ export default function SettingsPage() {
 
     const uploadImage = async (file: File): Promise<string> => {
         // Get presigned URL
-        const { uploadUrl, fileUrl } = await apiClient.get<any>(
+        const { uploadUrl, finalUrl } = await apiClient.get<any>(
             `/api/users/presigned-url/profile-image?fileName=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(file.type)}`
         );
         // Upload directly to S3
@@ -58,7 +58,7 @@ export default function SettingsPage() {
             body: file,
             headers: { "Content-Type": file.type },
         });
-        return fileUrl;
+        return finalUrl;
     };
 
     const handleSaveProfile = async () => {

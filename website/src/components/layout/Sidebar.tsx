@@ -10,6 +10,7 @@ import {
 import { motion } from "framer-motion";
 import Avatar from "@/components/ui/Avatar";
 import toast from "react-hot-toast";
+import AppDownloadBadge from "@/components/ui/AppDownloadBadge";
 
 const NAV_ITEMS = [
     { href: "/feed", icon: Home, label: "Feed" },
@@ -94,9 +95,14 @@ export default function Sidebar() {
                 })}
             </nav>
 
+            {/* App Download Badge */}
+            <div className="mt-6 mb-2">
+                <AppDownloadBadge />
+            </div>
+
             {/* User Widget */}
             {user && (
-                <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--glass-border)" }}>
+                <div className="mt-auto pt-4" style={{ borderTop: "1px solid var(--glass-border)" }}>
                     <Link href="/profile">
                         <div className="flex items-center gap-3 px-3 py-2 rounded-2xl mb-2 cursor-pointer transition-all"
                             style={{ background: "rgba(255,255,255,0.03)" }}>

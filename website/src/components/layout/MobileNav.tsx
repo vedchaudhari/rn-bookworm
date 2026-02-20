@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { Home, BookOpen, Compass, Bell, User, PlusCircle, MessageSquare, Flame } from "lucide-react";
+import AppDownloadBadge from "@/components/ui/AppDownloadBadge";
 
 const NAV_ITEMS = [
     { href: "/feed", icon: Home, label: "Feed" },
@@ -36,6 +37,9 @@ export default function MobileNav() {
                         </Link>
                     );
                 })}
+            </div>
+            <div className="px-4 py-2">
+                <AppDownloadBadge />
             </div>
         </nav>
     );
