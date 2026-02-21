@@ -6,16 +6,18 @@ import { useAuthStore } from "@/store/authStore";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, UserCheck, UserPlus, Loader2 } from "lucide-react";
+import { ArrowLeft, UserCheck, UserPlus, Loader2, MessageSquare } from "lucide-react";
 import PostCard from "@/components/features/PostCard";
 import { getLevelTitle } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import Avatar from "@/components/ui/Avatar";
+import { useRouter } from "next/navigation";
 
 export default function UserProfilePage() {
     const { id } = useParams<{ id: string }>();
     const { user: currentUser } = useAuthStore();
+    const router = useRouter();
     const [profile, setProfile] = useState<any>(null);
     const [posts, setPosts] = useState<any[]>([]);
     const [followStatus, setFollowStatus] = useState<"none" | "following" | "requested">("none");
@@ -30,15 +32,13 @@ export default function UserProfilePage() {
             try {
                 const [profileData, postsData, follows] = await Promise.all([
                     apiClient.get<any>(`/api/users/${id}`),
-                    apiClient.get<any>("/api/books", { page: 1, limit: 20 }),
+                    // Use userId filter so we only get THIS user's posts
+                    apiClient.get<any>("/api/books", { page: 1, limit: 50, userId: id }),
                     apiClient.get<any>(`/api/social/follow-counts/${id}`),
                 ]);
                 const p = profileData.user || profileData;
                 setProfile({ ...p, ...follows });
-                const userPosts = (postsData.books || []).filter(
-                    (b: any) => b.user?._id === id
-                );
-                setPosts(userPosts);
+                setPosts(postsData.books || []);
                 setFollowStatus(
                     profileData.isFollowing ? "following" :
                         profileData.hasRequestedFollow ? "requested" : "none"
@@ -68,7 +68,6 @@ export default function UserProfilePage() {
         try {
             const res = await apiClient.post<any>(`/api/social/follow/${id}`);
             const status = res.status;
-            // The backend returns literal strings: "accepted", "pending", or "none"
             if (status === "accepted") setFollowStatus("following");
             else if (status === "pending") setFollowStatus("requested");
             else setFollowStatus("none");
@@ -100,25 +99,33 @@ export default function UserProfilePage() {
     return (
         <div className="h-screen overflow-y-auto">
             <div className="max-w-2xl mx-auto w-full pb-20 lg:pb-0">
-                {/* Back */}
-                <div className="sticky top-0 z-20 px-4 pt-4 pb-3 flex items-center gap-3"
-                    style={{ background: "rgba(11,15,20,0.9)", backdropFilter: "blur(20px)", borderBottom: "1px solid var(--glass-border)" }}>
-                    <Link href="/explore" className="p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.08)" }}>
+                {/* Back Header */}
+                <div
+                    className="sticky top-0 z-20 px-4 pt-4 pb-3 flex items-center gap-3"
+                    style={{ background: "rgba(11,15,20,0.9)", backdropFilter: "blur(20px)", borderBottom: "1px solid var(--glass-border)" }}
+                >
+                    <button
+                        onClick={() => router.back()}
+                        className="p-2 rounded-xl"
+                        style={{ background: "rgba(255,255,255,0.08)" }}
+                    >
                         <ArrowLeft className="w-5 h-5" style={{ color: "var(--text-primary)" }} />
-                    </Link>
+                    </button>
                     <p className="font-black" style={{ color: "var(--text-primary)" }}>{profile.username}</p>
                 </div>
 
                 {/* Banner */}
-                <div className="relative h-24 sm:h-36"
-                    style={{ background: "linear-gradient(135deg, rgba(25,227,209,0.12), rgba(0,194,255,0.08))" }}>
+                <div
+                    className="relative h-32 sm:h-44"
+                    style={{ background: "linear-gradient(135deg, rgba(25,227,209,0.12), rgba(0,194,255,0.08))" }}
+                >
                     {profile.profileBanner && (
                         <Image src={profile.profileBanner} alt="banner" fill className="object-cover opacity-60" unoptimized />
                     )}
                 </div>
 
-                <div className="px-4">
-                    {/* Avatar + Follow row */}
+                <div className="px-4 sm:px-6">
+                    {/* Avatar + Actions Row */}
                     <div className="flex items-end justify-between -mt-10 mb-4">
                         <Avatar
                             src={profile.profileImage}
@@ -127,28 +134,39 @@ export default function UserProfilePage() {
                             style={{ border: "3px solid var(--background)", boxShadow: "0 0 0 2px rgba(25,227,209,0.4)" }}
                         />
 
-                        <button
-                            onClick={handleFollow}
-                            disabled={followLoading}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-2xl font-bold text-sm transition-all ${followStatus === "following" ? "btn-secondary" : "btn-primary"
-                                }`}
-                        >
-                            {followLoading ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : followStatus === "following" ? (
-                                <><UserCheck className="w-4 h-4" /> Following</>
-                            ) : followStatus === "requested" ? (
-                                "Requested"
-                            ) : (
-                                <><UserPlus className="w-4 h-4" /> Follow</>
-                            )}
-                        </button>
+                        <div className="flex items-center gap-2 mb-1">
+                            {/* Message button */}
+                            <Link
+                                href={`/messages/${id}`}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-sm font-bold btn-secondary"
+                            >
+                                <MessageSquare className="w-4 h-4" />
+                                <span className="hidden sm:inline">Message</span>
+                            </Link>
+
+                            {/* Follow button */}
+                            <button
+                                onClick={handleFollow}
+                                disabled={followLoading}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-2xl font-bold text-sm transition-all ${followStatus === "following" ? "btn-secondary" : "btn-primary"}`}
+                            >
+                                {followLoading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : followStatus === "following" ? (
+                                    <><UserCheck className="w-4 h-4" /> Following</>
+                                ) : followStatus === "requested" ? (
+                                    "Requested"
+                                ) : (
+                                    <><UserPlus className="w-4 h-4" /> Follow</>
+                                )}
+                            </button>
+                        </div>
                     </div>
 
                     {/* Info */}
                     <h2 className="text-xl font-black mb-0.5" style={{ color: "var(--text-primary)" }}>{profile.username}</h2>
                     {profile.bio && (
-                        <p className="text-sm mb-3" style={{ color: "var(--text-secondary)" }}>{profile.bio}</p>
+                        <p className="text-sm mb-3 leading-relaxed" style={{ color: "var(--text-secondary)" }}>{profile.bio}</p>
                     )}
 
                     <div className="flex items-center gap-2 mb-4">
@@ -156,25 +174,31 @@ export default function UserProfilePage() {
                     </div>
 
                     {/* Stats */}
-                    <div className="flex gap-5 mb-5">
-                        <div className="text-center">
-                            <p className="text-xl font-black" style={{ color: "var(--text-primary)" }}>{profile.followersCount || 0}</p>
+                    <div className="grid grid-cols-3 gap-3 mb-5">
+                        <div className="glass-card p-3 text-center">
+                            <p className="text-xl font-black" style={{ color: "var(--text-primary)" }}>
+                                {profile.followersCount || 0}
+                            </p>
                             <p className="text-xs" style={{ color: "var(--text-muted)" }}>Followers</p>
                         </div>
-                        <div className="text-center">
-                            <p className="text-xl font-black" style={{ color: "var(--text-primary)" }}>{profile.followingCount || 0}</p>
+                        <div className="glass-card p-3 text-center">
+                            <p className="text-xl font-black" style={{ color: "var(--text-primary)" }}>
+                                {profile.followingCount || 0}
+                            </p>
                             <p className="text-xs" style={{ color: "var(--text-muted)" }}>Following</p>
                         </div>
-                        <div className="text-center">
-                            <p className="text-xl font-black" style={{ color: "var(--text-primary)" }}>{profile.currentStreak || 0}</p>
-                            <p className="text-xs" style={{ color: "var(--text-muted)" }}>🔥 Streak</p>
+                        <div className="glass-card p-3 text-center">
+                            <p className="text-xl font-black" style={{ color: "var(--primary)" }}>
+                                {profile.currentStreak || 0}🔥
+                            </p>
+                            <p className="text-xs" style={{ color: "var(--text-muted)" }}>Streak</p>
                         </div>
                     </div>
 
-                    {/* Divider */}
-                    <div className="mb-2" style={{ borderTop: "1px solid var(--glass-border)", paddingTop: "12px" }}>
-                        <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: "var(--text-muted)" }}>
-                            Posts
+                    {/* Posts Header */}
+                    <div className="mb-2 pt-2" style={{ borderTop: "1px solid var(--glass-border)" }}>
+                        <p className="text-xs font-black uppercase tracking-widest mt-3 mb-0" style={{ color: "var(--text-muted)" }}>
+                            Posts · {posts.length}
                         </p>
                     </div>
                 </div>

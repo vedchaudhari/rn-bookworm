@@ -5,7 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import {
     Home, BookOpen, Compass, Bell, User, LogOut,
-    PlusCircle, MessageSquare, Flame, ChevronRight
+    PlusCircle, MessageSquare, Flame, ChevronRight,
+    Settings, Gift, BarChart2
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Avatar from "@/components/ui/Avatar";
@@ -20,7 +21,10 @@ const NAV_ITEMS = [
     { href: "/messages", icon: MessageSquare, label: "Messages" },
     { href: "/notifications", icon: Bell, label: "Notifications" },
     { href: "/streaks", icon: Flame, label: "Streaks" },
+    { href: "/reading-stats", icon: BarChart2, label: "Reading Stats" },
+    { href: "/rewards", icon: Gift, label: "Rewards" },
     { href: "/profile", icon: User, label: "Profile" },
+    { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export default function Sidebar() {
@@ -35,7 +39,8 @@ export default function Sidebar() {
     };
 
     return (
-        <aside className="fixed left-0 top-0 h-full w-64 z-40 hidden lg:flex flex-col py-6 px-4"
+        <aside
+            className="fixed left-0 top-0 h-full w-64 z-40 hidden lg:flex flex-col py-6 px-4"
             style={{
                 background: "rgba(11, 15, 20, 0.9)",
                 borderRight: "1px solid var(--glass-border)",
@@ -44,7 +49,8 @@ export default function Sidebar() {
         >
             {/* Logo */}
             <Link href="/feed" className="flex items-center gap-3 px-3 mb-8">
-                <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+                <div
+                    className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
                     style={{
                         background: "linear-gradient(135deg, #19E3D1, #00C2FF)",
                         boxShadow: "0 0 20px rgba(25,227,209,0.4)",
@@ -57,22 +63,18 @@ export default function Sidebar() {
                 </span>
             </Link>
 
-            {/* Navigation */}
-            <nav className="flex-1 space-y-1">
+            {/* Navigation — scrollable */}
+            <nav className="flex-1 space-y-0.5 overflow-y-auto pr-1">
                 {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
                     const isActive = pathname === href || pathname.startsWith(href + "/");
                     return (
                         <Link key={href} href={href}>
                             <motion.div
                                 whileHover={{ x: 4 }}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 cursor-pointer ${isActive ? "nav-active" : ""
-                                    }`}
+                                className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-200 cursor-pointer ${isActive ? "nav-active" : ""}`}
                                 style={
                                     isActive
-                                        ? {
-                                            background: "rgba(25, 227, 209, 0.1)",
-                                            borderLeft: "2px solid var(--primary)",
-                                        }
+                                        ? { background: "rgba(25, 227, 209, 0.1)", borderLeft: "2px solid var(--primary)" }
                                         : { color: "var(--text-secondary)" }
                                 }
                             >
@@ -96,16 +98,18 @@ export default function Sidebar() {
             </nav>
 
             {/* App Download Badge */}
-            <div className="mt-6 mb-2">
+            <div className="mt-4 mb-3">
                 <AppDownloadBadge />
             </div>
 
             {/* User Widget */}
             {user && (
-                <div className="mt-auto pt-4" style={{ borderTop: "1px solid var(--glass-border)" }}>
+                <div className="pt-4" style={{ borderTop: "1px solid var(--glass-border)" }}>
                     <Link href="/profile">
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-2xl mb-2 cursor-pointer transition-all"
-                            style={{ background: "rgba(255,255,255,0.03)" }}>
+                        <div
+                            className="flex items-center gap-3 px-3 py-2 rounded-2xl mb-2 cursor-pointer transition-all"
+                            style={{ background: "rgba(255,255,255,0.03)" }}
+                        >
                             <Avatar
                                 src={user.profileImage}
                                 name={user.username}

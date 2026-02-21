@@ -5,8 +5,8 @@ import { apiClient } from "@/lib/apiClient";
 import { useAuthStore } from "@/store/authStore";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { ArrowLeft, Heart, MessageCircle, BookPlus, Star, Send, Loader2 } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft, Heart, MessageCircle, BookPlus, Star, Send, Loader2, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatDate } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -23,6 +23,7 @@ const STATUS_OPTIONS = [
 export default function BookDetailPage() {
     const { id } = useParams<{ id: string }>();
     const { user } = useAuthStore();
+    const router = useRouter();
     const [book, setBook] = useState<any>(null);
     const [comments, setComments] = useState<any[]>([]);
     const [comment, setComment] = useState("");
@@ -115,17 +116,37 @@ export default function BookDetailPage() {
         </div>
     );
 
+    const handleShare = async () => {
+        try {
+            await navigator.share({ title: book.title, url: window.location.href });
+        } catch {
+            navigator.clipboard.writeText(window.location.href);
+            toast.success("Link copied!");
+        }
+    };
+
     return (
         <div className="h-screen overflow-y-auto">
             {/* Back Button */}
             <div className="sticky top-0 z-20 px-4 pt-4 pb-3 flex items-center gap-3"
                 style={{ background: "rgba(11,15,20,0.9)", backdropFilter: "blur(20px)", borderBottom: "1px solid var(--glass-border)" }}>
-                <Link href="/feed" className="p-2 rounded-xl transition-colors" style={{ background: "rgba(255,255,255,0.08)" }}>
+                <button
+                    onClick={() => router.back()}
+                    className="p-2 rounded-xl transition-colors"
+                    style={{ background: "rgba(255,255,255,0.08)" }}
+                >
                     <ArrowLeft className="w-5 h-5" style={{ color: "var(--text-primary)" }} />
-                </Link>
-                <h1 className="text-lg font-black truncate" style={{ color: "var(--text-primary)" }}>
+                </button>
+                <h1 className="text-lg font-black truncate flex-1" style={{ color: "var(--text-primary)" }}>
                     {book.title}
                 </h1>
+                <button
+                    onClick={handleShare}
+                    className="p-2 rounded-xl transition-colors"
+                    style={{ background: "rgba(255,255,255,0.08)" }}
+                >
+                    <Share2 className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
+                </button>
             </div>
 
             <div className="max-w-2xl mx-auto">
@@ -154,9 +175,18 @@ export default function BookDetailPage() {
 
                     {/* Caption */}
                     {book.caption && (
-                        <p className="text-sm mb-5 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                        <p className="text-sm mb-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
                             {book.caption}
                         </p>
+                    )}
+
+                    {/* Hashtags */}
+                    {book.tags && book.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-5">
+                            {book.tags.map((tag: string) => (
+                                <span key={tag} className="tag-hashtag">#{tag}</span>
+                            ))}
+                        </div>
                     )}
 
                     {/* Author + Actions Row */}

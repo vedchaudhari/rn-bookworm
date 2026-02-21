@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { Heart, MessageCircle, Star, MoreHorizontal, Trash2 } from "lucide-react";
+import { Heart, MessageCircle, Star, MoreHorizontal, Trash2, Bookmark } from "lucide-react";
 import { apiClient } from "@/lib/apiClient";
 import { formatDate } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
@@ -22,6 +22,7 @@ interface Post {
     isBookmarked?: boolean;
     likeCount?: number;
     commentCount?: number;
+    tags?: string[];
     user: {
         _id: string;
         username: string;
@@ -64,6 +65,18 @@ export default function PostCard({ post, onDelete }: Props) {
         } catch {
             setLiked(prev);
             setLikeCount((c) => (prev ? c + 1 : c - 1));
+        }
+    };
+
+    const handleBookmark = async () => {
+        const prev = bookmarked;
+        setBookmarked(!bookmarked);
+        try {
+            await apiClient.post(`/api/social/bookmark/${post._id}`);
+            toast.success(prev ? "Removed from bookmarks" : "Bookmarked!");
+        } catch {
+            setBookmarked(prev);
+            toast.error("Failed to update bookmark");
         }
     };
 
@@ -145,13 +158,32 @@ export default function PostCard({ post, onDelete }: Props) {
             <div className="p-5">
                 {/* Caption */}
                 {post.caption && (
-                    <p className="text-sm mb-5 line-clamp-3 text-text-secondary leading-relaxed">
+                    <p className="text-sm mb-3 line-clamp-3 text-text-secondary leading-relaxed">
                         {post.caption}
                     </p>
                 )}
 
+                {/* Hashtags */}
+                {post.tags && post.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                        {post.tags.map((tag) => (
+                            <span
+                                key={tag}
+                                className="px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                                style={{
+                                    background: "rgba(25,227,209,0.08)",
+                                    border: "1px solid rgba(25,227,209,0.2)",
+                                    color: "var(--primary)",
+                                }}
+                            >
+                                #{tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
                 {/* User + Interactions Row */}
-                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                <div className="flex items-center justify-between pt-3 border-t border-white/5">
                     {/* User */}
                     <Link href={`/profile/${post.user?._id}`} className="flex items-center gap-3 group/user">
                         <Avatar
@@ -172,6 +204,7 @@ export default function PostCard({ post, onDelete }: Props) {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2">
+                        {/* Like */}
                         <button
                             onClick={handleLike}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all border ${liked
@@ -189,6 +222,7 @@ export default function PostCard({ post, onDelete }: Props) {
                             )}
                         </button>
 
+                        {/* Comment */}
                         <Link
                             href={`/book/${post._id}`}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all bg-white/5 border border-white/10 text-text-muted hover:bg-white/10 hover:text-primary hover:border-primary/30"
@@ -200,6 +234,17 @@ export default function PostCard({ post, onDelete }: Props) {
                                 </span>
                             )}
                         </Link>
+
+                        {/* Bookmark */}
+                        <button
+                            onClick={handleBookmark}
+                            className={`p-1.5 rounded-xl transition-all border ${bookmarked
+                                ? "bg-primary/10 border-primary/30 text-primary"
+                                : "bg-white/5 border-white/10 text-text-muted hover:bg-white/10"
+                                }`}
+                        >
+                            <Bookmark className={`w-4 h-4 ${bookmarked ? "fill-current" : ""}`} />
+                        </button>
                     </div>
                 </div>
             </div>
